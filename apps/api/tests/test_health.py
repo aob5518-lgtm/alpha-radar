@@ -1,0 +1,12 @@
+from fastapi.testclient import TestClient
+
+from alpha_radar.main import app
+
+
+def test_health_returns_ok() -> None:
+    with TestClient(app) as client:
+        response = client.get("/api/v1/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    assert response.headers["x-request-id"]

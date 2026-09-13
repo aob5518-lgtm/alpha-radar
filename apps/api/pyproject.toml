@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "alpha-radar-backend"
+version = "0.1.0"
+description = "Alpha Radar API and worker foundation"
+requires-python = ">=3.12"
+dependencies = [
+  "alembic==1.16.5",
+  "asyncpg==0.30.0",
+  "celery[redis]==5.5.3",
+  "fastapi==0.116.1",
+  "pydantic-settings==2.10.1",
+  "redis==5.2.1",
+  "sqlalchemy[asyncio]==2.0.43",
+  "structlog==25.4.0",
+  "uvicorn[standard]==0.35.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx==0.28.1",
+  "pyright==1.1.404",
+  "pytest==8.4.1",
+  "pytest-asyncio==1.1.0",
+  "ruff==0.12.11",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/alpha_radar"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests", "../worker"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+include = ["src", "tests", "../worker"]
+exclude = ["alembic"]
+reportMissingTypeStubs = "none"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+asyncio_mode = "auto"
+testpaths = ["tests"]
