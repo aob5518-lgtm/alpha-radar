@@ -1,4 +1,4 @@
-# Sprint 0 Architecture
+# Alpha Radar Architecture
 
 ## Shape
 
@@ -20,14 +20,28 @@ Browser -> Next.js web -> FastAPI API -> PostgreSQL/TimescaleDB + pgvector
 - `apps/worker`: deployment entry-point documentation; the worker imports `alpha_radar.worker` from
   the same backend package.
 
-Logical domain boundaries live under `services/`. They are placeholders in Sprint 0 and will be
-implemented incrementally without network boundaries.
+Logical domain boundaries are implemented inside the shared backend package and may also be
+represented by top-level `services/` documentation placeholders. They are added incrementally
+without network boundaries.
+
+## Asset domain
+
+`alpha_radar.assets` is the first domain module. HTTP routes validate transport concerns and call
+the asset service; the service owns identifier-resolution rules and response composition; the
+repository owns SQLAlchemy queries. Routes never query the database directly. The API and worker
+continue to share the package, so future asynchronous asset work can reuse the same models and
+services without an HTTP dependency.
+
+Frontend asset contracts live in `packages/types`. The Next.js server-side API client consumes
+those contracts and uses the private `API_URL`, allowing Compose to call `http://api:8000` without
+exposing an internal hostname to browsers.
 
 ## Health semantics
 
 `GET /api/v1/health` is a process liveness endpoint. `GET /api/v1/health/ready` checks PostgreSQL and
 Redis and returns HTTP 503 while either dependency is unavailable. Docker uses liveness after it has
-already sequenced startup on healthy infrastructure; operators can use readiness for traffic gating.
+already sequenced API startup on healthy infrastructure; operators can use readiness for traffic
+gating. The worker is sequenced directly on PostgreSQL and Redis and does not require the HTTP API.
 
 ## Data and migrations
 
@@ -44,6 +58,6 @@ envelope. Secrets are excluded from version control and must never be logged.
 
 ## Deferred decisions
 
-Authentication, provider adapters, domain models, task queues/routing, cloud deployment, telemetry
-vendors, and scaling policies belong to later sprints. No Kafka, Kubernetes, or independent services
-are introduced.
+Authentication, live provider adapters, market data, events, AI integrations, task routing, cloud
+deployment, telemetry vendors, and scaling policies belong to later sprints. No Kafka, Kubernetes,
+or independent services are introduced.

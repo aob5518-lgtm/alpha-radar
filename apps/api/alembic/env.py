@@ -7,7 +7,10 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alpha_radar.config import get_settings
+from alpha_radar.db import models as registered_models
 from alpha_radar.db.base import Base
+
+_ = registered_models
 
 config = context.config
 if config.config_file_name is not None:

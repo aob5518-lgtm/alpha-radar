@@ -47,3 +47,20 @@ jobs:
       - run: ruff format --check . ../worker
       - run: pyright
       - run: pytest
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start Compose stack
+        run: docker compose up --build --detach --wait
+      - name: Verify health, dependencies, and PostgreSQL extensions
+        run: ./scripts/verify-stack.sh
+      - name: Show Compose logs on failure
+        if: failure()
+        run: docker compose logs
+      - name: Stop Compose stack
+        if: always()
+        run: docker compose down --volumes

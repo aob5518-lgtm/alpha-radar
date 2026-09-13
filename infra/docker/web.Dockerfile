@@ -3,6 +3,7 @@ WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web/package.json apps/web/package.json
+COPY packages/types/package.json packages/types/package.json
 RUN pnpm install --frozen-lockfile
 
 FROM node:22.19.0-alpine AS builder
@@ -14,6 +15,7 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=dependencies /app/apps/web/node_modules ./apps/web/node_modules
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web ./apps/web
+COPY packages/types ./packages/types
 RUN pnpm --dir apps/web build
 
 FROM node:22.19.0-alpine AS runner

@@ -1,0 +1,9 @@
+{
+  "name": "@alpha-radar/types",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./assets": "./src/assets.ts"
+  }
+}
