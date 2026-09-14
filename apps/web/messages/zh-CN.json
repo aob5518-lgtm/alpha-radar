@@ -1,0 +1,85 @@
+{
+  "common": {
+    "appName": "Alpha Radar",
+    "notAvailable": "尚未接入",
+    "tryAgain": "重试"
+  },
+  "home": {
+    "status": "工程基础已上线",
+    "title": "基于证据构建的金融情报。",
+    "description": "Sprint 1 资产基础已就绪，可支撑后续本地化资产情报、市场数据和事件情报。",
+    "currentPhase": "当前阶段",
+    "phaseName": "资产基础",
+    "exploreAssets": "浏览资产"
+  },
+  "assets": {
+    "title": "资产目录",
+    "description": "规范化金融实体。代码只是标签；UUID 才是持久身份。",
+    "countLabel": "项资产",
+    "searchLabel": "搜索资产",
+    "searchPlaceholder": "搜索代码、名称或 slug",
+    "filterByType": "按资产类型筛选",
+    "allTypes": "全部资产类型",
+    "apply": "应用",
+    "emptyTitle": "未找到资产",
+    "emptyDescription": "请尝试其他搜索词或资产类型。",
+    "notClassified": "未分类",
+    "classificationUnavailable": "分类信息尚不可用",
+    "canonicalUuid": "规范 UUID",
+    "backToDirectory": "资产目录",
+    "backToAssets": "返回资产",
+    "notFoundTitle": "未找到资产",
+    "notFoundDescription": "没有规范资产匹配此标识符。",
+    "errorTitle": "资产数据不可用",
+    "errorDescription": "无法连接 API。不会展示占位数据。",
+    "loading": "正在加载资产",
+    "paginationLabel": "分页",
+    "pageStatus": "第 {page} 页，共 {totalPages} 页",
+    "previousPage": "上一页",
+    "nextPage": "下一页",
+    "columns": {
+      "symbol": "代码",
+      "name": "名称",
+      "type": "类型",
+      "sectorChain": "板块 / 链"
+    },
+    "overview": {
+      "title": "概览",
+      "slug": "Slug",
+      "status": "状态",
+      "providerMappings": "数据源映射"
+    },
+    "sections": {
+      "market": "市场",
+      "events": "事件",
+      "catalysts": "催化剂",
+      "fundamentals": "基本面",
+      "capitalFlow": "资金流",
+      "narratives": "市场叙事",
+      "risk": "风险",
+      "notIntegratedDescription": "尚未接入。此区域只会在平台已有来源数据时展示。"
+    }
+  },
+  "labels": {
+    "assetTypes": {
+      "crypto": "加密资产",
+      "equity": "股票",
+      "etf": "ETF",
+      "commodity": "大宗商品",
+      "currency": "货币",
+      "bond": "债券",
+      "index": "指数",
+      "macro": "宏观指标"
+    },
+    "assetStatuses": {
+      "active": "活跃",
+      "inactive": "非活跃",
+      "delisted": "已退市"
+    }
+  },
+  "language": {
+    "label": "语言",
+    "english": "English",
+    "simplifiedChinese": "简体中文"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "common": {
+    "appName": "Alpha Radar",
+    "notAvailable": "Not yet integrated",
+    "tryAgain": "Try again"
+  },
+  "home": {
+    "status": "Engineering foundation online",
+    "title": "Financial intelligence, built from evidence.",
+    "description": "The Sprint 1 asset foundation is ready for localized asset intelligence, market data, and event intelligence in the sprints ahead.",
+    "currentPhase": "Current phase",
+    "phaseName": "Asset Foundation",
+    "exploreAssets": "Explore assets"
+  },
+  "assets": {
+    "title": "Asset directory",
+    "description": "Canonical financial entities. Symbols are labels; UUIDs are the durable identity.",
+    "countLabel": "assets",
+    "searchLabel": "Search assets",
+    "searchPlaceholder": "Search symbol, name, or slug",
+    "filterByType": "Filter by asset type",
+    "allTypes": "All asset types",
+    "apply": "Apply",
+    "emptyTitle": "No assets found",
+    "emptyDescription": "Try a different search or asset type.",
+    "notClassified": "Not classified",
+    "classificationUnavailable": "Classification not yet available",
+    "canonicalUuid": "Canonical UUID",
+    "backToDirectory": "Asset directory",
+    "backToAssets": "Back to assets",
+    "notFoundTitle": "Asset not found",
+    "notFoundDescription": "No canonical asset matches this identifier.",
+    "errorTitle": "Asset data is unavailable",
+    "errorDescription": "The API could not be reached. No placeholder data is shown.",
+    "loading": "Loading assets",
+    "paginationLabel": "Pagination",
+    "pageStatus": "Page {page} of {totalPages}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "columns": {
+      "symbol": "Symbol",
+      "name": "Name",
+      "type": "Type",
+      "sectorChain": "Sector / chain"
+    },
+    "overview": {
+      "title": "Overview",
+      "slug": "Slug",
+      "status": "Status",
+      "providerMappings": "Provider mappings"
+    },
+    "sections": {
+      "market": "Market",
+      "events": "Events",
+      "catalysts": "Catalysts",
+      "fundamentals": "Fundamentals",
+      "capitalFlow": "Capital Flow",
+      "narratives": "Narratives",
+      "risk": "Risk",
+      "notIntegratedDescription": "Not yet integrated. This section will only display sourced platform data when available."
+    }
+  },
+  "labels": {
+    "assetTypes": {
+      "crypto": "Crypto",
+      "equity": "Equity",
+      "etf": "ETF",
+      "commodity": "Commodity",
+      "currency": "Currency",
+      "bond": "Bond",
+      "index": "Index",
+      "macro": "Macro"
+    },
+    "assetStatuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "delisted": "Delisted"
+    }
+  },
+  "language": {
+    "label": "Language",
+    "english": "English",
+    "simplifiedChinese": "Simplified Chinese"
+  }
+}

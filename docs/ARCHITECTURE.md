@@ -56,6 +56,24 @@ Settings are environment-driven and validated by Pydantic. Structlog emits JSON 
 and request correlation IDs. Expected, validation, and unexpected API failures share a typed error
 envelope. Secrets are excluded from version control and must never be logged.
 
+## Internationalization
+
+English and Simplified Chinese localization is owned by the Next.js presentation layer. The backend
+API, database schema, canonical asset fields, provider identifiers, enum values, UUIDs, and slugs
+remain language-neutral. Frontend pages translate copy and enum presentation labels without changing
+the API contract or route structure.
+
+The web app keeps the existing unprefixed routes such as `/`, `/assets`, and
+`/assets/[identifier]`. Locale preference is stored in an unauthenticated cookie named
+`alpha_radar_locale`, validated against the supported locale list, and read by server-rendered pages
+so the first HTML response is already localized. After authentication is introduced, this cookie can
+be synchronized with a user preference while continuing to provide a fallback for anonymous users.
+
+Locale catalogs live under `apps/web/messages`, while centralized locale utilities, label helpers,
+and `Intl`-based date, number, percent, and currency formatters live under `apps/web/src/lib/i18n`.
+Future AI Analyst requests must receive the user's preferred locale so model output can match the UI
+language, but AI integration remains deferred.
+
 ## Deferred decisions
 
 Authentication, live provider adapters, market data, events, AI integrations, task routing, cloud

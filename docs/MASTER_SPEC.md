@@ -40,6 +40,10 @@ The platform must answer:
 
 Alpha Radar is not intended to be another generic financial news feed.
 
+The web experience should support English and Simplified Chinese. Canonical financial data,
+provider identifiers, tickers, slugs, and API enum values remain language-neutral; localization is a
+presentation-layer concern.
+
 ## 2. Initial Scope
 
 V1 focuses on:
