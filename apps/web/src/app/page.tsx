@@ -1,4 +1,5 @@
 import { Activity, Radar } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
@@ -29,9 +30,9 @@ export default function Home() {
               aria-hidden="true"
             />
             <p className="text-sm text-[var(--muted)]">Current phase</p>
-            <p className="mt-1 text-xl font-medium">Engineering Foundation</p>
-            <Button className="mt-6 w-full" disabled>
-              Sprint 0
+            <p className="mt-1 text-xl font-medium">Asset Foundation</p>
+            <Button className="mt-6 w-full" asChild>
+              <Link href="/assets">Explore assets</Link>
             </Button>
           </div>
         </div>

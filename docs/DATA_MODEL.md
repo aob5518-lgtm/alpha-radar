@@ -1,12 +1,31 @@
 # Data Model Conventions
 
-Sprint 0 establishes conventions only; it intentionally creates no financial domain tables.
-
 ## Identity
 
-Assets use canonical internal UUID primary keys. Symbols are mutable labels and must never be primary
-business identifiers. Provider identifiers belong in mapping rows that reference the canonical asset
-UUID, allowing one asset to map to forms such as `BTCUSDT`, `BTC-USD`, and `bitcoin`.
+Every Asset uses a canonical internal UUID primary key. Seeded assets receive deterministic UUIDv5
+values so repeated seed runs and independent local environments refer to the same identities.
+
+Symbols are labels, not identifiers, and are intentionally not globally unique. A case-insensitive
+symbol index supports lookup while allowing the same symbol in different markets. Slugs are stable,
+globally unique, lowercase application identifiers. Renaming a slug is therefore an explicit data
+migration rather than a presentation-only change.
+
+`AssetProviderMapping` references `Asset.id`. The `(provider, provider_asset_id)` pair is unique,
+preventing one provider identifier from resolving to multiple canonical assets. Providers are stored
+in lowercase; provider symbols retain the provider's representation.
+
+`AssetAlias` also references `Asset.id`. Aliases are normalized with trimmed, collapsed whitespace
+and lowercase Unicode text. `(asset_id, normalized_alias)` is unique, but the same normalized alias
+may belong to multiple assets because entity resolution must preserve ambiguity rather than choose an
+arbitrary asset.
+
+The detail API resolves an identifier in this deterministic order: canonical UUID, lowercase slug,
+then case-insensitive symbol. UUID and slug matches are unique. A syntactically valid UUID is never
+reinterpreted as a slug or symbol. A missing identifier returns 404; a symbol that matches multiple
+assets returns 409 with candidate slugs.
+
+Market capitalization uses `numeric(30, 8)` and application `Decimal`, never floating point. Asset
+metadata uses PostgreSQL JSONB. Asset and mapping timestamps use timezone-aware `timestamptz` values.
 
 ## Time
 

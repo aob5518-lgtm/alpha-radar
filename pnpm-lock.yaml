@@ -10,6 +10,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@alpha-radar/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       '@radix-ui/react-slot':
         specifier: 1.2.3
         version: 1.2.3(@types/react@19.1.12)(react@19.1.1)
@@ -68,6 +71,8 @@ importers:
       typescript:
         specifier: 5.9.2
         version: 5.9.2
+
+  packages/types: {}
 
 packages:
 
