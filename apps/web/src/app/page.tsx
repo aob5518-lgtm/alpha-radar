@@ -2,26 +2,28 @@ import { Activity, Radar } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { getTranslations } from "@/lib/i18n/server";
 
-export default function Home() {
+export default async function Home() {
+  const { messages } = await getTranslations();
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl items-center px-6 py-16">
+    <main className="mx-auto flex min-h-[calc(100vh-73px)] max-w-6xl items-center px-6 py-16">
       <section className="w-full rounded-3xl border bg-[var(--card)] p-8 shadow-2xl sm:p-12">
         <div className="mb-8 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm text-[var(--accent)]">
           <Activity className="size-4" aria-hidden="true" />
-          Engineering foundation online
+          {messages.home.status}
         </div>
         <div className="grid gap-10 lg:grid-cols-[1fr_20rem] lg:items-end">
           <div>
             <p className="mb-3 text-sm font-semibold tracking-[0.25em] text-[var(--muted)] uppercase">
-              Alpha Radar
+              {messages.common.appName}
             </p>
             <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-6xl">
-              Financial intelligence, built from evidence.
+              {messages.home.title}
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--muted)]">
-              The Sprint 0 platform foundation is ready for canonical assets,
-              market data, and event intelligence in the sprints ahead.
+              {messages.home.description}
             </p>
           </div>
           <div className="rounded-2xl border bg-black/20 p-5">
@@ -29,10 +31,14 @@ export default function Home() {
               className="mb-8 size-8 text-[var(--accent)]"
               aria-hidden="true"
             />
-            <p className="text-sm text-[var(--muted)]">Current phase</p>
-            <p className="mt-1 text-xl font-medium">Asset Foundation</p>
+            <p className="text-sm text-[var(--muted)]">
+              {messages.home.currentPhase}
+            </p>
+            <p className="mt-1 text-xl font-medium">
+              {messages.home.phaseName}
+            </p>
             <Button className="mt-6 w-full" asChild>
-              <Link href="/assets">Explore assets</Link>
+              <Link href="/assets">{messages.home.exploreAssets}</Link>
             </Button>
           </div>
         </div>

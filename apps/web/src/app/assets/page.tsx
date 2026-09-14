@@ -3,6 +3,9 @@ import { ChevronLeft, ChevronRight, Database, Search } from "lucide-react";
 import Link from "next/link";
 
 import { getAssets } from "@/lib/api/assets";
+import { assetTypeLabel } from "@/lib/i18n/labels";
+import { formatMessage } from "@/lib/i18n/messages";
+import { getTranslations } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +34,7 @@ function pageHref(page: number, search: string, assetType: string): string {
 }
 
 export default async function AssetsPage({ searchParams }: AssetsPageProps) {
+  const { messages } = await getTranslations();
   const params = await searchParams;
   const page = parsePage(first(params.page));
   const search = first(params.search)?.trim() ?? "";
@@ -50,25 +54,24 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
             href="/"
             className="text-sm text-emerald-400 hover:text-emerald-300"
           >
-            Alpha Radar
+            {messages.common.appName}
           </Link>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight">
-            Asset directory
+            {messages.assets.title}
           </h1>
           <p className="mt-3 max-w-2xl text-[var(--muted)]">
-            Canonical financial entities. Symbols are labels; UUIDs are the
-            durable identity.
+            {messages.assets.description}
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
           <Database className="size-4" aria-hidden="true" />
-          {response.pagination.total_items} assets
+          {response.pagination.total_items} {messages.assets.countLabel}
         </div>
       </div>
 
       <form className="mb-6 grid gap-3 rounded-2xl border bg-[var(--card)] p-4 sm:grid-cols-[1fr_13rem_auto]">
         <label className="relative">
-          <span className="sr-only">Search assets</span>
+          <span className="sr-only">{messages.assets.searchLabel}</span>
           <Search
             className="absolute top-3 left-3 size-4 text-[var(--muted)]"
             aria-hidden="true"
@@ -76,35 +79,35 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
           <input
             name="search"
             defaultValue={search}
-            placeholder="Search symbol, name, or slug"
+            placeholder={messages.assets.searchPlaceholder}
             className="h-10 w-full rounded-md border bg-black/20 pr-3 pl-10 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
           />
         </label>
         <label>
-          <span className="sr-only">Filter by asset type</span>
+          <span className="sr-only">{messages.assets.filterByType}</span>
           <select
             name="asset_type"
             defaultValue={assetType ?? ""}
             className="h-10 w-full rounded-md border bg-black/20 px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
           >
-            <option value="">All asset types</option>
+            <option value="">{messages.assets.allTypes}</option>
             {assetTypes.map((type) => (
               <option key={type} value={type}>
-                {type}
+                {assetTypeLabel(type, messages)}
               </option>
             ))}
           </select>
         </label>
         <button className="h-10 rounded-md bg-emerald-400 px-5 text-sm font-medium text-zinc-950 hover:bg-emerald-300">
-          Apply
+          {messages.assets.apply}
         </button>
       </form>
 
       {response.items.length === 0 ? (
         <div className="rounded-2xl border border-dashed py-20 text-center">
-          <p className="text-lg font-medium">No assets found</p>
+          <p className="text-lg font-medium">{messages.assets.emptyTitle}</p>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Try a different search or asset type.
+            {messages.assets.emptyDescription}
           </p>
         </div>
       ) : (
@@ -113,10 +116,14 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
             <table className="w-full text-left text-sm">
               <thead className="border-b text-xs tracking-wider text-[var(--muted)] uppercase">
                 <tr>
-                  <th className="px-5 py-4">Symbol</th>
-                  <th className="px-5 py-4">Name</th>
-                  <th className="px-5 py-4">Type</th>
-                  <th className="px-5 py-4">Sector / chain</th>
+                  <th className="px-5 py-4">
+                    {messages.assets.columns.symbol}
+                  </th>
+                  <th className="px-5 py-4">{messages.assets.columns.name}</th>
+                  <th className="px-5 py-4">{messages.assets.columns.type}</th>
+                  <th className="px-5 py-4">
+                    {messages.assets.columns.sectorChain}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -130,10 +137,12 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
                     </td>
                     <td className="px-5 py-4">{asset.name}</td>
                     <td className="px-5 py-4 text-[var(--muted)]">
-                      {asset.asset_type}
+                      {assetTypeLabel(asset.asset_type, messages)}
                     </td>
                     <td className="px-5 py-4 text-[var(--muted)]">
-                      {asset.chain ?? asset.sector ?? "Not classified"}
+                      {asset.chain ??
+                        asset.sector ??
+                        messages.assets.notClassified}
                     </td>
                   </tr>
                 ))}
@@ -145,11 +154,13 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
 
       <nav
         className="mt-6 flex items-center justify-between text-sm"
-        aria-label="Pagination"
+        aria-label={messages.assets.paginationLabel}
       >
         <span className="text-[var(--muted)]">
-          Page {response.pagination.page} of{" "}
-          {Math.max(response.pagination.total_pages, 1)}
+          {formatMessage(messages.assets.pageStatus, {
+            page: response.pagination.page,
+            totalPages: Math.max(response.pagination.total_pages, 1),
+          })}
         </span>
         <div className="flex gap-2">
           {page > 1 && (
@@ -157,7 +168,10 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
               className="rounded-md border p-2 hover:bg-white/5"
               href={pageHref(page - 1, search, assetType ?? "")}
             >
-              <ChevronLeft className="size-4" aria-label="Previous page" />
+              <ChevronLeft
+                className="size-4"
+                aria-label={messages.assets.previousPage}
+              />
             </Link>
           )}
           {page < response.pagination.total_pages && (
@@ -165,7 +179,10 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
               className="rounded-md border p-2 hover:bg-white/5"
               href={pageHref(page + 1, search, assetType ?? "")}
             >
-              <ChevronRight className="size-4" aria-label="Next page" />
+              <ChevronRight
+                className="size-4"
+                aria-label={messages.assets.nextPage}
+              />
             </Link>
           )}
         </div>

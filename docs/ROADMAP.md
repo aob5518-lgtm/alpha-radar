@@ -117,6 +117,30 @@ Do not use symbol as database primary key.
 
 ---
 
+# Sprint 1.5 — Internationalization Foundation
+
+Goal:
+
+Add English and Simplified Chinese localization to the existing web UI before additional product
+surface area is built.
+
+Required:
+
+- translation catalogs
+- centralized locale utilities
+- locale cookie persistence
+- server-rendered localized pages
+- reusable language switcher
+- localized presentation labels for asset types and statuses
+- locale-aware formatting helpers
+- glossary and architecture documentation
+
+Do not localize canonical API values or database fields.
+
+Do not introduce locale-prefixed routes unless a later architectural decision requires it.
+
+---
+
 # Sprint 2 — Market Data
 
 Goal:

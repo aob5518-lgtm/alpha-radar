@@ -6,6 +6,7 @@
     "web:dev": "pnpm --dir apps/web dev",
     "web:lint": "pnpm --dir apps/web lint",
     "web:typecheck": "pnpm --dir apps/web typecheck",
+    "web:test": "pnpm --dir apps/web test",
     "web:build": "pnpm --dir apps/web build",
     "web:format:check": "pnpm --dir apps/web format:check"
   }
