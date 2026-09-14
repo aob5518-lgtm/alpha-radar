@@ -45,3 +45,20 @@ export function formatCurrency(
     ...options,
   });
 }
+
+export function formatMarketPrice(
+  value: number,
+  locale: Locale,
+  quoteCurrency: string,
+  options: Intl.NumberFormatOptions = {},
+): string {
+  const priceOptions: Intl.NumberFormatOptions = {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 8,
+    ...options,
+  };
+  if (/^[A-Z]{3}$/.test(quoteCurrency)) {
+    return formatCurrency(value, locale, quoteCurrency, priceOptions);
+  }
+  return `${formatNumber(value, locale, priceOptions)} ${quoteCurrency}`;
+}

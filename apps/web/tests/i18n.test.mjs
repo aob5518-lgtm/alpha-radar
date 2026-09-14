@@ -9,6 +9,7 @@ import {
   parseLocale,
   supportedLocales,
 } from "../src/lib/i18n/config.ts";
+import { formatMarketPrice } from "../src/lib/i18n/format.ts";
 
 const messageFiles = {
   en: new URL("../messages/en.json", import.meta.url),
@@ -51,6 +52,8 @@ test("loads matching English and Simplified Chinese translation catalogs", async
 
   assert.equal(english.assets.title, "Asset directory");
   assert.equal(simplifiedChinese.assets.title, "资产目录");
+  assert.equal(english.market.freshness.stale, "Stale");
+  assert.equal(simplifiedChinese.market.freshness.stale, "陈旧");
   assert.deepEqual(flattenKeys(simplifiedChinese), flattenKeys(english));
 });
 
@@ -66,6 +69,12 @@ test("keeps API enum values language-neutral while providing localized labels", 
 
 test("uses a stable cookie for unauthenticated locale persistence", () => {
   assert.equal(localeCookieName, "alpha_radar_locale");
+});
+
+test("formats ISO and crypto quote currencies without conflating them", () => {
+  assert.match(formatMarketPrice(1234.5, "en", "USD"), /\$1,234\.50/);
+  assert.equal(formatMarketPrice(1234.5, "en", "USDT"), "1,234.50 USDT");
+  assert.equal(formatMarketPrice(1234.5, "zh-CN", "USDT"), "1,234.50 USDT");
 });
 
 test("language switcher persists locale and refreshes without changing route", async () => {

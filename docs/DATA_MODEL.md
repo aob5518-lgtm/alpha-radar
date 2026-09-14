@@ -27,11 +27,35 @@ assets returns 409 with candidate slugs.
 Market capitalization uses `numeric(30, 8)` and application `Decimal`, never floating point. Asset
 metadata uses PostgreSQL JSONB. Asset and mapping timestamps use timezone-aware `timestamptz` values.
 
+## Market instruments and observations
+
+`MarketInstrument.asset_id` references the canonical Asset UUID. It represents one
+provider-addressable spot pair or index, not a replacement for Asset identity. The unique provider
+identity is `(provider, provider_instrument_id)`. Instrument types initially used are `spot` and
+`index`; enum values also accommodate `perpetual`, `future`, and `option` without modeling a
+derivative as a new Asset. `AssetProviderMapping` is retained separately.
+
+Every instrument and observation stores explicit base and quote currencies. USD, USDT, USDC, EUR,
+and other quotes are distinct and are not implicitly converted.
+
+`MarketQuote` stores append-only observations in a Timescale hypertable partitioned by
+`observed_at`. Its Timescale-compatible primary key includes `(id, observed_at)`. `MarketCandle` is a
+hypertable partitioned by `open_time`; its primary/unique identity is
+`(provider, market_instrument_id, interval, open_time)`, which includes the partition column and
+supports idempotent upserts.
+
+Prices, bid/ask, sizes, OHLC, volume, and quote volume use `numeric(38, 18)` / `Decimal`. Quality and
+provider metadata use JSONB. All market observations reference `Asset.id`, never a ticker.
+
 ## Time
 
 Normalized timestamps are stored in UTC using PostgreSQL `timestamptz`. The model must keep distinct
 semantics for `published_at`, `fetched_at`, `detected_at`, and `event_time`; these fields are not
 interchangeable. Application code should use timezone-aware datetime values.
+
+Market data additionally distinguishes `provider_timestamp`, `observed_at`, and `ingested_at` for
+quotes, and `open_time`, `close_time`, optional `provider_timestamp`, and `ingested_at` for candles.
+A provider timestamp is nullable and must never be inferred from receipt time.
 
 ## Information lineage
 
