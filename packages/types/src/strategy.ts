@@ -76,7 +76,9 @@ export interface DemoObject {
   blocks: StrategicBlock[];
 }
 /** Ordinal fixture bands, never calibrated scores or promised returns. */
-export type DemoBand = ConfidenceLevel;
+export type OrdinalBand = "low" | "medium" | "high";
+/** Demo probability presentation only; not calibrated likelihood or confidence. */
+export type ProbabilityBand = "low" | "medium" | "high";
 export interface Theme extends DemoObject {
   slug: string;
   name: LocalizedText;
@@ -92,7 +94,7 @@ export interface Theme extends DemoObject {
     | "institutionalInterest"
     | "regulatoryTailwind"
     | "crowding",
-    DemoBand
+    OrdinalBand
   >;
 }
 export interface Opportunity extends DemoObject {
@@ -105,11 +107,11 @@ export interface Opportunity extends DemoObject {
   relatedProjectIds: string[];
   catalystIds: string[];
   timeHorizon: Horizon;
-  rewardPotential: DemoBand;
-  riskLevel: DemoBand;
-  capitalRequirement: DemoBand;
-  timeRequirement: DemoBand;
-  crowding: DemoBand;
+  rewardPotential: OrdinalBand;
+  riskLevel: OrdinalBand;
+  capitalRequirement: OrdinalBand;
+  timeRequirement: OrdinalBand;
+  crowding: OrdinalBand;
   confidenceBand: ConfidenceLevel;
   thesis: LocalizedText;
   counterThesis: LocalizedText;
@@ -131,7 +133,7 @@ export interface EarlyProject extends DemoObject {
     | "funding"
     | "competitiveMoat"
     | "attention",
-    DemoBand
+    OrdinalBand
   >;
 }
 export interface AirdropOpportunity extends DemoObject {
@@ -141,14 +143,14 @@ export interface AirdropOpportunity extends DemoObject {
   officialAirdropStatus: "confirmed" | "not_announced" | "none";
   pointsProgram: "yes" | "no" | "unknown";
   opportunityBasis: LocalizedText;
-  capitalRequirement: DemoBand;
-  estimatedGasCostBand: DemoBand;
-  timeRequirement: DemoBand;
-  sybilRisk: DemoBand;
-  dilutionRisk: DemoBand;
-  lockupRisk: DemoBand;
-  opportunityCost: DemoBand;
-  rewardPotential: DemoBand;
+  capitalRequirement: OrdinalBand;
+  estimatedGasCostBand: OrdinalBand;
+  timeRequirement: OrdinalBand;
+  sybilRisk: OrdinalBand;
+  dilutionRisk: OrdinalBand;
+  lockupRisk: OrdinalBand;
+  opportunityCost: OrdinalBand;
+  rewardPotential: OrdinalBand;
   confidenceBand: ConfidenceLevel;
   action: StrategicAction;
 }
@@ -173,7 +175,7 @@ export interface Catalyst extends DemoObject {
   scheduledAt: string | null;
   dateCertainty: "confirmed" | "tentative" | "unknown";
   impact: ImpactLevel;
-  probabilityBand: DemoBand;
+  probabilityBand: ProbabilityBand;
   pricedIn: PricedInLevel;
   affectedAssetIds: string[];
   preparationWindow: LocalizedText;
@@ -210,13 +212,13 @@ export interface StrategyPlaybook extends DemoObject {
   risks: LocalizedText;
   watchNext: LocalizedText;
   timeHorizon: Horizon;
-  capitalRequirement: DemoBand;
+  capitalRequirement: OrdinalBand;
   action: StrategicAction;
   exit: ExitFramework;
 }
 export interface CycleReadiness extends DemoObject {
   regime: CycleRegime;
-  readiness: DemoBand;
+  readiness: OrdinalBand;
   dimensions: Record<
     | "liquidity"
     | "institutionalFlow"
@@ -226,7 +228,7 @@ export interface CycleReadiness extends DemoObject {
     | "retailAttention"
     | "narrativeBreadth"
     | "macroSupport",
-    DemoBand
+    OrdinalBand
   >;
   evidence: LocalizedText[];
   counterEvidence: LocalizedText[];

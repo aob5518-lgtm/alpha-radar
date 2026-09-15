@@ -62,6 +62,23 @@ const catalogs = await Promise.all(
   ),
 );
 
+test("ordinal, probability and confidence contracts remain semantically independent", async () => {
+  const contract = await readFile(
+    new URL("../../../packages/types/src/strategy.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(contract, /type OrdinalBand = "low" \| "medium" \| "high";/);
+  assert.match(contract, /type ProbabilityBand = "low" \| "medium" \| "high";/);
+  assert.match(contract, /probabilityBand: ProbabilityBand;/);
+  assert.match(contract, /confidenceBand: ConfidenceLevel;/);
+  assert.match(contract, /rewardPotential: OrdinalBand;/);
+  assert.match(contract, /estimatedGasCostBand: OrdinalBand;/);
+  assert.doesNotMatch(
+    contract,
+    /DemoBand|type (OrdinalBand|ProbabilityBand) = ConfidenceLevel/,
+  );
+});
+
 test("strategic objects are deterministic demos with all six analysis distinctions", () => {
   assert.equal(new Set(records.map((item) => item.id)).size, records.length);
   for (const item of records) {

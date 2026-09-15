@@ -26,6 +26,10 @@ Presentation contracts live in `packages/types/src/strategy.ts`. They reuse Rada
 Horizon, ImpactLevel and categorical confidence for display only. They are not backend canonical
 Event storage or database schema proposals.
 
+`OrdinalBand` describes generic low/medium/high demo dimensions; `ProbabilityBand` describes
+demo probability presentation, and `ConfidenceLevel` is reserved for confidence. These are
+independent semantic contracts despite sharing initial labels, not calibrated numeric measures.
+
 | Object | Purpose and boundary |
 | --- | --- |
 | Theme | Stable demo ID/slug, name, description, stage; nine ordinal presentation dimensions. No real theme scoring model or ranking. |
