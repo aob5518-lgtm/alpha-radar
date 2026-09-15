@@ -244,6 +244,29 @@ Answers should eventually include:
 - related assets
 - related events
 
+### Product Shell and Intelligence Map
+
+The first product-shell implementation validates the information architecture before the real
+Sources, Story Clustering, Event Engine, and Event-to-Asset Mapping domains exist. It provides the
+shared navigation for Command Center, Radar, Discover, Assets, Watchlist, Alerts, and AI Analyst,
+plus three Radar presentations: Timeline, Impact Map, and Heatmap.
+
+This implementation uses a fixed, deterministic sample snapshot. Every sample event, relationship,
+source, score-like value, and derived surface must be visibly marked `Demo Data` or
+`Sample Intelligence` in both supported languages. Sample sources are illustrative references and
+must never be presented as fetched evidence. The shell does not provide live intelligence,
+investment recommendations, persisted watchlists, notifications, or model-generated answers.
+
+The product shell previews the future user experience without changing the required intelligence
+lineage:
+
+```text
+Article -> Story Cluster -> Event -> Asset Mapping -> Impact
+```
+
+When those domains are implemented, validated API contracts will replace the fixtures; presentation
+components must not become a parallel event domain.
+
 ## 4. System Architecture
 
 Initial architecture:

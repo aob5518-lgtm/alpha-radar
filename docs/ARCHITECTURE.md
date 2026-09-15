@@ -74,6 +74,31 @@ and `Intl`-based date, number, percent, and currency formatters live under `apps
 Future AI Analyst requests must receive the user's preferred locale so model output can match the UI
 language, but AI integration remains deferred.
 
+## Product shell and demo-intelligence boundary
+
+The web application owns a presentation-only Intelligence Map shell. Language-neutral TypeScript
+contracts for `RadarItem`, `AssetImpact`, source tier, direction, impact, horizon, order, confidence,
+status, and priced-in state live in `packages/types`. Deterministic fixtures and pure filtering/view
+derivations live under `apps/web/src/lib/intelligence`; they do not call the network and all fixture
+records carry `isDemo: true`.
+
+The fixed sample snapshot is intentionally independent from wall-clock time so UI behavior and tests
+remain reproducible. Demo assets reference the existing canonical Asset UUIDs, allowing Asset pages
+to link into filtered Radar views without using ticker symbols as business identifiers. Tickers are
+used only as human-readable route query conveniences.
+
+The shell does not add backend models, migrations, provider adapters, queues, or Graph infrastructure.
+The Impact Map is a frontend projection of the fixture's typed relationships rather than a graph
+database. Its future source of truth remains the evidence-preserving pipeline:
+
+```text
+Article -> Story Cluster -> Event -> Asset Mapping -> Impact
+```
+
+Until those domains ship, sample source names never imply retrieval and every intelligence surface
+must display the localized demo disclosure. Real Event APIs should replace the fixture adapter at the
+presentation boundary rather than reuse demo records as domain entities.
+
 ## Deferred decisions
 
 Authentication, live provider adapters, market data, events, AI integrations, task routing, cloud

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./assets": "./src/assets.ts"
+    "./assets": "./src/assets.ts",
+    "./radar": "./src/radar.ts"
   }
 }
