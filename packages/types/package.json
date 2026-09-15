@@ -6,6 +6,7 @@
   "exports": {
     "./assets": "./src/assets.ts",
     "./radar": "./src/radar.ts",
-    "./market-data": "./src/market-data.ts"
+    "./market-data": "./src/market-data.ts",
+    "./strategy": "./src/strategy.ts"
   }
 }

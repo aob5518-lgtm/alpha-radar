@@ -14,6 +14,9 @@ import { EventCard } from "@/components/radar/event-card";
 import { getTranslations } from "@/lib/i18n/server";
 import { demoRadarItems, localize } from "@/lib/intelligence/demo-data";
 import { orderRadarItems } from "@/lib/intelligence/derive";
+import { StrategyDisclosure } from "@/components/strategy/strategy-ui";
+import { demoOpportunities } from "@/lib/strategy/demo-data";
+import { opportunityHref } from "@/lib/strategy/derive";
 
 export default async function Home() {
   const { locale, messages } = await getTranslations();
@@ -169,6 +172,31 @@ export default async function Home() {
           }
           demoLabel={messages.common.demoData}
         />
+      </section>
+      <section className="mt-6">
+        <SectionHeading
+          title={messages.strategy.top}
+          href="/strategy"
+          linkLabel={messages.nav.strategy}
+        />
+        <StrategyDisclosure messages={messages} />
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {demoOpportunities.slice(0, 2).map((item) => (
+            <Link
+              className="panel p-5"
+              key={item.id}
+              href={opportunityHref(item.id)}
+            >
+              <DemoBadge label={messages.common.demoData} />
+              <h3 className="mt-3 font-semibold">
+                {localize(item.title, locale)}
+              </h3>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                {localize(item.summary, locale)}
+              </p>
+            </Link>
+          ))}
+        </div>
       </section>
       <p className="mt-8 text-center text-xs text-[var(--muted)]">
         {messages.common.demoDisclaimer}
