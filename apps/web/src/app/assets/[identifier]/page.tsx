@@ -3,8 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DemoBadge } from "@/components/demo-badge";
-import { getAsset } from "@/lib/api/assets";
 import { eventTypeLabel, impactLabel } from "@/lib/i18n/intelligence-labels";
+import { MarketHistoryChart } from "@/components/market-history-chart";
+import { getAsset, getMarketHistory, getMarketQuote } from "@/lib/api/assets";
+import { formatDateTime, formatMarketPrice } from "@/lib/i18n/format";
 import { assetStatusLabel, assetTypeLabel } from "@/lib/i18n/labels";
 import { getTranslations } from "@/lib/i18n/server";
 import { demoRadarItems, localize } from "@/lib/intelligence/demo-data";
@@ -22,6 +24,10 @@ export default async function AssetPage({ params }: AssetPageProps) {
   const asset = await getAsset(identifier);
   if (!asset) notFound();
   const intelligence = relatedItemsForAsset(demoRadarItems, asset.id);
+  const [quote, history] = await Promise.all([
+    getMarketQuote(identifier),
+    getMarketHistory(identifier),
+  ]);
 
   return (
     <main className="page-shell">
@@ -94,6 +100,88 @@ export default async function AssetPage({ params }: AssetPageProps) {
         </dl>
       </section>
 
+      <section className="mt-6 rounded-2xl border bg-[var(--card)] p-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-medium">
+              {messages.assets.sections.market}
+            </h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {messages.market.sourcedData}
+            </p>
+          </div>
+          {quote ? (
+            <span
+              className={
+                quote.is_stale
+                  ? "w-fit rounded-full bg-amber-400/15 px-3 py-1 text-xs text-amber-300"
+                  : "w-fit rounded-full bg-emerald-400/15 px-3 py-1 text-xs text-emerald-300"
+              }
+            >
+              {quote.is_stale
+                ? messages.market.freshness.stale
+                : messages.market.freshness.fresh}
+            </span>
+          ) : null}
+        </div>
+
+        {quote ? (
+          <>
+            <dl className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <dt className="text-xs text-[var(--muted)] uppercase">
+                  {messages.market.latestPrice}
+                </dt>
+                <dd className="mt-1 text-2xl font-semibold">
+                  {formatMarketPrice(
+                    Number(quote.price),
+                    locale,
+                    quote.quote_currency,
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-[var(--muted)] uppercase">
+                  {messages.market.quoteCurrency}
+                </dt>
+                <dd className="mt-1">{quote.quote_currency}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-[var(--muted)] uppercase">
+                  {messages.market.provider}
+                </dt>
+                <dd className="mt-1">{quote.provider}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-[var(--muted)] uppercase">
+                  {messages.market.lastUpdated}
+                </dt>
+                <dd className="mt-1">
+                  {formatDateTime(quote.observed_at, locale)}
+                </dd>
+              </div>
+            </dl>
+            {history && history.items.length >= 2 ? (
+              <MarketHistoryChart
+                candles={history.items}
+                label={messages.market.chartLabel}
+              />
+            ) : (
+              <p className="mt-6 text-sm text-[var(--muted)]">
+                {messages.market.historyUnavailable}
+              </p>
+            )}
+            <p className="mt-4 text-xs text-[var(--muted)]">
+              {messages.market.performanceUnavailable}
+            </p>
+          </>
+        ) : (
+          <p className="mt-6 text-sm text-[var(--muted)]">
+            {messages.market.quoteUnavailable}
+          </p>
+        )}
+      </section>
+
       <div className="mt-6 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs leading-5 text-amber-100">
         {messages.assets.demoContext}
       </div>
@@ -136,10 +224,7 @@ export default async function AssetPage({ params }: AssetPageProps) {
             <Empty text={messages.assets.noDemoEvents} />
           )}
         </IntelligenceSection>
-        <PlaceholderSection
-          title={messages.assets.sections.market}
-          description={messages.assets.sections.notIntegratedDescription}
-        />
+
         <PlaceholderSection
           title={messages.assets.sections.fundamentals}
           description={messages.assets.sections.notIntegratedDescription}

@@ -1,24 +1,9 @@
 import { DemoBadge } from "@/components/demo-badge";
 import { RadarWorkspace } from "@/components/radar/radar-workspace";
 import { getTranslations } from "@/lib/i18n/server";
-import { allDemoAssets } from "@/lib/intelligence/demo-data";
 
-interface RadarPageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-const first = (value: string | string[] | undefined): string | undefined =>
-  Array.isArray(value) ? value[0] : value;
-
-export default async function RadarPage({ searchParams }: RadarPageProps) {
+export default async function RadarPage() {
   const { locale, messages } = await getTranslations();
-  const params = await searchParams;
-  const assetQuery = first(params.asset);
-  const initialAssetId = allDemoAssets.find(
-    (asset) =>
-      asset.assetId === assetQuery ||
-      asset.symbol.toLowerCase() === assetQuery?.toLowerCase() ||
-      asset.slug === assetQuery,
-  )?.assetId;
 
   return (
     <main className="page-shell">
@@ -38,12 +23,7 @@ export default async function RadarPage({ searchParams }: RadarPageProps) {
         {messages.common.demoDisclaimer}
       </div>
       <div className="mt-6">
-        <RadarWorkspace
-          locale={locale}
-          messages={messages}
-          initialAssetId={initialAssetId}
-          initialEventId={first(params.event)}
-        />
+        <RadarWorkspace locale={locale} messages={messages} />
       </div>
     </main>
   );

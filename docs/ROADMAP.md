@@ -166,6 +166,21 @@ Start with a limited provider set.
 
 Do not tightly couple business logic to provider formats.
 
+Implemented foundation:
+
+- canonical Asset-linked market instruments
+- fixed-precision quote and OHLCV observations
+- quote and candle Timescale hypertables
+- idempotent candle upserts
+- typed mock and Coinbase Exchange provider adapters
+- Celery ingestion tasks with configurable scheduling
+- bounded quote/history APIs
+- localized Asset Market UI
+- deterministic real-PostgreSQL integration verification
+
+Production vendor entitlements, equities feeds, WebSocket streaming, composite prices, conversion,
+derivatives analytics, and technical indicators remain deferred.
+
 ---
 
 # Sprint 3 — Sources and Articles

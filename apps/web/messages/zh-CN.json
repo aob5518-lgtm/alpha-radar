@@ -212,6 +212,21 @@
       "notIntegratedDescription": "尚未接入。此区域只会在平台已有来源数据时展示。"
     }
   },
+  "market": {
+    "sourcedData": "平台已持久化并保留数据源溯源信息的市场观测。",
+    "latestPrice": "最新价格",
+    "quoteCurrency": "计价货币",
+    "provider": "数据提供方",
+    "lastUpdated": "最后更新",
+    "quoteUnavailable": "暂无已持久化的市场报价。",
+    "historyUnavailable": "该市场标的暂无 OHLC 历史数据。",
+    "performanceUnavailable": "缺少足够的可比历史数据，暂不提供 24 小时表现。",
+    "chartLabel": "收盘价历史",
+    "freshness": {
+      "fresh": "新鲜",
+      "stale": "陈旧"
+    }
+  },
   "labels": {
     "assetTypes": {
       "crypto": "加密资产",

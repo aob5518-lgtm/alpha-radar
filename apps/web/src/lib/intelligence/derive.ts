@@ -47,7 +47,7 @@ export function filterRadarItems(
     if (filters.eventType && item.eventType !== filters.eventType) return false;
     if (
       filters.assetId &&
-      !item.assets.some((asset) => asset.assetId === filters.assetId)
+      !item.impacts.some((impact) => impact.assetId === filters.assetId)
     )
       return false;
     if (
@@ -109,7 +109,7 @@ export function relatedItemsForAsset(
 ): RadarItem[] {
   return orderRadarItems(
     items.filter((item) =>
-      item.assets.some((asset) => asset.assetId === assetId),
+      item.impacts.some((impact) => impact.assetId === assetId),
     ),
   );
 }

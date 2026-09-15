@@ -18,7 +18,7 @@ import { orderRadarItems } from "@/lib/intelligence/derive";
 export default async function Home() {
   const { locale, messages } = await getTranslations();
   const ordered = orderRadarItems(demoRadarItems);
-  const breaking = ordered.filter((item) => item.isBreaking);
+  const breaking = ordered.filter((item) => item.status === "breaking");
   const macroRegulation = ordered.filter(
     (item) => item.eventType === "macro" || item.eventType === "regulation",
   );

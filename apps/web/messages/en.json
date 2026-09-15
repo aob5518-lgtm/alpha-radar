@@ -212,6 +212,21 @@
       "notIntegratedDescription": "Not yet integrated. This section will only display sourced platform data when available."
     }
   },
+  "market": {
+    "sourcedData": "Persisted platform observations with provider provenance.",
+    "latestPrice": "Latest price",
+    "quoteCurrency": "Quote currency",
+    "provider": "Provider",
+    "lastUpdated": "Last updated",
+    "quoteUnavailable": "No persisted market quote is available.",
+    "historyUnavailable": "OHLC history is not available for this instrument.",
+    "performanceUnavailable": "24h performance is not available without sufficient comparable history.",
+    "chartLabel": "Closing-price history",
+    "freshness": {
+      "fresh": "Fresh",
+      "stale": "Stale"
+    }
+  },
   "labels": {
     "assetTypes": {
       "crypto": "Crypto",

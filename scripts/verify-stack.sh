@@ -93,3 +93,90 @@ case "${SECOND_SEED_OUTPUT}" in
     exit 1
     ;;
 esac
+
+run_market_data_seed() {
+  docker compose run --rm api python -m alpha_radar.market_data.seed
+}
+
+market_data_counts() {
+  docker compose exec -T postgres psql -U "${POSTGRES_USER}" \
+    -d "${POSTGRES_DB}" \
+    -tAc "SELECT (SELECT count(*) FROM market_instruments), (SELECT count(*) FROM market_quotes), (SELECT count(*) FROM market_candles);"
+}
+
+docker compose exec -T postgres psql -U "${POSTGRES_USER}" \
+  -d "${POSTGRES_DB}" \
+  -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('market_instruments', 'market_quotes', 'market_candles') ORDER BY table_name;"
+
+HYPERTABLES="$(docker compose exec -T postgres psql -U "${POSTGRES_USER}" \
+  -d "${POSTGRES_DB}" \
+  -tAc "SELECT hypertable_name FROM timescaledb_information.hypertables WHERE hypertable_schema = 'public' AND hypertable_name IN ('market_quotes', 'market_candles') ORDER BY hypertable_name;")"
+if [ "${HYPERTABLES}" != "market_candles
+market_quotes" ]; then
+  printf 'Expected market quote and candle hypertables, got:\n%s\n' "${HYPERTABLES}" >&2
+  exit 1
+fi
+
+FIRST_MARKET_SEED_OUTPUT="$(run_market_data_seed)"
+printf '%s\n' "${FIRST_MARKET_SEED_OUTPUT}"
+MARKET_COUNTS_AFTER_FIRST="$(market_data_counts)"
+
+MARKET_QUOTE_JSON="$(curl --fail --silent "${API_URL}/api/v1/assets/bitcoin/quote")"
+MARKET_HISTORY_JSON="$(curl --fail --silent "${API_URL}/api/v1/assets/bitcoin/history?interval=1h&limit=10")"
+export MARKET_QUOTE_JSON
+export MARKET_HISTORY_JSON
+python - <<'PY'
+from decimal import Decimal
+import json
+import os
+
+quote = json.loads(os.environ["MARKET_QUOTE_JSON"])
+history = json.loads(os.environ["MARKET_HISTORY_JSON"])
+
+if quote["symbol"] != "BTC" or quote["provider"] != "mock":
+    raise SystemExit(f"unexpected quote identity: {quote}")
+if quote["quote_currency"] != "USD":
+    raise SystemExit(f"expected explicit USD quote currency, got {quote['quote_currency']}")
+if Decimal(quote["price"]) != Decimal("60000.12345678"):
+    raise SystemExit(f"unexpected Decimal quote price: {quote['price']}")
+if quote["asset_id"] != history["asset_id"]:
+    raise SystemExit("quote and history do not link to the same canonical Asset UUID")
+if len(history["items"]) != 3:
+    raise SystemExit(f"expected 3 sample candles, got {len(history['items'])}")
+open_times = [item["open_time"] for item in history["items"]]
+if open_times != sorted(open_times):
+    raise SystemExit("history API is not ordered by open_time ascending")
+if any(item["market_instrument_id"] != quote["market_instrument_id"] for item in history["items"]):
+    raise SystemExit("history contains a candle from the wrong market instrument")
+
+print("Market quote and history API verification passed.")
+PY
+
+SECOND_MARKET_SEED_OUTPUT="$(run_market_data_seed)"
+printf '%s\n' "${SECOND_MARKET_SEED_OUTPUT}"
+MARKET_COUNTS_AFTER_SECOND="$(market_data_counts)"
+
+FIRST_INSTRUMENTS="$(printf '%s' "${MARKET_COUNTS_AFTER_FIRST}" | cut -d'|' -f1)"
+FIRST_QUOTES="$(printf '%s' "${MARKET_COUNTS_AFTER_FIRST}" | cut -d'|' -f2)"
+FIRST_CANDLES="$(printf '%s' "${MARKET_COUNTS_AFTER_FIRST}" | cut -d'|' -f3)"
+SECOND_INSTRUMENTS="$(printf '%s' "${MARKET_COUNTS_AFTER_SECOND}" | cut -d'|' -f1)"
+SECOND_QUOTES="$(printf '%s' "${MARKET_COUNTS_AFTER_SECOND}" | cut -d'|' -f2)"
+SECOND_CANDLES="$(printf '%s' "${MARKET_COUNTS_AFTER_SECOND}" | cut -d'|' -f3)"
+
+if [ "${FIRST_INSTRUMENTS}" != "4" ] || [ "${SECOND_INSTRUMENTS}" != "4" ]; then
+  printf 'Market instrument seed is not idempotent: %s -> %s\n' \
+    "${FIRST_INSTRUMENTS}" "${SECOND_INSTRUMENTS}" >&2
+  exit 1
+fi
+if [ "${FIRST_CANDLES}" != "3" ] || [ "${SECOND_CANDLES}" != "3" ]; then
+  printf 'Candle upsert created duplicates: %s -> %s\n' \
+    "${FIRST_CANDLES}" "${SECOND_CANDLES}" >&2
+  exit 1
+fi
+if [ "${SECOND_QUOTES}" -ne "$((FIRST_QUOTES + 1))" ]; then
+  printf 'Expected append-only quote observation count to increase by one: %s -> %s\n' \
+    "${FIRST_QUOTES}" "${SECOND_QUOTES}" >&2
+  exit 1
+fi
+
+printf 'Market instrument and candle idempotency verification passed.\n'

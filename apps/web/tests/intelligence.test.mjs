@@ -16,6 +16,10 @@ import {
   orderRadarItems,
   relatedItemsForAsset,
 } from "../src/lib/intelligence/derive.ts";
+import {
+  parseRadarState,
+  serializeRadarState,
+} from "../src/lib/intelligence/url-state.ts";
 
 const messageFiles = {
   en: new URL("../messages/en.json", import.meta.url),
@@ -26,7 +30,12 @@ test("demo intelligence contracts preserve canonical identities and explicit dem
   assert.ok(demoRadarItems.length >= 6);
   for (const item of demoRadarItems) {
     assert.equal(item.isDemo, true);
-    assert.equal(item.sourceCount, item.sources.length);
+    assert.equal("sourceCount" in item, false);
+    assert.equal("isBreaking" in item, false);
+    assert.deepEqual(
+      item.assets.map((asset) => asset.assetId),
+      item.impacts.map((impact) => impact.assetId),
+    );
     assert.ok(item.sources.every((source) => source.isDemo));
     assert.ok(
       item.assets.every((asset) => /^[0-9a-f-]{36}$/.test(asset.assetId)),
@@ -157,4 +166,51 @@ test("radar surfaces render explicit demo markers", async () => {
     files.map((file) => readFile(file, "utf8")),
   );
   assert.ok(sources.every((source) => source.includes("DemoBadge")));
+});
+
+test("URL state round trips filters, canonical asset, event, and view", () => {
+  const state = parseRadarState(
+    new URLSearchParams(
+      "asset=BTC&type=regulation&impact=high&range=24h&event=demo-crypto-rule&view=heatmap",
+    ),
+    Object.values(demoAssets),
+  );
+  assert.equal(state.filters.assetId, demoAssets.bitcoin.assetId);
+  assert.equal(state.filters.eventType, "regulation");
+  assert.equal(state.filters.timeRange, "24h");
+  assert.deepEqual(
+    parseRadarState(
+      new URLSearchParams(serializeRadarState(state)),
+      Object.values(demoAssets),
+    ),
+    state,
+  );
+  const invalid = parseRadarState(
+    new URLSearchParams("range=bad&type=bad&class=bad&view=bad"),
+    Object.values(demoAssets),
+  );
+  assert.equal(invalid.filters.timeRange, "7d");
+  assert.equal(invalid.filters.eventType, undefined);
+  assert.equal(invalid.filters.assetType, undefined);
+  assert.equal(invalid.view, "timeline");
+});
+
+test("integrated Asset page retains persisted Market and labeled Radar contexts", async () => {
+  const source = await readFile(
+    new URL("../src/app/assets/[identifier]/page.tsx", import.meta.url),
+    "utf8",
+  );
+  for (const required of [
+    "getMarketQuote",
+    "getMarketHistory",
+    "MarketHistoryChart",
+    "messages.market.freshness",
+    "quote.provider",
+    "messages.assets.demoContext",
+    "relatedItemsForAsset",
+    "messages.assets.sections.events",
+    "messages.assets.sections.risk",
+    "/radar?asset=",
+  ])
+    assert.ok(source.includes(required), required);
 });

@@ -3,6 +3,11 @@ import type {
   AssetListResponse,
   AssetType,
 } from "@alpha-radar/types/assets";
+import type {
+  MarketHistory,
+  MarketInterval,
+  MarketQuote,
+} from "@alpha-radar/types/market-data";
 
 const apiUrl = process.env.API_URL ?? "http://localhost:8000";
 
@@ -52,6 +57,38 @@ export async function getAsset(
   try {
     return await request<AssetDetail>(
       `/api/v1/assets/${encodeURIComponent(identifier)}`,
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+export async function getMarketQuote(
+  identifier: string,
+): Promise<MarketQuote | null> {
+  try {
+    return await request<MarketQuote>(
+      `/api/v1/assets/${encodeURIComponent(identifier)}/quote`,
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+export async function getMarketHistory(
+  identifier: string,
+  interval: MarketInterval = "1h",
+  limit = 48,
+): Promise<MarketHistory | null> {
+  try {
+    const params = new URLSearchParams({
+      interval,
+      limit: String(limit),
+    });
+    return await request<MarketHistory>(
+      `/api/v1/assets/${encodeURIComponent(identifier)}/history?${params.toString()}`,
     );
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;

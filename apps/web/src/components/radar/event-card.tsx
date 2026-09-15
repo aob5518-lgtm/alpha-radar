@@ -81,7 +81,7 @@ export function EventCard({
         </span>
         <span className="inline-flex items-center gap-1.5">
           <ShieldCheck className="size-3.5" aria-hidden="true" />
-          {confidenceLabel(item.confidence, messages)} · {item.sourceCount}{" "}
+          {confidenceLabel(item.confidence, messages)} · {item.sources.length}{" "}
           {messages.radar.sourceCount}
           {onSelect && <ArrowRight className="size-3.5" aria-hidden="true" />}
         </span>

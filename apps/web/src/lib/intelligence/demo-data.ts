@@ -96,7 +96,7 @@ const source = (
   isDemo: true,
 });
 
-export const demoRadarItems: RadarItem[] = [
+const demoItems: Omit<RadarItem, "assets">[] = [
   {
     id: "demo-fed-path",
     title: text(
@@ -115,12 +115,6 @@ export const demoRadarItems: RadarItem[] = [
     importance: "high",
     confidence: "medium",
     pricedIn: "partial",
-    assets: [
-      demoAssets.us10y,
-      demoAssets.dxy,
-      demoAssets.spy,
-      demoAssets.bitcoin,
-    ],
     impacts: [
       {
         assetId: demoAssets.us10y.assetId,
@@ -159,12 +153,10 @@ export const demoRadarItems: RadarItem[] = [
         confidence: "low",
       },
     ],
-    sourceCount: 2,
     sources: [
       source("fed-sample", "Federal Reserve", "primary"),
       source("reuters-sample", "Reuters", "major_media"),
     ],
-    isBreaking: true,
     isDemo: true,
     updatedAt: "2026-01-15T13:52:00.000Z",
     whatChanged: text(
@@ -222,7 +214,6 @@ export const demoRadarItems: RadarItem[] = [
     importance: "high",
     confidence: "high",
     pricedIn: "not_priced",
-    assets: [demoAssets.coinbase, demoAssets.bitcoin, demoAssets.ethereum],
     impacts: [
       {
         assetId: demoAssets.coinbase.assetId,
@@ -252,12 +243,10 @@ export const demoRadarItems: RadarItem[] = [
         confidence: "medium",
       },
     ],
-    sourceCount: 2,
     sources: [
       source("sec-sample", "SEC", "primary"),
       source("specialist-sample", "Sample Regulatory Desk", "specialist"),
     ],
-    isBreaking: false,
     isDemo: true,
     whatChanged: text(
       "The fictional review window was extended.",
@@ -314,7 +303,6 @@ export const demoRadarItems: RadarItem[] = [
     importance: "medium",
     confidence: "high",
     pricedIn: "mostly_priced",
-    assets: [demoAssets.ibit, demoAssets.bitcoin, demoAssets.coinbase],
     impacts: [
       {
         assetId: demoAssets.ibit.assetId,
@@ -344,12 +332,10 @@ export const demoRadarItems: RadarItem[] = [
         confidence: "medium",
       },
     ],
-    sourceCount: 2,
     sources: [
       source("issuer-sample", "Sample ETF Issuer", "primary"),
       source("terminal-sample", "Sample Flow Monitor", "specialist"),
     ],
-    isBreaking: false,
     isDemo: true,
     whatChanged: text(
       "The synthetic flow series broadened across two sessions.",
@@ -406,7 +392,6 @@ export const demoRadarItems: RadarItem[] = [
     importance: "high",
     confidence: "medium",
     pricedIn: "partial",
-    assets: [demoAssets.nvidia, demoAssets.qqq, demoAssets.spy],
     impacts: [
       {
         assetId: demoAssets.nvidia.assetId,
@@ -436,12 +421,10 @@ export const demoRadarItems: RadarItem[] = [
         confidence: "low",
       },
     ],
-    sourceCount: 2,
     sources: [
       source("filing-sample", "Sample Company Filing", "primary"),
       source("media-sample", "Sample Major Media", "major_media"),
     ],
-    isBreaking: false,
     isDemo: true,
     watchNext: text(
       "Watch sample order conversion and margin sensitivity.",
@@ -493,7 +476,6 @@ export const demoRadarItems: RadarItem[] = [
     importance: "medium",
     confidence: "medium",
     pricedIn: "unknown",
-    assets: [demoAssets.bitcoin, demoAssets.ethereum, demoAssets.solana],
     impacts: [
       {
         assetId: demoAssets.bitcoin.assetId,
@@ -523,7 +505,6 @@ export const demoRadarItems: RadarItem[] = [
         confidence: "low",
       },
     ],
-    sourceCount: 1,
     sources: [
       source(
         "structure-sample",
@@ -531,7 +512,6 @@ export const demoRadarItems: RadarItem[] = [
         "specialist",
       ),
     ],
-    isBreaking: false,
     isDemo: true,
     whatChanged: text(
       "The demo spread dispersion moved above its fixed threshold.",
@@ -581,7 +561,6 @@ export const demoRadarItems: RadarItem[] = [
     importance: "low",
     confidence: "high",
     pricedIn: "mostly_priced",
-    assets: [demoAssets.dxy, demoAssets.us10y, demoAssets.spy],
     impacts: [
       {
         assetId: demoAssets.dxy.assetId,
@@ -611,9 +590,7 @@ export const demoRadarItems: RadarItem[] = [
         confidence: "medium",
       },
     ],
-    sourceCount: 1,
     sources: [source("macro-sample", "Sample Macro Monitor", "specialist")],
-    isBreaking: false,
     isDemo: true,
     updatedAt: "2026-01-10T16:00:00.000Z",
     whatChanged: text(
@@ -650,6 +627,17 @@ export const demoRadarItems: RadarItem[] = [
 ];
 
 export const allDemoAssets = Object.values(demoAssets);
+
+export const demoRadarItems: RadarItem[] = demoItems.map((item) => ({
+  ...item,
+  assets: item.impacts.map((impact) => {
+    const asset = allDemoAssets.find(
+      (candidate) => candidate.assetId === impact.assetId,
+    );
+    if (!asset) throw new Error(`Unknown demo asset ${impact.assetId}`);
+    return asset;
+  }),
+}));
 
 export function localize(value: LocalizedText, locale: "en" | "zh-CN"): string {
   return value[locale];

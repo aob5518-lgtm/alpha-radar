@@ -1,3 +1,5 @@
+import type { AssetType } from "./assets";
+
 export const eventTypes = [
   "macro",
   "regulation",
@@ -21,6 +23,9 @@ export type Direction = (typeof directions)[number];
 
 export const impactLevels = ["low", "medium", "high"] as const;
 export type ImpactLevel = (typeof impactLevels)[number];
+
+export const importanceLevels = ["low", "medium", "high"] as const;
+export type ImportanceLevel = (typeof importanceLevels)[number];
 
 export const confidenceLevels = ["low", "medium", "high"] as const;
 export type ConfidenceLevel = (typeof confidenceLevels)[number];
@@ -58,6 +63,7 @@ export const intelligenceKinds = [
 ] as const;
 export type IntelligenceKind = (typeof intelligenceKinds)[number];
 
+/** Demo/presentation copy, not canonical backend Event storage. */
 export interface LocalizedText {
   en: string;
   "zh-CN": string;
@@ -68,7 +74,7 @@ export interface RadarAsset {
   slug: string;
   symbol: string;
   name: LocalizedText;
-  assetType: string;
+  assetType: AssetType;
 }
 
 export interface AssetImpact {
@@ -102,14 +108,13 @@ export interface RadarItem {
   eventTime?: string;
   publishedAt?: string;
   detectedAt: string;
-  importance: ImpactLevel;
+  importance: ImportanceLevel;
   confidence: ConfidenceLevel;
   pricedIn: PricedInLevel;
   assets: RadarAsset[];
+  /** Canonical event-to-asset relationships; assets contains derived display metadata. */
   impacts: AssetImpact[];
-  sourceCount: number;
   sources: SourceRecord[];
-  isBreaking: boolean;
   isDemo: true;
   updatedAt?: string;
   whatChanged?: LocalizedText;
@@ -124,7 +129,7 @@ export interface RadarFilters {
   timeRange: RadarTimeRange;
   eventType?: EventType;
   assetId?: string;
-  assetType?: string;
+  assetType?: AssetType;
   direction?: Direction;
   impact?: ImpactLevel;
   confidence?: ConfidenceLevel;

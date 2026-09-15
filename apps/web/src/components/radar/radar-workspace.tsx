@@ -14,7 +14,13 @@ import {
   type RadarItem,
 } from "@alpha-radar/types/radar";
 import { ArrowDownRight, Grid3X3, ListTree, Network } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  parseRadarState,
+  serializeRadarState,
+  type RadarState,
+} from "@/lib/intelligence/url-state";
 
 import { DemoBadge } from "@/components/demo-badge";
 import { EventCard } from "@/components/radar/event-card";
@@ -50,33 +56,29 @@ import {
 } from "@/lib/intelligence/presentation";
 import { cn } from "@/lib/utils";
 
-type View = "timeline" | "impact" | "heatmap";
 const emptyToUndefined = <T extends string>(value: string): T | undefined =>
   value ? (value as T) : undefined;
 
 interface RadarWorkspaceProps {
   locale: Locale;
   messages: Messages;
-  initialAssetId?: string;
-  initialEventId?: string;
 }
 
-export function RadarWorkspace({
-  locale,
-  messages,
-  initialAssetId,
-  initialEventId,
-}: RadarWorkspaceProps) {
-  const defaultFilters: RadarFilters = {
-    timeRange: "7d",
-    assetId: initialAssetId,
-  };
-  const [filters, setFilters] = useState<RadarFilters>(defaultFilters);
-  const [view, setView] = useState<View>("timeline");
-  const [selected, setSelected] = useState<RadarItem | undefined>(() =>
-    demoRadarItems.find((item) => item.id === initialEventId),
+export function RadarWorkspace({ locale, messages }: RadarWorkspaceProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const state = parseRadarState(
+    new URLSearchParams(searchParams.toString()),
+    allDemoAssets,
   );
-  const selectItem = useCallback((item: RadarItem) => setSelected(item), []);
+  const { filters, view } = state;
+  const selected = demoRadarItems.find((item) => item.id === state.eventId);
+  const navigate = (next: RadarState) =>
+    router.push(`${pathname}?${serializeRadarState(next)}`, { scroll: false });
+  const selectItem = (item: RadarItem) =>
+    navigate({ ...state, eventId: item.id });
+  const setView = (view: RadarState["view"]) => navigate({ ...state, view });
   const visible = useMemo(
     () => filterRadarItems(demoRadarItems, filters, DEMO_REFERENCE_TIME),
     [filters],
@@ -85,13 +87,16 @@ export function RadarWorkspace({
     visible.flatMap((item) => item.assets.map((asset) => asset.assetId)),
   ).size;
   const update = (next: Partial<RadarFilters>) =>
-    setFilters((current) => ({ ...current, ...next }));
+    navigate({ ...state, filters: { ...filters, ...next } });
   const metrics = [
     [
       messages.radar.highImpactEvents,
       visible.filter((item) => item.importance === "high").length,
     ],
-    [messages.radar.breaking, visible.filter((item) => item.isBreaking).length],
+    [
+      messages.radar.breaking,
+      visible.filter((item) => item.status === "breaking").length,
+    ],
     [
       messages.radar.developing,
       visible.filter((item) => item.status === "developing").length,
@@ -242,7 +247,7 @@ export function RadarWorkspace({
         <button
           type="button"
           className="mt-4 text-xs font-semibold text-emerald-300 hover:text-emerald-200"
-          onClick={() => setFilters({ timeRange: "7d" })}
+          onClick={() => navigate({ ...state, filters: { timeRange: "7d" } })}
         >
           {messages.common.resetFilters}
         </button>
@@ -319,7 +324,7 @@ export function RadarWorkspace({
           items={demoRadarItems}
           locale={locale}
           messages={messages}
-          onClose={() => setSelected(undefined)}
+          onClose={() => navigate({ ...state, eventId: undefined })}
           onSelect={selectItem}
         />
       )}

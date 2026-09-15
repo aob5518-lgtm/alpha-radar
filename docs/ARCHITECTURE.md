@@ -36,6 +36,19 @@ Frontend asset contracts live in `packages/types`. The Next.js server-side API c
 those contracts and uses the private `API_URL`, allowing Compose to call `http://api:8000` without
 exposing an internal hostname to browsers.
 
+## Market-data domain
+
+`alpha_radar.market_data` adds a provider-neutral boundary inside the modular monolith. A canonical
+Asset may have multiple provider-addressable `MarketInstrument` records. Provider adapters emit
+typed normalized DTOs; the ingestion service validates provenance and quality; repositories persist
+observations. HTTP handlers only resolve assets and read PostgreSQL, so external provider latency or
+availability never enters the request path.
+
+Celery tasks reuse the existing worker and Redis broker. Beat schedules provide conservative quote
+and 1m-candle polling defaults, while external ingestion is disabled unless explicitly configured.
+The deterministic mock provider supports tests and integration verification without network access.
+The Coinbase adapter is an optional development adapter, not a commercial data entitlement.
+
 ## Health semantics
 
 `GET /api/v1/health` is a process liveness endpoint. `GET /api/v1/health/ready` checks PostgreSQL and
@@ -49,6 +62,12 @@ PostgreSQL is the system of record. The database image supplies TimescaleDB and 
 script and the first Alembic migration idempotently enable both extensions. All future schema changes
 must use Alembic. Redis is ephemeral coordination/cache infrastructure and the Celery broker/result
 store, not a source of truth.
+
+Market quotes and candles are Timescale hypertables partitioned on `observed_at` and `open_time`,
+respectively. Quotes are append-only observations. Candles use provider/instrument/interval/open-time
+identity with atomic upserts, allowing an open candle to be updated without duplicating history.
+Financial values use fixed-precision NUMERIC/Decimal types. See `docs/MARKET_DATA.md` for timestamp,
+quote-currency, freshness, quality, provider, and licensing semantics.
 
 ## Cross-cutting foundations
 
@@ -93,6 +112,26 @@ by detected time relative to the fixed snapshot. Source count means the number o
 references, not independent confirmations. Localized title/summary blocks are presentation data;
 canonical enums and UUID relationships remain language-neutral.
 
+The hardened shell derives breaking state from `status === "breaking"` and source-reference count
+from `sources.length`; neither is separately stored. `impacts` is the canonical event-to-asset
+relationship list, while `assets` is derived display metadata resolved from those canonical IDs.
+`RadarAsset.assetType` reuses the canonical `AssetType`. Event importance uses `ImportanceLevel`,
+separate from the `ImpactLevel` describing asset effect magnitude, even though both initially use
+low/medium/high presentation bands. The existing `impact` query filter selects event importance.
+
+Categorical confidence is demo/presentation-only, not the permanent Event Engine contract. A future
+real engine must use a numeric, calibrated confidence score and derive display bands separately.
+`LocalizedText` likewise belongs to demo/presentation copy, not canonical backend Event storage.
+Future events must retain language-neutral structured facts and source/original-language provenance,
+with localization as a separate concern. Neither backend calibration nor backend localization is
+implemented here.
+
+Radar filters, selected event, and map view are backed by query parameters. Validated parameters
+survive reload and browser history navigation; asset symbol/slug conveniences resolve to canonical
+UUIDs, and UI updates serialize UUIDs into shareable URLs. Unknown enum values fall back safely.
+Asset pages retain persisted Market quote/history, provider provenance, and freshness independently
+from explicitly labeled sample Radar intelligence; neither surface substitutes for the other.
+
 `AssetImpact` describes one event-to-canonical-asset relationship: bullish/bearish/mixed/neutral
 direction, low/medium/high magnitude, confidence, intraday/short/medium/long horizon, and
 first/second/third-order transmission. These ordinal sample labels are not calculated financial
@@ -114,6 +153,6 @@ presentation boundary rather than reuse demo records as domain entities.
 
 ## Deferred decisions
 
-Authentication, live provider adapters, market data, events, AI integrations, task routing, cloud
-deployment, telemetry vendors, and scaling policies belong to later sprints. No Kafka, Kubernetes,
-or independent services are introduced.
+Authentication, production market-data entitlements, equities providers, events, AI integrations,
+task routing, cloud deployment, telemetry vendors, and scaling policies belong to later sprints. No
+Kafka, Kubernetes, WebSocket feed, or independent service is introduced.
