@@ -207,6 +207,29 @@ No sophisticated event reasoning yet.
 
 ---
 
+# Product Shell / Intelligence Map Preview
+
+Goal:
+
+Validate the bilingual product navigation and financial-intelligence information architecture using
+deterministic, explicitly labeled demo data.
+
+Includes:
+
+- Command Center shell
+- Radar filters and summary metrics
+- Timeline, Impact Map, and Heatmap presentations
+- event detail drawer with separated fact, analysis, scenario, and model-output labels
+- Discover, Watchlist, Alerts, and AI Analyst shells
+- demo intelligence links on canonical Asset pages
+
+This is a presentation-layer preview, not a change to the data-foundation sequence. It does not
+implement Sources, Articles, Story Clusters, Events, live ingestion, alert delivery, authentication,
+or AI. Real intelligence continues through the later roadmap sprints below, and demo fixtures must be
+removed or isolated when validated domain APIs become available.
+
+---
+
 # Sprint 4 — Story Clustering
 
 Goal:
