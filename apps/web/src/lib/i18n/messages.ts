@@ -65,6 +65,21 @@ export interface Messages {
       notIntegratedDescription: string;
     };
   };
+  market: {
+    sourcedData: string;
+    latestPrice: string;
+    quoteCurrency: string;
+    provider: string;
+    lastUpdated: string;
+    quoteUnavailable: string;
+    historyUnavailable: string;
+    performanceUnavailable: string;
+    chartLabel: string;
+    freshness: {
+      fresh: string;
+      stale: string;
+    };
+  };
   labels: {
     assetTypes: Record<
       | "crypto"

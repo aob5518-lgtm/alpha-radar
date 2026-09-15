@@ -1,8 +1,8 @@
 # Alpha Radar
 
-Alpha Radar is an AI-powered financial intelligence and asset discovery platform. Sprint 1 adds the
-canonical Asset foundation while deliberately leaving market data, events, AI, and authentication
-for later work.
+Alpha Radar is an AI-powered financial intelligence and asset discovery platform. Sprint 2 adds a
+provider-neutral, point-in-time market-data foundation on top of canonical Assets while deliberately
+leaving events, AI, authentication, execution, and production vendor entitlements for later work.
 
 ## Requirements
 
@@ -42,6 +42,15 @@ docker compose run --rm api python -m alpha_radar.assets.seed
 ```
 
 Seeding is never run automatically during application startup.
+
+Load deterministic sample market instruments, a quote, and candles after the Asset seed:
+
+```bash
+docker compose run --rm api python -m alpha_radar.market_data.seed
+```
+
+External market-data polling is disabled by default. See `docs/MARKET_DATA.md` before enabling the
+optional Coinbase development adapter; public technical access does not grant redistribution rights.
 
 Stop the stack with `docker compose down`. Add `--volumes` only when you intentionally want to delete
 local database and Redis data.
@@ -83,6 +92,7 @@ Frontend:
 pnpm web:lint
 pnpm web:typecheck
 pnpm web:format:check
+pnpm web:test
 pnpm web:build
 ```
 
@@ -108,7 +118,8 @@ alembic revision --autogenerate -m "describe change"
 
 Every schema change requires an Alembic migration. The initial migration verifies the required
 `timescaledb` and `vector` extensions. The Sprint 1 migration creates `assets`,
-`asset_provider_mappings`, and `asset_aliases`.
+`asset_provider_mappings`, and `asset_aliases`. The Sprint 2 migration creates market instruments,
+quotes, and candles, and converts both observation tables to Timescale hypertables.
 
 ## Asset API
 
@@ -118,6 +129,15 @@ Every schema change requires an Alembic migration. The initial migration verifie
   ambiguous symbol returns HTTP 409 instead of selecting an arbitrary asset.
 
 The web asset directory is available at <http://localhost:3000/assets>.
+
+## Market data API
+
+- `GET /api/v1/assets/{identifier}/quote` returns the latest persisted quote with provider,
+  currencies, timestamp semantics, quality flags, and backend-computed freshness.
+- `GET /api/v1/assets/{identifier}/history` accepts `interval`, `start`, `end`, and bounded `limit`
+  parameters and returns candles ordered oldest to newest.
+
+Provider calls run only in Celery ingestion tasks. HTTP requests never call external vendors.
 
 ## Repository map
 
