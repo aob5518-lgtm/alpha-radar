@@ -60,6 +60,8 @@ jobs:
         run: docker compose up --build --detach --wait
       - name: Verify health, dependencies, assets, and market data
         run: ./scripts/verify-stack.sh
+      - name: Verify bilingual strategy shell and persisted Asset Market
+        run: python scripts/verify-strategy-shell.py
       - name: Show Compose logs on failure
         if: failure()
         run: docker compose logs

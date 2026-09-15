@@ -230,6 +230,18 @@ removed or isolated when validated domain APIs become available.
 
 ---
 
+# Strategy & Opportunity Product Foundation Preview
+
+Presentation-only continuation of the approved Radar shell: bilingual Theme Radar, fictional early
+projects, opportunity lifecycle, incentive research, catalysts, conditional playbooks, cycle
+readiness, bull-market preparation, exit review and nullable unobserved Outcome contracts.
+Discover/Strategy grouping and typed Radar/Asset links use deterministic, explicitly labeled demos.
+No real scoring, trading, scraping, probability calibration, cycle prediction or performance tracking.
+This preview does not replace Sources/Story Clustering/Events or alter the data-foundation sequence.
+Real strategy intelligence requires sourced evidence and historical validation. See `STRATEGY_ENGINE.md`.
+
+---
+
 # Sprint 4 — Story Clustering
 
 Goal:

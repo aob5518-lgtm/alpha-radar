@@ -22,6 +22,27 @@ provider IDs, ETF, BTC, ETH, TVL, OI, and RWA should generally remain unchanged.
 | Portfolio | 投资组合 |  |
 | Alert | 预警 |  |
 
+## Strategy terminology
+
+| English | Simplified Chinese | Notes |
+| --- | --- | --- |
+| Theme | 主题 | Distinct from a sourced Event. |
+| Playbook | 行动框架 | Research/preparation, not execution. |
+| Strategy | 策略 | No BUY/SELL calls in the preview. |
+| Cycle Readiness | 周期准备度 | Not a next-bull-market forecast. |
+| Opportunity Lifecycle | 机会生命周期 | Descriptive, not a transition engine. |
+| Counterpoint | 反方观点 | Must remain visible alongside a thesis. |
+| Invalidation | 失效条件 | Conditions that undermine the thesis. |
+| Counter-evidence | 反证 | Kept separate from supporting evidence. |
+| Crowding | 拥挤度 | Popularity is not profitability. |
+| Opportunity Cost | 机会成本 | Includes time and capital commitments. |
+| Sybil Risk | 女巫风险 | No reward eligibility promise. |
+| Outcome | 结果 | Future observed calibration; currently unobserved. |
+| Maximum Drawdown | 最大回撤 | Null unless actually measured. |
+| Bull / Base / Bear Case | 乐观 / 基准 / 悲观情景 | Conditional, not promised. |
+| FACT / ANALYSIS | 事实 / 分析 | Fictional FACT and speculative ANALYSIS labeled explicitly. |
+| SCENARIO / MODEL OUTPUT | 情景 / 模型输出 | No model runs in the product foundation. |
+
 ## Abbreviations
 
 Preserve common financial and crypto abbreviations where they are clearer than translation:

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 import { DemoBadge } from "@/components/demo-badge";
+import { RelatedStrategy } from "@/components/strategy/strategy-ui";
 import type { Locale } from "@/lib/i18n/config";
 import {
   confidenceLabel,
@@ -267,6 +268,11 @@ export function EventDrawer({
             )}
           </div>
         </section>
+        <RelatedStrategy
+          eventId={item.id}
+          locale={locale}
+          messages={messages}
+        />
         <p className="mt-8 rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-xs leading-5 text-amber-100">
           {messages.common.demoDisclaimer}
         </p>

@@ -70,6 +70,20 @@ and distinguishes independent evidence from syndication. An Event is a structure
 occurrence derived from evidence; an article is never automatically an event. Provenance links must
 be retained throughout this progression.
 
+## Strategy / Opportunity demo contracts
+
+Theme, Opportunity, EarlyProject, AirdropOpportunity, Catalyst, StrategyPlaybook, CycleReadiness,
+ExitFramework and Outcome are presentation-only TypeScript contracts, not persisted tables.
+All strategic fixtures carry `isDemo: true`; relation IDs resolve against deterministic catalogs.
+`affectedAssetIds` always uses existing canonical Asset UUIDs. There is no duplicate Asset,
+MarketInstrument, quote or candle source of truth. Radar linkage remains an independent typed demo
+reference adapter, not a backend Event foreign key.
+Every object has fact/analysis/scenario/model-output/counterpoint/invalidation blocks. Fictional
+FACT is explicitly labeled. Scheduled dates can be null, probability uses uncalibrated demo bands,
+and Outcome observation dates, return, drawdown, correctness and version remain null/unobserved.
+Future persisted models require Alembic migrations and language-neutral facts/provenance; do not
+reuse LocalizedText fixtures as canonical backend storage. See `STRATEGY_ENGINE.md`.
+
 ## Schema changes
 
 Every schema change requires a forward-safe Alembic migration. Migrations must preserve history,

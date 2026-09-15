@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DemoBadge } from "@/components/demo-badge";
+import { RelatedStrategy } from "@/components/strategy/strategy-ui";
 import { eventTypeLabel, impactLabel } from "@/lib/i18n/intelligence-labels";
 import { MarketHistoryChart } from "@/components/market-history-chart";
 import { getAsset, getMarketHistory, getMarketQuote } from "@/lib/api/assets";
@@ -264,6 +265,7 @@ export default async function AssetPage({ params }: AssetPageProps) {
           )}
         </IntelligenceSection>
       </div>
+      <RelatedStrategy assetId={asset.id} locale={locale} messages={messages} />
     </main>
   );
 }

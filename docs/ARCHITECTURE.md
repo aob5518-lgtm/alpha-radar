@@ -151,6 +151,17 @@ Until those domains ship, sample source names never imply retrieval and every in
 must display the localized demo disclosure. Real Event APIs should replace the fixture adapter at the
 presentation boundary rather than reuse demo records as domain entities.
 
+## Strategy presentation boundary
+
+Strategy & Opportunity extends the existing demo adapter, not the backend modular monolith.
+`packages/types/strategy` holds explicit DemoObject-based contracts; deterministic fixtures and pure
+filters/link builders live in `apps/web/src/lib/strategy`. Shared SSR-compatible cards reuse the
+existing locale catalogs and Radar presentation vocabulary. A typed independent reference adapter
+connects demo Radar IDs to themes/opportunities/catalysts without changing canonical Events.
+Asset relations retain canonical UUIDs; persisted Market observations remain the sole price source.
+No providers, API endpoints, database tables, migrations or dependencies are added.
+See `STRATEGY_ENGINE.md` for routes, nullable unobserved Outcomes, and scoring/execution non-goals.
+
 ## Deferred decisions
 
 Authentication, production market-data entitlements, equities providers, events, AI integrations,

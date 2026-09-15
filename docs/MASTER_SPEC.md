@@ -267,6 +267,24 @@ Article -> Story Cluster -> Event -> Asset Mapping -> Impact
 When those domains are implemented, validated API contracts will replace the fixtures; presentation
 components must not become a parallel event domain.
 
+### Strategy & Opportunity Product Foundation
+
+The presentation preview extends Event → Asset Impact with Theme → Opportunity → Strategy →
+Monitoring → Outcome. New routes are `/discover/themes`, `/discover/opportunities`, `/strategy`
+and `/strategy/cycle`. Discover groups Themes, Projects and Opportunities; Strategy groups Cycle,
+Playbooks and Plans. Existing Radar and persisted Market Data remain intact.
+Every strategic value, dimension, catalyst date and probability band is deterministic Demo/Sample,
+not live intelligence, predictive truth, real Alpha Score or a return promise. Fictional early
+projects and incentive opportunities support research, not claims of future successful projects.
+Playbooks include bull/base/bear scenarios, evidence, costs, counterpoints, invalidation, monitoring
+and exit preparation. Cycle readiness is multi-dimensional; historical cycles are not deterministic
+four-year laws. Outcomes remain unobserved and are a future basis for sourced model calibration.
+Every strategic object distinguishes FACT (fictional fixture), ANALYSIS, SCENARIO, MODEL OUTPUT,
+COUNTERPOINT and INVALIDATION. Popularity is not profitability; tokenlessness does not imply an
+airdrop; halving does not guarantee a bull market; growth does not justify valuation.
+No trading, wallet execution, live scraping, real probability/cycle model or strategy scoring is
+implemented. Real scoring requires sourced data and historical validation. See `STRATEGY_ENGINE.md`.
+
 ## 4. System Architecture
 
 Initial architecture:

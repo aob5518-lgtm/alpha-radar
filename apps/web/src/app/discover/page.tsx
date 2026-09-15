@@ -7,6 +7,13 @@ import { Filter, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 import { DemoBadge } from "@/components/demo-badge";
+import {
+  ProductTabs,
+  ProjectCard,
+  StrategyDisclosure,
+} from "@/components/strategy/strategy-ui";
+import { DemoSelectionNotice } from "@/components/strategy/filters";
+import { demoProjects } from "@/lib/strategy/demo-data";
 import { assetTypeLabel } from "@/lib/i18n/labels";
 import {
   confidenceLabel,
@@ -36,6 +43,11 @@ export default async function DiscoverPage({
 }: DiscoverPageProps) {
   const { locale, messages } = await getTranslations();
   const query = await searchParams;
+  const projects = demoProjects.filter(
+    (project) =>
+      (!first(query.project) || project.id === first(query.project)) &&
+      (!first(query.theme) || project.themeId === first(query.theme)),
+  );
   const assetClass = first(query.class);
   const catalyst = first(query.catalyst) as EventType | undefined;
   const impact = first(query.impact) as ImpactLevel | undefined;
@@ -75,6 +87,28 @@ export default async function DiscoverPage({
           <DemoBadge label={messages.common.demoData} />
         </div>
       </header>
+      <ProductTabs area="discover" messages={messages} />
+      <StrategyDisclosure messages={messages} />
+      <section id="projects" className="mt-6 scroll-mt-24">
+        <h2 className="mb-4 text-xl font-semibold">
+          {messages.strategy.earlyProjects}
+        </h2>
+        <DemoSelectionNotice
+          empty={!projects.length}
+          messages={messages}
+          resetHref="/discover#projects"
+        />
+        <div className="grid gap-4 xl:grid-cols-2">
+          {projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              locale={locale}
+              messages={messages}
+            />
+          ))}
+        </div>
+      </section>
       <form className="panel mt-6 grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
         <Select
           name="class"
