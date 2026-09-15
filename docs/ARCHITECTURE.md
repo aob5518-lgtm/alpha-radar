@@ -87,6 +87,19 @@ remain reproducible. Demo assets reference the existing canonical Asset UUIDs, a
 to link into filtered Radar views without using ticker symbols as business identifiers. Tickers are
 used only as human-readable route query conveniences.
 
+`RadarItem` keeps `eventTime`, `publishedAt`, `detectedAt`, and optional `updatedAt` separate. The
+Timeline sorts by event time with a detected-time fallback; time-range filters intentionally select
+by detected time relative to the fixed snapshot. Source count means the number of sample source
+references, not independent confirmations. Localized title/summary blocks are presentation data;
+canonical enums and UUID relationships remain language-neutral.
+
+`AssetImpact` describes one event-to-canonical-asset relationship: bullish/bearish/mixed/neutral
+direction, low/medium/high magnitude, confidence, intraday/short/medium/long horizon, and
+first/second/third-order transmission. These ordinal sample labels are not calculated financial
+scores. The Impact Map projects those relationships as labeled event-to-asset edges. The Heatmap
+projects the same relationships into event rows and asset columns, with both direction and magnitude
+written in each populated cell so meaning never depends on color alone.
+
 The shell does not add backend models, migrations, provider adapters, queues, or Graph infrastructure.
 The Impact Map is a frontend projection of the fixture's typed relationships rather than a graph
 database. Its future source of truth remains the evidence-preserving pipeline:
