@@ -9,6 +9,11 @@ provider IDs, ETF, BTC, ETH, TVL, OI, and RWA should generally remain unchanged.
 | Asset | 资产 | Canonical database values remain language-neutral. |
 | Market | 市场 |  |
 | Event | 事件 | An Article is not automatically an Event. |
+| Source | 来源 | Canonical publisher/feed registry, not analysis confidence. |
+| Source Document | 来源文档 | Upstream evidence; not automatically an Event. |
+| Revision | 修订版本 | Immutable observed version of a Source Document. |
+| First observed | 首次观测 | When Alpha Radar first saw the document. |
+| Latest fetched | 最近获取 | Most recent completed retrieval time. |
 | Catalyst | 催化剂 |  |
 | Fundamentals | 基本面 |  |
 | Capital Flow | 资金流 |  |

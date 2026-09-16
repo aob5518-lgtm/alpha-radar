@@ -52,6 +52,17 @@ docker compose run --rm api python -m alpha_radar.market_data.seed
 External market-data polling is disabled by default. See `docs/MARKET_DATA.md` before enabling the
 optional Coinbase development adapter; public technical access does not grant redistribution rights.
 
+Seed the official Source registry idempotently:
+
+```bash
+docker compose run --rm api python -m alpha_radar.sources.seed
+```
+
+Real SEC/Federal Reserve polling is disabled by default and requires explicit provider flags plus a
+monitored contact identity. See `docs/SOURCES.md`; public access never implies redistribution rights.
+Source APIs are `/api/v1/sources` and `/api/v1/documents`; the bilingual UI is at
+<http://localhost:3000/radar/sources>.
+
 Stop the stack with `docker compose down`. Add `--volumes` only when you intentionally want to delete
 local database and Redis data.
 

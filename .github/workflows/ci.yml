@@ -62,6 +62,8 @@ jobs:
         run: ./scripts/verify-stack.sh
       - name: Verify bilingual strategy shell and persisted Asset Market
         run: python scripts/verify-strategy-shell.py
+      - name: Verify bilingual persisted Source Intelligence
+        run: python scripts/verify-sources-ui.py
       - name: Show Compose logs on failure
         if: failure()
         run: docker compose logs

@@ -25,7 +25,8 @@
     "primaryLabel": "Primary navigation",
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
-    "strategy": "Strategy"
+    "strategy": "Strategy",
+    "sources": "Sources"
   },
   "home": {
     "eyebrow": "Intelligence Command Center",
@@ -106,6 +107,43 @@
     "relativeMinutes": "{count}m before snapshot",
     "relativeHours": "{count}h before snapshot",
     "relativeDays": "{count}d before snapshot"
+  },
+  "sources": {
+    "eyebrow": "Real Intelligence Ingestion",
+    "title": "Source Intelligence",
+    "description": "Official source documents preserved with identity, timestamps, revisions, and provenance.",
+    "documents": "documents",
+    "boundary": "Source Document",
+    "boundaryDescription": "Upstream evidence only. A document may produce zero, one, or multiple future Events.",
+    "sourceDocument": "Source Document",
+    "notAnalyzed": "Not yet analyzed into Event",
+    "search": "Search document titles",
+    "allSources": "All sources",
+    "documentType": "Document type",
+    "apply": "Apply filters",
+    "version": "Revision",
+    "published": "Published",
+    "observed": "First observed",
+    "fetched": "Latest fetched",
+    "officialDocument": "Open official document",
+    "unknown": "Not provided",
+    "notFound": "The selected source document was not found.",
+    "empty": "No source documents match these filters.",
+    "previous": "Previous page",
+    "next": "Next page",
+    "errorTitle": "Source intelligence unavailable",
+    "errorDescription": "The API could not be reached. No substitute or demo document is shown.",
+    "types": {
+      "government": "Government",
+      "regulator": "Regulator",
+      "central_bank": "Central bank",
+      "company": "Company",
+      "exchange": "Exchange",
+      "media": "Media",
+      "specialist_media": "Specialist media",
+      "protocol": "Protocol",
+      "social": "Social"
+    }
   },
   "discover": {
     "eyebrow": "Asset Discovery Shell",

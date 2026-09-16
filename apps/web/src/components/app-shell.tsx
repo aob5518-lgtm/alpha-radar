@@ -8,6 +8,7 @@ import {
   Layers3,
   Menu,
   Radar,
+  Rss,
   Search,
   Star,
   X,
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 const routes = [
   { href: "/", key: "commandCenter", icon: Gauge },
   { href: "/radar", key: "radar", icon: Radar },
+  { href: "/radar/sources", key: "sources", icon: Rss },
   { href: "/discover", key: "discover", icon: Binoculars },
   { href: "/strategy", key: "strategy", icon: Layers3 },
   { href: "/assets", key: "assets", icon: Search },
@@ -46,7 +48,9 @@ export function AppShell({ children, locale, messages }: AppShellProps) {
     <nav aria-label={messages.nav.primaryLabel} className="space-y-1">
       {routes.map(({ href, key, icon: Icon }) => {
         const active =
-          href === "/" ? pathname === "/" : pathname.startsWith(href);
+          href === "/" || href === "/radar"
+            ? pathname === href
+            : pathname.startsWith(href);
         return (
           <Link
             key={href}
