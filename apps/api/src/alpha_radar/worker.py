@@ -12,7 +12,7 @@ app = Celery(
     backend=settings.celery_result_backend,
 )
 app.conf.update(  # pyright: ignore[reportUnknownMemberType]
-    imports=("alpha_radar.market_data.tasks",),
+    imports=("alpha_radar.market_data.tasks", "alpha_radar.sources.tasks"),
     accept_content=["json"],
     task_serializer="json",
     result_serializer="json",
@@ -30,3 +30,15 @@ app.conf.update(  # pyright: ignore[reportUnknownMemberType]
         },
     },
 )
+
+if settings.source_ingestion_enabled:
+    for slug, enabled in (
+        ("sec", settings.sec_source_enabled),
+        ("federal-reserve", settings.fed_source_enabled),
+    ):
+        if enabled:
+            app.conf.beat_schedule[f"source-{slug}"] = {  # pyright: ignore[reportUnknownMemberType]
+                "task": "alpha_radar.sources.ingest_source_recent",
+                "schedule": float(settings.source_poll_interval_seconds),
+                "args": [slug],
+            }

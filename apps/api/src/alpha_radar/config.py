@@ -23,6 +23,16 @@ class Settings(BaseSettings):
     market_data_future_tolerance_seconds: int = Field(default=30, ge=0)
     coinbase_exchange_api_url: str = "https://api.exchange.coinbase.com"
     market_data_http_timeout_seconds: float = Field(default=10.0, gt=0)
+    source_ingestion_enabled: bool = False
+    sec_source_enabled: bool = False
+    fed_source_enabled: bool = False
+    source_contact_identity: str = ""
+    sec_ciks: list[str] = Field(default_factory=list)
+    source_poll_interval_seconds: int = Field(default=900, ge=300)
+    sec_requests_per_second: float = Field(default=2, gt=0, le=5)
+    fed_requests_per_second: float = Field(default=1, gt=0, le=2)
+    source_minimum_interval_seconds: float = Field(default=1, ge=0.2)
+    source_http_timeout_seconds: float = Field(default=15, gt=0, le=60)
 
 
 @lru_cache

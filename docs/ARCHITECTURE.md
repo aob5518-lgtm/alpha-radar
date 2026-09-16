@@ -49,6 +49,14 @@ and 1m-candle polling defaults, while external ingestion is disabled unless expl
 The deterministic mock provider supports tests and integration verification without network access.
 The Coinbase adapter is an optional development adapter, not a commercial data entitlement.
 
+## Sources domain
+
+`alpha_radar.sources` is the first real-intelligence ingestion boundary. Typed adapters normalize
+official SEC JSON and Federal Reserve RSS into SourceDocument DTOs. A policy-aware ingestion service
+resolves identity, appends revisions and preserves time/provenance in PostgreSQL; API routes remain
+read-only. Celery and Redis are reused for fetch tasks and distributed per-provider request gates.
+This remains one modular monolith, not a source microservice. See `SOURCES.md`.
+
 ## Health semantics
 
 `GET /api/v1/health` is a process liveness endpoint. `GET /api/v1/health/ready` checks PostgreSQL and

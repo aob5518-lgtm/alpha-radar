@@ -244,6 +244,14 @@ Answers should eventually include:
 - related assets
 - related events
 
+### Sources and Source Documents
+
+The first real intelligence ingestion layer introduces canonical Sources, policy-aware
+SourceDocuments and append-only revisions. Official SEC JSON and Federal Reserve RSS adapters run
+only in Celery; external polling is opt-in. PostgreSQL APIs and `/radar/sources` expose provenance
+without provider raw payloads. A SourceDocument is upstream evidence, not an Event, sentiment,
+impact, asset mapping, or opportunity. See `SOURCES.md`.
+
 ### Product Shell and Intelligence Map
 
 The first product-shell implementation validates the information architecture before the real

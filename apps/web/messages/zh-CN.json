@@ -25,7 +25,8 @@
     "primaryLabel": "主导航",
     "openMenu": "打开导航",
     "closeMenu": "关闭导航",
-    "strategy": "策略"
+    "strategy": "策略",
+    "sources": "来源"
   },
   "home": {
     "eyebrow": "情报指挥中心",
@@ -106,6 +107,43 @@
     "relativeMinutes": "快照前 {count} 分钟",
     "relativeHours": "快照前 {count} 小时",
     "relativeDays": "快照前 {count} 天"
+  },
+  "sources": {
+    "eyebrow": "真实情报采集",
+    "title": "来源情报",
+    "description": "保留身份、时间戳、修订记录与溯源信息的官方来源文档。",
+    "documents": "份文档",
+    "boundary": "来源文档",
+    "boundaryDescription": "仅为上游证据。一份文档未来可能生成零个、一个或多个事件。",
+    "sourceDocument": "来源文档",
+    "notAnalyzed": "尚未分析为事件",
+    "search": "搜索文档标题",
+    "allSources": "全部来源",
+    "documentType": "文档类型",
+    "apply": "应用筛选",
+    "version": "修订版本",
+    "published": "发布时间",
+    "observed": "首次观测",
+    "fetched": "最近获取",
+    "officialDocument": "打开官方文档",
+    "unknown": "未提供",
+    "notFound": "未找到所选来源文档。",
+    "empty": "没有符合筛选条件的来源文档。",
+    "previous": "上一页",
+    "next": "下一页",
+    "errorTitle": "来源情报暂不可用",
+    "errorDescription": "无法连接 API。不会展示替代内容或演示文档。",
+    "types": {
+      "government": "政府",
+      "regulator": "监管机构",
+      "central_bank": "中央银行",
+      "company": "公司",
+      "exchange": "交易所",
+      "media": "媒体",
+      "specialist_media": "专业媒体",
+      "protocol": "协议",
+      "social": "社交来源"
+    }
   },
   "discover": {
     "eyebrow": "资产发现框架",

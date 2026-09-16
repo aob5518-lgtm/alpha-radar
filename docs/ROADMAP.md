@@ -205,6 +205,19 @@ provider adapters
 
 No sophisticated event reasoning yet.
 
+Implemented foundation:
+
+- canonical Source registry with explicit publisher tier and license/storage policy
+- SourceDocument identity, timestamp provenance, deterministic URL/external-ID deduplication
+- append-only SourceDocumentVersion revision history
+- deterministic Mock, official SEC submissions JSON, and official Federal Reserve RSS adapters
+- Redis-coordinated request policy and existing Celery worker tasks, disabled by default
+- bounded Source/Document APIs and bilingual `/radar/sources` UI
+- offline unit tests and deterministic real-PostgreSQL integration verification
+
+Story clustering, Event extraction, asset mapping, full-text archives, embeddings, AI, sentiment,
+and scoring remain deferred.
+
 ---
 
 # Product Shell / Intelligence Map Preview

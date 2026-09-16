@@ -180,3 +180,43 @@ if [ "${SECOND_QUOTES}" -ne "$((FIRST_QUOTES + 1))" ]; then
 fi
 
 printf 'Market instrument and candle idempotency verification passed.\n'
+
+docker compose exec -T postgres psql -U "${POSTGRES_USER}" \
+  -d "${POSTGRES_DB}" \
+  -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('sources', 'source_documents', 'source_document_versions') ORDER BY table_name;"
+
+FIRST_SOURCE_SEED="$(docker compose run --rm api python -m alpha_radar.sources.seed)"
+SECOND_SOURCE_SEED="$(docker compose run --rm api python -m alpha_radar.sources.seed)"
+printf '%s\n%s\n' "${FIRST_SOURCE_SEED}" "${SECOND_SOURCE_SEED}"
+SOURCE_COUNT="$(docker compose exec -T postgres psql -U "${POSTGRES_USER}" \
+  -d "${POSTGRES_DB}" -tAc "SELECT count(*) FROM sources;")"
+if [ "${SOURCE_COUNT}" != "2" ]; then
+  printf 'Expected two idempotently seeded official sources, got %s\n' "${SOURCE_COUNT}" >&2
+  exit 1
+fi
+
+MOCK_OUTPUT="$(docker compose run --rm api python -m alpha_radar.sources.integration_verify)"
+printf '%s\n' "${MOCK_OUTPUT}"
+DOCUMENT_LIST_JSON="$(curl --fail --silent "${API_URL}/api/v1/documents?source=mock-source")"
+SOURCE_LIST_JSON="$(curl --fail --silent "${API_URL}/api/v1/sources")"
+export DOCUMENT_LIST_JSON SOURCE_LIST_JSON
+export API_URL
+python - <<'PY'
+import json
+import os
+from urllib.request import urlopen
+
+documents = json.loads(os.environ["DOCUMENT_LIST_JSON"])
+sources = json.loads(os.environ["SOURCE_LIST_JSON"])
+if documents["pagination"]["total_items"] != 1:
+    raise SystemExit(f"expected one mock source document: {documents}")
+document = documents["items"][0]
+if document["current_version"]["version_number"] != 2:
+    raise SystemExit(f"expected current revision 2: {document}")
+if len({item["slug"] for item in sources["items"]}) != 3:
+    raise SystemExit(f"expected unique official + integration sources: {sources}")
+detail = json.load(urlopen(os.environ["API_URL"] + "/api/v1/documents/" + document["id"], timeout=10))
+if detail["id"] != document["id"] or "metadata" in detail:
+    raise SystemExit(f"unexpected source detail contract: {detail}")
+print("Source list/detail API and revision verification passed.")
+PY

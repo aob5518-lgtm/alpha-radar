@@ -70,6 +70,13 @@ and distinguishes independent evidence from syndication. An Event is a structure
 occurrence derived from evidence; an article is never automatically an event. Provenance links must
 be retained throughout this progression.
 
+Sprint 3 names the canonical upstream record `SourceDocument` so it covers filings, official
+releases, RSS items and future licensed articles without claiming each record is an Article or Event.
+`Source` identifies the publisher/feed. `SourceDocumentVersion` preserves immutable observed
+revisions. Identity uses source-scoped external ID and canonical URL; content hash detects changes,
+not semantic equivalence. Publisher, observation, fetch and ingestion timestamps remain distinct.
+See `SOURCES.md`.
+
 ## Strategy / Opportunity demo contracts
 
 Theme, Opportunity, EarlyProject, AirdropOpportunity, Catalyst, StrategyPlaybook, CycleReadiness,
