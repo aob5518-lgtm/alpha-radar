@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable
+import json
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import httpx
 from pydantic import AwareDatetime, BaseModel, TypeAdapter
+from websockets.asyncio.client import connect
 
 from alpha_radar.market_data.constants import (
     COINBASE_MAX_BACKFILL_TARGET_CANDLES,
@@ -18,6 +20,7 @@ from alpha_radar.market_data.providers.base import (
     MarketInstrumentRef,
     ProviderCandle,
     ProviderQuote,
+    ProviderTick,
 )
 
 
@@ -42,6 +45,7 @@ class CoinbaseMarketDataProvider:
         self,
         *,
         base_url: str,
+        websocket_url: str = "wss://ws-feed.exchange.coinbase.com",
         timeout_seconds: float = 10.0,
         requests_per_second: float = 8.0,
         transport: httpx.AsyncBaseTransport | None = None,
@@ -49,11 +53,42 @@ class CoinbaseMarketDataProvider:
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self.base_url = base_url.rstrip("/")
+        self.websocket_url = websocket_url
         self.timeout_seconds = timeout_seconds
         self.request_interval_seconds = 1 / requests_per_second
         self.transport = transport
         self.clock = clock or (lambda: datetime.now(UTC))
         self.sleep = sleep
+
+    async def stream_ticks(self, instrument: MarketInstrumentRef) -> AsyncIterator[ProviderTick]:
+        subscription = {
+            "type": "subscribe",
+            "product_ids": [instrument.provider_instrument_id],
+            "channels": ["ticker"],
+        }
+        async with connect(self.websocket_url, open_timeout=self.timeout_seconds) as socket:
+            await socket.send(json.dumps(subscription))
+            async for raw in socket:
+                payload = json.loads(raw)
+                if (
+                    payload.get("type") != "ticker"
+                    or payload.get("product_id") != instrument.provider_instrument_id
+                ):
+                    continue
+                timestamp = datetime.fromisoformat(str(payload["time"]).replace("Z", "+00:00"))
+                if timestamp.tzinfo is None:
+                    continue
+                yield ProviderTick(
+                    provider=self.name,
+                    provider_instrument_id=instrument.provider_instrument_id,
+                    price=Decimal(payload["price"]),
+                    observed_at=self._as_utc(self.clock()),
+                    provider_timestamp=timestamp,
+                    open_24h=Decimal(payload["open_24h"]) if payload.get("open_24h") else None,
+                    volume_24h=Decimal(payload["volume_24h"])
+                    if payload.get("volume_24h")
+                    else None,
+                )
 
     async def get_quote(self, instrument: MarketInstrumentRef) -> ProviderQuote:
         payload = await self._get(f"/products/{instrument.provider_instrument_id}/ticker")

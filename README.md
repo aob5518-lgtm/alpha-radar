@@ -96,6 +96,7 @@ Seed a host-run backend with:
 
 ```bash
 python -m alpha_radar.assets.seed
+python -m alpha_radar.events.seed
 ```
 
 ## Checks and tests
@@ -152,8 +153,29 @@ not a primary product surface.
 - `GET /api/v1/assets/{identifier}/history` accepts `interval`, `start`, `end`, and bounded `limit`
   parameters and returns candles ordered oldest to newest. Supported intervals are 1m, 5m, 15m,
   1h, 4h, 1d and 1w.
+- `WS /api/v1/assets/{identifier}/stream` emits normalized real-time ticks when the configured
+  provider supports streaming. Coinbase uses its public Exchange ticker channel. The open candle is
+  visual only; technical calculations remain closed-candle-only.
 
-Provider calls run only in Celery ingestion tasks. HTTP requests never call external vendors.
+## Event API
+
+- `GET /api/v1/events` supports pagination, time range, importance, type, status and canonical Asset
+  filters. Critical and High are the default importance set.
+- `GET /api/v1/events/{event_id}` returns the canonical event, affected Assets and official source
+  references.
+- The idempotent `python -m alpha_radar.events.seed` command installs curated official BLS, BEA and
+  Federal Reserve 2026 schedules without inventing actual, forecast, previous or unannounced times.
+
+## AI Analyst
+
+AI is unavailable by default. To enable the provider-neutral OpenAI adapter, set `AI_PROVIDER=openai`,
+`AI_MODEL`, and server-only `OPENAI_API_KEY`. Never prefix the key with `NEXT_PUBLIC_`. Each request
+rebuilds context from the canonical Asset, latest quote, closed candles, frozen V1.1 technical
+engines, recent validated Events and their source references. Strict structured output records
+provider/model and context timestamps.
+
+REST ingestion calls run in Celery tasks. The read APIs serve persisted data; only the explicit
+WebSocket stream endpoint opens a provider market-data stream when streaming is configured.
 
 ## Repository map
 

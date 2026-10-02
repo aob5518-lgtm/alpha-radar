@@ -43,16 +43,17 @@
     "importance": "Importance",
     "criticalHigh": "Critical + High",
     "includeMedium": "Include Medium",
-    "timezone": "Times shown in UTC. When only a date is known, time is shown as not announced.",
+    "timezone": "Primary times use your browser timezone; UTC and the official timezone remain in event details.",
     "emptyTitle": "No verified events available",
-    "emptyDescription": "The Event Engine is not active yet. Source documents are never promoted to Events without validation.",
+    "emptyDescription": "No validated events match this time range and importance filter.",
     "sourceBoundary": "Official source documents are retained for provenance, but raw document noise is excluded from this calendar.",
     "timeNotAnnounced": "Time not announced",
     "eventDetail": "Select an event to inspect its evidence and analysis.",
     "expected": "Expected",
     "actual": "Actual",
     "previous": "Previous",
-    "affectedAssets": "Affected assets"
+    "affectedAssets": "Affected assets",
+    "sources": "Sources"
   },
   "chart": {
     "eyebrow": "Professional Crypto Chart",
@@ -249,11 +250,11 @@
   "analyst": {
     "eyebrow": "Analyst Shell",
     "title": "AI Analyst",
-    "description": "This workspace will eventually answer questions using current, retrieved platform evidence.",
+    "description": "Ask concise market questions grounded in current platform data and source evidence.",
     "placeholder": "Ask about an asset, event, catalyst, or risk…",
     "disabled": "AI integration is not enabled",
     "guardrailTitle": "Evidence before answers",
-    "guardrailDescription": "Future responses must separate facts, analysis, and scenarios, with sources and model provenance.",
+    "guardrailDescription": "Responses separate facts, analysis, and scenarios, with sources and model provenance.",
     "contextTitle": "Grounded market context",
     "contextFromChart": "Context received from Chart",
     "noContext": "Open Analyst from Chart to carry the selected asset and timeframe automatically.",
@@ -269,7 +270,14 @@
     "watchNext": "What to Watch Next",
     "eventsUnavailable": "No validated Event data is available.",
     "answerUnavailable": "No model response is generated because AI integration is disabled.",
-    "dataUnavailable": "Required platform data is unavailable. No substitute values are generated."
+    "dataUnavailable": "Required platform data is unavailable. No substitute values are generated.",
+    "fact": "Fact",
+    "analysis": "Analysis",
+    "scenario": "Scenario",
+    "engine": "Engine",
+    "analyzing": "Analyzing grounded context…",
+    "send": "Send",
+    "evidence": "Evidence"
   },
   "assets": {
     "title": "Asset directory",

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
@@ -65,6 +66,18 @@ class ProviderCandle(BaseModel):
         return self
 
 
+class ProviderTick(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    provider: str
+    provider_instrument_id: str
+    price: Decimal = Field(gt=0)
+    observed_at: AwareDatetime
+    provider_timestamp: AwareDatetime
+    open_24h: Decimal | None = Field(default=None, gt=0)
+    volume_24h: Decimal | None = Field(default=None, ge=0)
+
+
 class MarketDataProvider(Protocol):
     name: str
 
@@ -79,3 +92,8 @@ class MarketDataProvider(Protocol):
         end: datetime | None = None,
         limit: int = 300,
     ) -> list[ProviderCandle]: ...
+
+
+@runtime_checkable
+class StreamingMarketDataProvider(Protocol):
+    def stream_ticks(self, instrument: MarketInstrumentRef) -> AsyncIterator[ProviderTick]: ...

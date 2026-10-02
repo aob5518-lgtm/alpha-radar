@@ -129,4 +129,6 @@ export interface AnalystResponse {
   model_provider: string;
   model_version: string;
   generated_at: string;
+  technical_model_version: string;
+  context_timestamp: string;
 }
