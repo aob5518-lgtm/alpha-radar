@@ -191,6 +191,7 @@ if [ "${EVENT_COUNTS_BEFORE}" != "14|42|14" ] || [ "${EVENT_COUNTS_AFTER}" != "1
   exit 1
 fi
 EVENT_LIST_JSON="$(curl --fail --silent "${API_URL}/api/v1/events?importance=critical&importance=high")"
+export API_URL
 export EVENT_LIST_JSON
 python - <<'PY'
 import json
