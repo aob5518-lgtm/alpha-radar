@@ -74,6 +74,7 @@ export default async function ChartPage({
               assets={assets}
               selected={asset}
               interval={interval}
+              label={messages.chart.assetPair}
             />
           )}
           {asset && (
@@ -88,9 +89,12 @@ export default async function ChartPage({
       </header>
 
       <nav
-        className="mt-4 flex flex-wrap gap-1"
+        className="mt-4 flex flex-wrap items-center gap-1"
         aria-label={messages.chart.timeframe}
       >
+        <span className="mr-2 text-[10px] font-semibold tracking-wider text-[var(--muted)] uppercase">
+          {messages.chart.timeframe}
+        </span>
         {marketIntervals.map((value) => (
           <Link
             key={value}
@@ -105,6 +109,9 @@ export default async function ChartPage({
           </Link>
         ))}
       </nav>
+      <p className="mt-2 text-[10px] text-[var(--muted)]">
+        {messages.chart.closedOnly}
+      </p>
 
       <section className="mt-4 grid gap-px border bg-[var(--border)] sm:grid-cols-2 xl:grid-cols-5">
         <Metric

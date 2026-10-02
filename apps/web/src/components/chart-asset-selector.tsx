@@ -9,10 +9,12 @@ export function ChartAssetSelector({
   assets,
   selected,
   interval,
+  label,
 }: {
   assets: AssetSummary[];
   selected: AssetSummary;
   interval: MarketInterval;
+  label: string;
 }) {
   const router = useRouter();
   const [value, setValue] = useState(`${selected.symbol} · ${selected.name}`);
@@ -31,7 +33,7 @@ export function ChartAssetSelector({
   }
   return (
     <label className="text-[10px] text-[var(--muted)] uppercase">
-      Asset / Pair
+      {label}
       <input
         list="chart-assets"
         value={value}

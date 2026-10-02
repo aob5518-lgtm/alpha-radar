@@ -60,6 +60,7 @@
     "title": "市场结构",
     "description": "基于已持久化的数据源 K 线，计算确定性、仅使用收盘 K 线的结构位与趋势状态。",
     "asset": "资产",
+    "assetPair": "资产 / 交易对",
     "timeframe": "周期",
     "currentPrice": "当前价格",
     "provider": "数据源",

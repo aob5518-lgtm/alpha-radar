@@ -54,7 +54,7 @@ def verify_locale(locale: str) -> None:
     expected = (
         {
             "events": "Market-moving events",
-            "chart": "Market structure",
+            "chart_contract": ("Asset / Pair", "Current price", "Timeframe"),
             "analyst": "AI Analyst",
             "event_columns": (
                 "Importance",
@@ -69,7 +69,7 @@ def verify_locale(locale: str) -> None:
         if locale == "en"
         else {
             "events": "影响市场的事件",
-            "chart": "市场结构",
+            "chart_contract": ("资产 / 交易对", "当前价格", "周期"),
             "analyst": "AI 分析师",
             "event_columns": (
                 "重要性",
@@ -85,7 +85,13 @@ def verify_locale(locale: str) -> None:
     events, _ = fetch("/events", locale)
     require(events, expected["events"], *expected["event_columns"])
     chart, _ = fetch("/chart?asset=bitcoin&interval=1h", locale)
-    require(chart, expected["chart"], expected["closed"], "mock", "USD")
+    require(
+        chart,
+        *expected["chart_contract"],
+        expected["closed"],
+        "mock",
+        "USD",
+    )
     analyst, _ = fetch("/analyst?asset=bitcoin&interval=1h&from=chart", locale)
     require(analyst, expected["analyst"], expected["disabled"], "BTC", "1h")
     for page in (events, chart, analyst):

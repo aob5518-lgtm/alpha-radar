@@ -60,6 +60,7 @@
     "title": "Market structure",
     "description": "Persisted provider candles with deterministic, closed-candle structural levels and trend regime.",
     "asset": "Asset",
+    "assetPair": "Asset / Pair",
     "timeframe": "Timeframe",
     "currentPrice": "Current price",
     "provider": "Provider",
