@@ -12,7 +12,7 @@ export default async function EventsPage() {
   }).catch(() => ({ items: [] }));
   return (
     <main className="mx-auto w-full max-w-[100rem] px-4 py-4 sm:px-7">
-      <h1 className="mb-3 text-xl font-semibold">{messages.nav.events}</h1>
+      <h1 className="mb-3 text-xl font-semibold">{messages.events.title}</h1>
       <div className="border bg-[var(--panel)]">
         <EventsWorkspace events={events.items} locale={locale} />
       </div>

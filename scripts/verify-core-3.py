@@ -56,7 +56,13 @@ def verify_locale(locale: str) -> None:
             "events": "Market-moving events",
             "chart": "Market structure",
             "analyst": "AI Analyst",
-            "empty": "No verified events available",
+            "event_columns": (
+                "Importance",
+                "Actual",
+                "Forecast",
+                "Previous",
+                "Affected assets",
+            ),
             "closed": "closed candles only",
             "disabled": "AI integration is not enabled",
         }
@@ -65,13 +71,19 @@ def verify_locale(locale: str) -> None:
             "events": "影响市场的事件",
             "chart": "市场结构",
             "analyst": "AI 分析师",
-            "empty": "暂无已验证事件",
+            "event_columns": (
+                "重要性",
+                "实际值",
+                "预测值",
+                "前值",
+                "受影响资产",
+            ),
             "closed": "仅使用收盘 K 线",
             "disabled": "AI 集成尚未启用",
         }
     )
     events, _ = fetch("/events", locale)
-    require(events, expected["events"], expected["empty"])
+    require(events, expected["events"], *expected["event_columns"])
     chart, _ = fetch("/chart?asset=bitcoin&interval=1h", locale)
     require(chart, expected["chart"], expected["closed"], "mock", "USD")
     analyst, _ = fetch("/analyst?asset=bitcoin&interval=1h&from=chart", locale)

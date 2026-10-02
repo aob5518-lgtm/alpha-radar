@@ -49,8 +49,8 @@
     "sourceBoundary": "官方来源文档会保留用于溯源，但原始文档噪声不会进入此日历。",
     "timeNotAnnounced": "时间尚未公布",
     "eventDetail": "选择事件后查看证据与分析。",
-    "expected": "预期",
-    "actual": "实际",
+    "expected": "预测值",
+    "actual": "实际值",
     "previous": "前值",
     "affectedAssets": "受影响资产",
     "sources": "来源"
