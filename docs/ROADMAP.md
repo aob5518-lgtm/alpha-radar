@@ -25,6 +25,21 @@ Foundation
 
 Do not skip foundational layers in order to create superficial UI demos.
 
+## Current Product Direction — Core 3 Simplification
+
+The active user-facing scope is now exactly Events, Chart and AI Analyst. Root opens Events.
+Command Center, Discover, Themes, Opportunities, Strategy, Cycle, Watchlist, Alerts, Asset
+Directory, Impact Map and Heatmap are archived and are not current product scope.
+
+This simplification does not skip data foundations. Sprint 0–3 infrastructure remains active.
+Story Clustering, a validated Event Engine and a grounded AI runtime remain later, separately
+reviewed phases. Until then, Events and Analyst expose honest unavailable/empty boundaries rather
+than demo intelligence.
+
+The Core 3 redesign PR delivers the final product shell, Events information architecture,
+professional persisted-data Chart, Structural Level Engine V1, Trend Regime V1 and Analyst context
+handoff. See `CORE_3_PRODUCT.md`.
+
 ---
 
 # Sprint 0 — Engineering Foundation
@@ -220,7 +235,7 @@ and scoring remain deferred.
 
 ---
 
-# Product Shell / Intelligence Map Preview
+# Product Shell / Intelligence Map Preview — Archived
 
 Goal:
 
@@ -243,7 +258,7 @@ removed or isolated when validated domain APIs become available.
 
 ---
 
-# Strategy & Opportunity Product Foundation Preview
+# Strategy & Opportunity Product Foundation Preview — Archived
 
 Presentation-only continuation of the approved Radar shell: bilingual Theme Radar, fictional early
 projects, opportunity lifecycle, incentive research, catalysts, conditional playbooks, cycle

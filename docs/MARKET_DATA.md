@@ -41,7 +41,8 @@ boundary; canonical persisted and API values remain decimal strings.
 
 ## Intervals, quality, and freshness
 
-Supported intervals are centrally versionable domain values: `1m`, `1h`, and `1d`. Their durations,
+Supported intervals are centrally versionable domain values: `1m`, `5m`, `15m`, `1h`, `4h`, `1d`,
+and `1w`. Their durations,
 API query ranges, and Coinbase granularities are defined in one module. API history is bounded by a
 maximum of 1,000 rows and an interval-specific maximum time range.
 
@@ -70,9 +71,26 @@ development:
 
 The ticker and candle endpoints are publicly accessible without authentication. Coinbase documents
 10 public REST requests per second per IP, with bursts up to 15. Candle responses are limited to 300
-points, may omit intervals without ticks, and should not be polled frequently. The adapter respects
-the 300-candle limit; Alpha Radar's default schedules are approximately 45 seconds for quotes and 60
-seconds for 1m candles. External ingestion remains opt-in through
+points, may omit intervals without ticks, and should not be polled frequently. The adapter pages
+sequentially backward with requests of at most 300 source candles and defaults to eight requests per
+second (`COINBASE_PUBLIC_REQUESTS_PER_SECOND`). Overlapping rows are deduplicated. The adapter can
+return at most 500 closed target candles per call; 4h and 1w require multiple native 1h/day requests.
+Four-hour bars use UTC 00/04/08/12/16/20 boundaries. Weekly bars use Monday 00:00 UTC and require
+exactly seven consecutive daily source candles; incomplete or gapped buckets are rejected.
+
+Alpha Radar's default schedules are approximately 45 seconds for quotes and 60 seconds for 1m
+candles. Deep history is intentionally not periodic. An operator can enqueue a bounded interval
+backfill (valid limit 1–500) when real ingestion is enabled:
+
+```bash
+docker compose exec worker celery -A alpha_radar.worker call \
+  alpha_radar.market_data.backfill_technical_history \
+  --args='["4h", 500]'
+```
+
+Repeat explicitly for required intervals; at least 300 closed 4h/1d candles and 200 closed 1w
+candles are required by the current acceptance contract, while 500 is preferred and supported.
+External ingestion remains opt-in through
 `MARKET_DATA_INGESTION_ENABLED=false` by default.
 
 Celery tasks make provider calls outside the HTTP request path. The API reads PostgreSQL only. The

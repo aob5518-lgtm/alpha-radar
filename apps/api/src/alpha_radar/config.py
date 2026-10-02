@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     market_data_quote_freshness_seconds: int = Field(default=90, ge=1)
     market_data_future_tolerance_seconds: int = Field(default=30, ge=0)
     coinbase_exchange_api_url: str = "https://api.exchange.coinbase.com"
+    coinbase_public_requests_per_second: float = Field(default=8, gt=0, le=10)
     market_data_http_timeout_seconds: float = Field(default=10.0, gt=0)
     source_ingestion_enabled: bool = False
     sec_source_enabled: bool = False

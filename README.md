@@ -1,8 +1,9 @@
 # Alpha Radar
 
-Alpha Radar is an AI-powered financial intelligence and asset discovery platform. Sprint 2 adds a
-provider-neutral, point-in-time market-data foundation on top of canonical Assets while deliberately
-leaving events, AI, authentication, execution, and production vendor entitlements for later work.
+Alpha Radar is a focused financial intelligence product with three primary surfaces: Important
+Financial Events, a professional Crypto Chart with deterministic structural levels and trend, and a
+platform-grounded AI Analyst. Events and AI remain honest integration boundaries until their real
+backend phases ship; fictional intelligence is not used to fill those gaps.
 
 ## Requirements
 
@@ -28,6 +29,8 @@ docker compose up --build
 Open the web application at <http://localhost:3000>. API documentation is at
 <http://localhost:8000/docs>, liveness at <http://localhost:8000/api/v1/health>, and dependency
 readiness at <http://localhost:8000/api/v1/health/ready>.
+
+Primary product routes are `/events`, `/chart`, and `/analyst`; `/` redirects to Events.
 
 Verify the running stack, database extensions, and Redis:
 
@@ -139,14 +142,16 @@ quotes, and candles, and converts both observation tables to Timescale hypertabl
 - `GET /api/v1/assets/{identifier}` resolves UUID, then slug, then case-insensitive symbol. An
   ambiguous symbol returns HTTP 409 instead of selecting an arbitrary asset.
 
-The web asset directory is available at <http://localhost:3000/assets>.
+The canonical Asset API remains active. The former Asset Directory route redirects to Chart and is
+not a primary product surface.
 
 ## Market data API
 
 - `GET /api/v1/assets/{identifier}/quote` returns the latest persisted quote with provider,
   currencies, timestamp semantics, quality flags, and backend-computed freshness.
 - `GET /api/v1/assets/{identifier}/history` accepts `interval`, `start`, `end`, and bounded `limit`
-  parameters and returns candles ordered oldest to newest.
+  parameters and returns candles ordered oldest to newest. Supported intervals are 1m, 5m, 15m,
+  1h, 4h, 1d and 1w.
 
 Provider calls run only in Celery ingestion tasks. HTTP requests never call external vendors.
 

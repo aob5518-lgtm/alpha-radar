@@ -60,6 +60,7 @@ services:
       MARKET_DATA_FUTURE_TOLERANCE_SECONDS: ${MARKET_DATA_FUTURE_TOLERANCE_SECONDS:-30}
       MARKET_DATA_HTTP_TIMEOUT_SECONDS: ${MARKET_DATA_HTTP_TIMEOUT_SECONDS:-10}
       COINBASE_EXCHANGE_API_URL: ${COINBASE_EXCHANGE_API_URL:-https://api.exchange.coinbase.com}
+      COINBASE_PUBLIC_REQUESTS_PER_SECOND: ${COINBASE_PUBLIC_REQUESTS_PER_SECOND:-8}
     command: ["sh", "-c", "alembic upgrade head && uvicorn alpha_radar.main:app --host 0.0.0.0 --port 8000"]
     ports:
       - "8000:8000"
@@ -102,6 +103,7 @@ services:
       MARKET_DATA_FUTURE_TOLERANCE_SECONDS: ${MARKET_DATA_FUTURE_TOLERANCE_SECONDS:-30}
       MARKET_DATA_HTTP_TIMEOUT_SECONDS: ${MARKET_DATA_HTTP_TIMEOUT_SECONDS:-10}
       COINBASE_EXCHANGE_API_URL: ${COINBASE_EXCHANGE_API_URL:-https://api.exchange.coinbase.com}
+      COINBASE_PUBLIC_REQUESTS_PER_SECOND: ${COINBASE_PUBLIC_REQUESTS_PER_SECOND:-8}
     command:
       ["celery", "--workdir", "/app/apps/worker", "-A", "main.app", "worker", "--beat", "--loglevel=INFO"]
     depends_on:

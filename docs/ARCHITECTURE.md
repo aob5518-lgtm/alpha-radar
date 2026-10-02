@@ -24,6 +24,24 @@ Logical domain boundaries are implemented inside the shared backend package and 
 represented by top-level `services/` documentation placeholders. They are added incrementally
 without network boundaries.
 
+## Core 3 product boundary
+
+The web product exposes only `/events`, `/chart` and `/analyst` in primary navigation. `/` redirects
+to Events. Historical demo routes redirect to the closest Core 3 surface; `/radar/sources` remains
+directly reachable as an internal provenance/debug surface but is not primary navigation.
+
+Events currently defines the final calendar presentation boundary and returns an honest empty state
+until canonical Event persistence exists. SourceDocument remains evidence and is never promoted to
+an Event by presentation code. The Chart reads only persisted MarketQuote/MarketCandle APIs. Its
+pure TypeScript Structural Level and Trend Regime engines consume closed candles only and do not
+write canonical market data. Analyst receives canonical asset identity and timeframe from Chart,
+then rehydrates price/history from platform APIs and recomputes technical context; URL values never
+become authoritative prices or levels. LLM execution remains disabled.
+
+The prior Command Center, Discover, Strategy/Opportunity, Cycle, Watchlist, Alerts, Asset Directory,
+Impact Map and Heatmap implementations are archived presentation history, not current product scope.
+Their backend-independent fixtures are not imported by Core 3 pages.
+
 ## Asset domain
 
 `alpha_radar.assets` is the first domain module. HTTP routes validate transport concerns and call
@@ -90,8 +108,8 @@ API, database schema, canonical asset fields, provider identifiers, enum values,
 remain language-neutral. Frontend pages translate copy and enum presentation labels without changing
 the API contract or route structure.
 
-The web app keeps the existing unprefixed routes such as `/`, `/assets`, and
-`/assets/[identifier]`. Locale preference is stored in an unauthenticated cookie named
+The web app keeps unprefixed Core 3 routes (`/events`, `/chart`, `/analyst`); `/` and archived product
+routes redirect without adding locale prefixes. Locale preference is stored in an unauthenticated cookie named
 `alpha_radar_locale`, validated against the supported locale list, and read by server-rendered pages
 so the first HTML response is already localized. After authentication is introduced, this cookie can
 be synchronized with a user preference while continuing to provide a fallback for anonymous users.
@@ -101,7 +119,7 @@ and `Intl`-based date, number, percent, and currency formatters live under `apps
 Future AI Analyst requests must receive the user's preferred locale so model output can match the UI
 language, but AI integration remains deferred.
 
-## Product shell and demo-intelligence boundary
+## Archived product shell and demo-intelligence boundary
 
 The web application owns a presentation-only Intelligence Map shell. Language-neutral TypeScript
 contracts for `RadarItem`, `AssetImpact`, source tier, direction, impact, horizon, order, confidence,
@@ -159,7 +177,7 @@ Until those domains ship, sample source names never imply retrieval and every in
 must display the localized demo disclosure. Real Event APIs should replace the fixture adapter at the
 presentation boundary rather than reuse demo records as domain entities.
 
-## Strategy presentation boundary
+## Archived strategy presentation boundary
 
 Strategy & Opportunity extends the existing demo adapter, not the backend modular monolith.
 `packages/types/strategy` holds explicit DemoObject-based contracts; deterministic fixtures and pure

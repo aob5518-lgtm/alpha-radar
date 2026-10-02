@@ -61,6 +61,26 @@ async def _fetch_candles() -> int:
         await engine.dispose()
 
 
+async def _backfill_technical_history(interval: MarketInterval, limit: int) -> int:
+    settings = get_settings()
+    if not settings.market_data_ingestion_enabled:
+        return 0
+    provider = create_market_data_provider(settings)
+    try:
+        async with async_session_factory() as session:
+            repository = MarketDataRepository(session)
+            instruments = await repository.list_active_instruments(provider.name)
+            service = _service(repository)
+            count = 0
+            for instrument in instruments:
+                count += await service.fetch_and_ingest_candles(
+                    instrument, provider, interval, limit=limit
+                )
+            return count
+    finally:
+        await engine.dispose()
+
+
 @app.task(  # pyright: ignore[reportUnknownMemberType, reportUntypedFunctionDecorator]
     name="alpha_radar.market_data.fetch_quotes"
 )
@@ -73,3 +93,13 @@ def fetch_quotes() -> int:
 )
 def fetch_candles() -> int:
     return asyncio.run(_fetch_candles())
+
+
+@app.task(  # pyright: ignore[reportUnknownMemberType, reportUntypedFunctionDecorator]
+    name="alpha_radar.market_data.backfill_technical_history"
+)
+def backfill_technical_history(interval: str, limit: int = 500) -> int:
+    """Explicit bounded backfill; intentionally absent from the periodic schedule."""
+    market_interval = MarketInterval(interval)
+    bounded_limit = min(max(limit, 1), 500)
+    return asyncio.run(_backfill_technical_history(market_interval, bounded_limit))

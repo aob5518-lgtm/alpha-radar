@@ -60,8 +60,8 @@ jobs:
         run: docker compose up --build --detach --wait
       - name: Verify health, dependencies, assets, and market data
         run: ./scripts/verify-stack.sh
-      - name: Verify bilingual strategy shell and persisted Asset Market
-        run: python scripts/verify-strategy-shell.py
+      - name: Verify bilingual Core 3 product and legacy redirects
+        run: python scripts/verify-core-3.py
       - name: Verify bilingual persisted Source Intelligence
         run: python scripts/verify-sources-ui.py
       - name: Show Compose logs on failure

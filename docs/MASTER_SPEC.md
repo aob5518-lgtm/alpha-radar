@@ -5,7 +5,9 @@ Status: Active Development
 
 ## 1. Product Vision
 
-Alpha Radar is an AI-powered financial intelligence and asset discovery platform.
+Alpha Radar is a focused financial intelligence product with exactly three primary user-facing
+functions: Important Financial Events, a professional Crypto Chart with deterministic structural
+levels and trend regime, and a platform-grounded AI Analyst.
 
 It continuously monitors:
 
@@ -94,9 +96,32 @@ Macro/reference:
 DXY
 US10Y
 
-## 3. Core Product Modules
+## 3. Current Core 3 Product
 
-### Command Center
+Primary navigation contains only:
+
+1. **Events** (`/events`) — a compact calendar of validated, important market-moving Events.
+2. **Chart** (`/chart`) — provider-provenanced crypto candles, deterministic S1–S3/R1–R3 and one
+   explainable bullish/neutral/bearish trend regime.
+3. **AI Analyst** (`/analyst`) — structured interpretation grounded in computed market context,
+   validated Events and evidence. It remains disabled until a schema-validated model integration is
+   implemented.
+
+The root route redirects to Events. English and Simplified Chinese remain supported. The product
+optimizes for usefulness, accuracy, speed and clarity rather than surface count. Missing data is
+shown as unavailable and is never replaced by fictional financial intelligence. See
+`CORE_3_PRODUCT.md` and `TECHNICAL_LEVELS.md`.
+
+## 4. Archived Product Surfaces
+
+The following sections describe historical prototypes and are **archived / not current product
+scope**. They must not appear in primary navigation: Command Center, Radar Impact Map, Radar
+Heatmap, Discover, Themes, Opportunities, Strategy, Cycle, Watchlist, Alerts and Asset Directory.
+Useful backend foundations and historical documentation remain preserved.
+
+### Archived: prior product modules
+
+#### Command Center (archived)
 
 Route:
 
@@ -116,7 +141,7 @@ Core components:
 - AI briefing
 - watchlist alerts
 
-### Radar
+#### Radar (archived; replaced by Events)
 
 Route:
 
@@ -140,7 +165,7 @@ Views:
 - ETF
 - Protocol
 
-### Discover
+#### Discover (archived)
 
 Route:
 
@@ -160,7 +185,7 @@ Potential sections:
 - High Conviction
 - High Risk
 
-### Asset Intelligence
+#### Asset Intelligence (archived as primary surface)
 
 Route:
 
@@ -189,7 +214,7 @@ AI Thesis should eventually support:
 - Risks
 - Kill Conditions
 
-### Watchlist
+#### Watchlist (archived)
 
 Route:
 
@@ -203,7 +228,7 @@ Users monitor selected assets and their:
 - risk
 - alerts
 
-### Alerts
+#### Alerts (archived)
 
 Route:
 
@@ -227,7 +252,7 @@ MEDIUM
 HIGH
 CRITICAL
 
-### AI Analyst
+#### AI Analyst historical notes (superseded by Core 3 contract)
 
 Route:
 
@@ -244,7 +269,7 @@ Answers should eventually include:
 - related assets
 - related events
 
-### Sources and Source Documents
+### Sources and Source Documents (retained infrastructure)
 
 The first real intelligence ingestion layer introduces canonical Sources, policy-aware
 SourceDocuments and append-only revisions. Official SEC JSON and Federal Reserve RSS adapters run
@@ -252,7 +277,7 @@ only in Celery; external polling is opt-in. PostgreSQL APIs and `/radar/sources`
 without provider raw payloads. A SourceDocument is upstream evidence, not an Event, sentiment,
 impact, asset mapping, or opportunity. See `SOURCES.md`.
 
-### Product Shell and Intelligence Map
+### Product Shell and Intelligence Map (archived preview)
 
 The first product-shell implementation validates the information architecture before the real
 Sources, Story Clustering, Event Engine, and Event-to-Asset Mapping domains exist. It provides the
@@ -275,7 +300,7 @@ Article -> Story Cluster -> Event -> Asset Mapping -> Impact
 When those domains are implemented, validated API contracts will replace the fixtures; presentation
 components must not become a parallel event domain.
 
-### Strategy & Opportunity Product Foundation
+### Strategy & Opportunity Product Foundation (archived preview)
 
 The presentation preview extends Event → Asset Impact with Theme → Opportunity → Strategy →
 Monitoring → Outcome. New routes are `/discover/themes`, `/discover/opportunities`, `/strategy`
@@ -293,7 +318,7 @@ airdrop; halving does not guarantee a bull market; growth does not justify valua
 No trading, wallet execution, live scraping, real probability/cycle model or strategy scoring is
 implemented. Real scoring requires sourced data and historical validation. See `STRATEGY_ENGINE.md`.
 
-## 4. System Architecture
+## 5. System Architecture
 
 Initial architecture:
 
@@ -533,7 +558,7 @@ Scoring
 ↓
 Persist
 ↓
-Radar / Discover / Alerts
+Events / Chart Context / AI Analyst
 
 Each stage should eventually be inspectable.
 
