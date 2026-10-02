@@ -23,10 +23,6 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
-  background-size: 32px 32px;
 }
 
 button,
@@ -47,6 +43,33 @@ input:focus-visible {
   width: 100%;
   max-width: 96rem;
   padding: 2rem 1.25rem 4rem;
+}
+.core-nav-link {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 0.45rem;
+  padding: 0.55rem 0.65rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.core-nav-link:hover {
+  color: var(--foreground);
+  background: rgba(255, 255, 255, 0.04);
+}
+.core-nav-link-active {
+  color: #6ee7b7;
+  background: rgba(52, 211, 153, 0.09);
+}
+@media (max-width: 520px) {
+  .core-nav-link {
+    gap: 0.3rem;
+    padding-inline: 0.45rem;
+    font-size: 0.68rem;
+  }
 }
 @media (min-width: 640px) {
   .page-shell {

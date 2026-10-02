@@ -7,8 +7,12 @@ from datetime import timedelta
 
 class MarketInterval(str, enum.Enum):
     ONE_MINUTE = "1m"
+    FIVE_MINUTES = "5m"
+    FIFTEEN_MINUTES = "15m"
     ONE_HOUR = "1h"
+    FOUR_HOURS = "4h"
     ONE_DAY = "1d"
+    ONE_WEEK = "1w"
 
 
 @dataclass(frozen=True)
@@ -16,6 +20,7 @@ class IntervalDefinition:
     duration: timedelta
     max_query_range: timedelta
     coinbase_granularity: int
+    coinbase_aggregation: int = 1
 
 
 INTERVAL_DEFINITIONS: dict[MarketInterval, IntervalDefinition] = {
@@ -24,15 +29,37 @@ INTERVAL_DEFINITIONS: dict[MarketInterval, IntervalDefinition] = {
         max_query_range=timedelta(days=7),
         coinbase_granularity=60,
     ),
+    MarketInterval.FIVE_MINUTES: IntervalDefinition(
+        duration=timedelta(minutes=5),
+        max_query_range=timedelta(days=30),
+        coinbase_granularity=300,
+    ),
+    MarketInterval.FIFTEEN_MINUTES: IntervalDefinition(
+        duration=timedelta(minutes=15),
+        max_query_range=timedelta(days=90),
+        coinbase_granularity=900,
+    ),
     MarketInterval.ONE_HOUR: IntervalDefinition(
         duration=timedelta(hours=1),
         max_query_range=timedelta(days=366),
         coinbase_granularity=3600,
     ),
+    MarketInterval.FOUR_HOURS: IntervalDefinition(
+        duration=timedelta(hours=4),
+        max_query_range=timedelta(days=1464),
+        coinbase_granularity=3600,
+        coinbase_aggregation=4,
+    ),
     MarketInterval.ONE_DAY: IntervalDefinition(
         duration=timedelta(days=1),
         max_query_range=timedelta(days=3650),
         coinbase_granularity=86400,
+    ),
+    MarketInterval.ONE_WEEK: IntervalDefinition(
+        duration=timedelta(days=7),
+        max_query_range=timedelta(days=7000),
+        coinbase_granularity=86400,
+        coinbase_aggregation=7,
     ),
 }
 

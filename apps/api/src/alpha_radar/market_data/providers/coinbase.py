@@ -71,7 +71,11 @@ class CoinbaseMarketDataProvider:
         limit: int = COINBASE_MAX_CANDLES_PER_REQUEST,
     ) -> list[ProviderCandle]:
         definition = INTERVAL_DEFINITIONS[interval]
-        bounded_limit = min(limit, COINBASE_MAX_CANDLES_PER_REQUEST)
+        source_limit = min(
+            limit * definition.coinbase_aggregation,
+            COINBASE_MAX_CANDLES_PER_REQUEST,
+        )
+        bounded_limit = max(1, source_limit // definition.coinbase_aggregation)
         params: dict[str, str | int] = {"granularity": definition.coinbase_granularity}
         if end is not None:
             params["end"] = end.isoformat()
@@ -84,6 +88,11 @@ class CoinbaseMarketDataProvider:
             f"/products/{instrument.provider_instrument_id}/candles", params=params
         )
         rows = _candle_rows.validate_python(payload)
+        normalized_rows = self._aggregate_rows(
+            rows,
+            target_seconds=int(definition.duration.total_seconds()),
+            aggregation=definition.coinbase_aggregation,
+        )
         observed_at = datetime.now(UTC)
         candles = [
             ProviderCandle(
@@ -100,9 +109,39 @@ class CoinbaseMarketDataProvider:
                 is_closed=datetime.fromtimestamp(timestamp, UTC) + definition.duration
                 <= observed_at,
             )
-            for timestamp, low, high, open_price, close, volume in rows[:bounded_limit]
+            for timestamp, low, high, open_price, close, volume in normalized_rows[-bounded_limit:]
         ]
         return sorted(candles, key=lambda candle: candle.open_time)
+
+    @staticmethod
+    def _aggregate_rows(
+        rows: list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]],
+        *,
+        target_seconds: int,
+        aggregation: int,
+    ) -> list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]]:
+        if aggregation == 1:
+            return sorted(rows, key=lambda row: row[0])
+        buckets: dict[int, list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]]] = {}
+        for row in rows:
+            bucket = row[0] - (row[0] % target_seconds)
+            buckets.setdefault(bucket, []).append(row)
+        result: list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]] = []
+        for timestamp, values in sorted(buckets.items()):
+            ordered = sorted(values, key=lambda row: row[0])
+            if len(ordered) != aggregation:
+                continue
+            result.append(
+                (
+                    timestamp,
+                    min(row[1] for row in ordered),
+                    max(row[2] for row in ordered),
+                    ordered[0][3],
+                    ordered[-1][4],
+                    sum((row[5] for row in ordered), start=Decimal("0")),
+                )
+            )
+        return result
 
     async def _get(self, path: str, *, params: dict[str, str | int] | None = None) -> object:
         async with httpx.AsyncClient(

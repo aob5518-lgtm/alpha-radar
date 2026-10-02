@@ -26,6 +26,18 @@ def instrument_ref() -> MarketInstrumentRef:
     )
 
 
+def test_core_3_market_intervals_are_centralized() -> None:
+    assert [interval.value for interval in MarketInterval] == [
+        "1m",
+        "5m",
+        "15m",
+        "1h",
+        "4h",
+        "1d",
+        "1w",
+    ]
+
+
 @pytest.mark.asyncio
 async def test_mock_provider_is_deterministic_and_preserves_decimal() -> None:
     now = datetime(2026, 9, 14, 2, 0, tzinfo=UTC)
@@ -121,3 +133,29 @@ async def test_coinbase_adapter_normalizes_ticker_and_candles() -> None:
     assert candles[0].low == Decimal("60000")
     assert candles[0].high == Decimal("60200")
     assert candles[0].provider_timestamp is None
+
+
+@pytest.mark.asyncio
+async def test_coinbase_adapter_aggregates_four_hour_candles_without_inventing_bars() -> None:
+    start = int(datetime(2026, 9, 14, 0, 0, tzinfo=UTC).timestamp())
+    rows = [
+        [start + index * 3600, "99", str(102 + index), str(100 + index), str(101 + index), "2"]
+        for index in range(4)
+    ]
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=rows)
+
+    provider = CoinbaseMarketDataProvider(
+        base_url="https://api.exchange.coinbase.com",
+        transport=httpx.MockTransport(handler),
+    )
+    candles = await provider.get_candles(instrument_ref(), MarketInterval.FOUR_HOURS, limit=1)
+
+    assert len(candles) == 1
+    assert candles[0].interval == MarketInterval.FOUR_HOURS
+    assert candles[0].open == Decimal("100")
+    assert candles[0].close == Decimal("104")
+    assert candles[0].high == Decimal("105")
+    assert candles[0].low == Decimal("99")
+    assert candles[0].volume == Decimal("8")
