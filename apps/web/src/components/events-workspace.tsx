@@ -4,13 +4,20 @@ import type { CanonicalEvent } from "@alpha-radar/types/events";
 import { ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { getClientTranslations } from "@/lib/i18n/client";
+import type { Locale } from "@/lib/i18n/config";
+import { getMessages } from "@/lib/i18n/messages";
 import { cn } from "@/lib/utils";
 
 type View = "today" | "week" | "calendar";
 
-export function EventsWorkspace({ events }: { events: CanonicalEvent[] }) {
-  const { locale, messages } = getClientTranslations();
+export function EventsWorkspace({
+  events,
+  locale,
+}: {
+  events: CanonicalEvent[];
+  locale: Locale;
+}) {
+  const messages = getMessages(locale);
   const [view, setView] = useState<View>("today");
   const [includeMedium, setIncludeMedium] = useState(false);
   const [selectedId, setSelectedId] = useState(events[0]?.id ?? null);
@@ -127,7 +134,7 @@ export function EventsWorkspace({ events }: { events: CanonicalEvent[] }) {
           </div>
         )}
       </section>
-      <EventDetail event={selected} locale={locale} />
+      <EventDetail event={selected} locale={locale} messages={messages} />
     </div>
   );
 }
@@ -135,11 +142,12 @@ export function EventsWorkspace({ events }: { events: CanonicalEvent[] }) {
 function EventDetail({
   event,
   locale,
+  messages,
 }: {
   event: CanonicalEvent | null;
-  locale: string;
+  locale: Locale;
+  messages: ReturnType<typeof getMessages>;
 }) {
-  const { messages } = getClientTranslations();
   if (!event)
     return (
       <aside className="p-5 text-sm text-[var(--muted)]">

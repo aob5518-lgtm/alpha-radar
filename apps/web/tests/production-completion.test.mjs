@@ -47,3 +47,25 @@ test("live chart updates an open candle without changing closed-candle engine in
   assert.match(chart, /candleSeries\.update\(current\)/);
   assert.match(engine, /filter\(\(candle\) => candle\.is_closed\)/);
 });
+
+test("Core 3 client localization is safe during server rendering", async () => {
+  const client = await readFile(
+    new URL("../src/lib/i18n/client.ts", import.meta.url),
+    "utf8",
+  );
+  const eventsPage = await readFile(
+    new URL("../src/app/events/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const analystPage = await readFile(
+    new URL("../src/app/analyst/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(client, /typeof document === "undefined"/);
+  assert.match(
+    eventsPage,
+    /<EventsWorkspace events=\{events\.items\} locale=\{locale\}/,
+  );
+  assert.match(analystPage, /locale=\{locale\}/);
+});

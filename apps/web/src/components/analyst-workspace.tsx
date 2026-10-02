@@ -8,7 +8,8 @@ import type { MarketInterval } from "@alpha-radar/types/market-data";
 import { Bot, Send, User } from "lucide-react";
 import { FormEvent, useState } from "react";
 
-import { getClientTranslations } from "@/lib/i18n/client";
+import type { Locale } from "@/lib/i18n/config";
+import { getMessages, type Messages } from "@/lib/i18n/messages";
 
 interface Turn {
   question: string;
@@ -21,13 +22,15 @@ export function AnalystWorkspace({
   symbol,
   timeframe,
   configured,
+  locale,
 }: {
   assetId: string | null;
   symbol: string | null;
   timeframe: MarketInterval;
   configured: boolean;
+  locale: Locale;
 }) {
-  const { messages } = getClientTranslations();
+  const messages = getMessages(locale);
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [pending, setPending] = useState(false);
@@ -99,7 +102,7 @@ export function AnalystWorkspace({
                 <p className="text-sm">{turn.question}</p>
               </div>
               {turn.answer ? (
-                <Answer answer={turn.answer} />
+                <Answer answer={turn.answer} messages={messages} />
               ) : (
                 <p className="ml-7 text-sm text-rose-300">{turn.error}</p>
               )}
@@ -136,8 +139,13 @@ export function AnalystWorkspace({
   );
 }
 
-function Answer({ answer }: { answer: AnalystResponse }) {
-  const { messages } = getClientTranslations();
+function Answer({
+  answer,
+  messages,
+}: {
+  answer: AnalystResponse;
+  messages: Messages;
+}) {
   const sections: [string, AnalystStatement[]][] = [
     [messages.analyst.marketState, answer.market_state],
     [messages.analyst.trend, answer.trend],

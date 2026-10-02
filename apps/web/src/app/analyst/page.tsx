@@ -12,7 +12,7 @@ export default async function AnalystPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const handoff = parseAnalystHandoff(await searchParams);
-  const { messages } = await getTranslations();
+  const { locale, messages } = await getTranslations();
   const asset = handoff
     ? await getAsset(handoff.asset).catch(() => null)
     : null;
@@ -32,6 +32,7 @@ export default async function AnalystPage({
           symbol={asset?.symbol ?? null}
           timeframe={handoff?.interval ?? "1h"}
           configured={isAnalystConfigured()}
+          locale={locale}
         />
       </div>
     </main>
