@@ -10,8 +10,9 @@ import type {
   MarketInterval,
 } from "@alpha-radar/types/market-data";
 
-export const TECHNICAL_LEVELS_VERSION = "structural-levels-v1";
-export const TREND_REGIME_VERSION = "trend-regime-v1";
+export const TECHNICAL_LEVELS_VERSION = "structural-levels-v1.1";
+export const TREND_REGIME_VERSION = "trend-regime-v1.1";
+export const TREND_MIN_CANDLES = 250;
 
 export interface NumericCandle {
   openTime: string;
@@ -32,15 +33,17 @@ export interface ConfirmedPivot {
   atr: number;
   pivotQuality: number;
   rejectionStrength: number;
-  volumeConfirmation: number;
+  volumeConfirmation: number | null;
 }
 
-interface LevelZone {
+export interface LevelZone {
   zoneLow: number;
   zoneHigh: number;
   representativePrice: number;
   pivots: ConfirmedPivot[];
   strength: number;
+  volumeEvidenceAvailable: boolean;
+  higherTimeframeAvailable: boolean;
   higherTimeframeConfluence: boolean;
 }
 
@@ -59,6 +62,20 @@ export interface StructuralLevelOptions {
   atrPeriod?: number;
   clusterAtrMultiplier?: number;
   higherTimeframePrices?: number[];
+  higherTimeframeDirection?: "bullish" | "neutral" | "bearish";
+}
+
+export interface WilderAdxSeries {
+  trueRange: number[];
+  plusDm: number[];
+  minusDm: number[];
+  smoothedTrueRange: Array<number | null>;
+  smoothedPlusDm: Array<number | null>;
+  smoothedMinusDm: Array<number | null>;
+  plusDi: Array<number | null>;
+  minusDi: Array<number | null>;
+  dx: Array<number | null>;
+  adx: Array<number | null>;
 }
 
 function finitePositive(value: string): number | null {
@@ -110,6 +127,7 @@ export function calculateAtrSeries(
   candles: NumericCandle[],
   period = 14,
 ): number[] {
+  if (candles.length === 0) return [];
   const trueRanges = candles.map((candle, index) => {
     const previousClose = index > 0 ? candles[index - 1]?.close : undefined;
     return previousClose === undefined
@@ -120,11 +138,20 @@ export function calculateAtrSeries(
           Math.abs(candle.low - previousClose),
         );
   });
-  return trueRanges.map((_, index) => {
-    const start = Math.max(0, index - period + 1);
-    const window = trueRanges.slice(start, index + 1);
-    return window.reduce((sum, value) => sum + value, 0) / window.length;
-  });
+  const result: number[] = [];
+  for (let index = 0; index < trueRanges.length; index += 1) {
+    if (index < period - 1) {
+      result.push(mean(trueRanges.slice(0, index + 1)));
+    } else if (index === period - 1) {
+      result.push(mean(trueRanges.slice(0, period)));
+    } else {
+      result.push(
+        ((result[index - 1] ?? 0) * (period - 1) + (trueRanges[index] ?? 0)) /
+          period,
+      );
+    }
+  }
+  return result;
 }
 
 export function detectConfirmedPivots(
@@ -142,9 +169,7 @@ export function detectConfirmedPivots(
       .slice(Math.max(0, index - 19), index + 1)
       .map((candle) => candle.volume)
       .filter((value): value is number => value !== null);
-    return values.length > 0
-      ? values.reduce((sum, value) => sum + value, 0) / values.length
-      : null;
+    return values.length > 0 ? mean(values) : null;
   });
   const pivots: ConfirmedPivot[] = [];
   for (let index = pivotLeft; index < candles.length - pivotRight; index += 1) {
@@ -154,8 +179,17 @@ export function detectConfirmedPivots(
     const others = neighbors.filter(
       (_, neighborIndex) => neighborIndex !== pivotLeft,
     );
-    const isHigh = others.every((value) => candle.high >= value.high);
-    const isLow = others.every((value) => candle.low <= value.low);
+    const next = candles[index + 1];
+    const isFinalHighPlateau = next?.high !== candle.high;
+    const isFinalLowPlateau = next?.low !== candle.low;
+    const isHigh =
+      isFinalHighPlateau &&
+      others.every((value) => candle.high >= value.high) &&
+      others.some((value) => candle.high > value.high);
+    const isLow =
+      isFinalLowPlateau &&
+      others.every((value) => candle.low <= value.low) &&
+      others.some((value) => candle.low < value.low);
     const localAtr = Math.max(atr[index] ?? 0, Number.EPSILON);
     const volumeAverage = averageVolumes[index];
     const volumeConfirmation =
@@ -164,8 +198,8 @@ export function detectConfirmedPivots(
       volumeAverage !== undefined &&
       volumeAverage > 0
         ? Math.min(candle.volume / volumeAverage / 2, 1)
-        : 0;
-    if (isHigh && others.some((value) => candle.high > value.high)) {
+        : null;
+    if (isHigh) {
       const surroundingHigh = Math.max(...others.map((value) => value.high));
       pivots.push({
         index,
@@ -182,7 +216,7 @@ export function detectConfirmedPivots(
         volumeConfirmation,
       });
     }
-    if (isLow && others.some((value) => candle.low < value.low)) {
+    if (isLow) {
       const surroundingLow = Math.min(...others.map((value) => value.low));
       pivots.push({
         index,
@@ -207,7 +241,7 @@ export function clusterPivots(
   pivots: ConfirmedPivot[],
   candleCount: number,
   clusterAtrMultiplier = 0.6,
-  higherTimeframePrices: number[] = [],
+  higherTimeframePrices?: number[],
 ): LevelZone[] {
   const clusters: ConfirmedPivot[][] = [];
   for (const pivot of [...pivots].sort(
@@ -230,29 +264,52 @@ export function clusterPivots(
       mean(cluster.map((pivot) => pivot.atr)),
       Number.EPSILON,
     );
-    const higherTimeframeConfluence = higherTimeframePrices.some(
-      (price) =>
-        Math.abs(price - representativePrice) <=
-        averageAtr * clusterAtrMultiplier,
-    );
+    const higherTimeframeAvailable = higherTimeframePrices !== undefined;
+    const higherTimeframeConfluence =
+      higherTimeframeAvailable &&
+      higherTimeframePrices.some(
+        (price) =>
+          Math.abs(price - representativePrice) <=
+          averageAtr * clusterAtrMultiplier,
+      );
     const recency = clamp(
       (Math.max(...cluster.map((pivot) => pivot.index)) + 1) /
         Math.max(candleCount, 1),
       0,
       1,
     );
-    const touchScore = clamp(cluster.length / 4, 0, 1);
+    const pivotScore = clamp(cluster.length / 4, 0, 1);
     const rejection = mean(cluster.map((pivot) => pivot.rejectionStrength));
-    const volume = mean(cluster.map((pivot) => pivot.volumeConfirmation));
+    const volumeValues = cluster
+      .map((pivot) => pivot.volumeConfirmation)
+      .filter((value): value is number => value !== null);
     const quality = mean(cluster.map((pivot) => pivot.pivotQuality));
+    const components = [
+      { value: pivotScore, weight: 0.25 },
+      { value: rejection, weight: 0.2 },
+      { value: recency, weight: 0.15 },
+      { value: quality, weight: 0.15 },
+    ];
+    if (volumeValues.length > 0) {
+      components.push({ value: mean(volumeValues), weight: 0.15 });
+    }
+    if (higherTimeframeAvailable) {
+      components.push({
+        value: Number(higherTimeframeConfluence),
+        weight: 0.1,
+      });
+    }
+    const availableWeight = components.reduce(
+      (total, component) => total + component.weight,
+      0,
+    );
     const strength = Math.round(
-      100 *
-        (0.25 * touchScore +
-          0.2 * rejection +
-          0.15 * volume +
-          0.15 * recency +
-          0.15 * quality +
-          0.1 * Number(higherTimeframeConfluence)),
+      (100 *
+        components.reduce(
+          (total, component) => total + component.value * component.weight,
+          0,
+        )) /
+        availableWeight,
     );
     return {
       zoneLow: Math.min(...cluster.map((pivot) => pivot.price)),
@@ -260,6 +317,8 @@ export function clusterPivots(
       representativePrice,
       pivots: cluster,
       strength,
+      volumeEvidenceAvailable: volumeValues.length > 0,
+      higherTimeframeAvailable,
       higherTimeframeConfluence,
     };
   });
@@ -305,7 +364,6 @@ function selectLevels(
         ? left.zone.representativePrice - right.zone.representativePrice
         : right.zone.representativePrice - left.zone.representativePrice,
     );
-
   return candidates.map(({ zone, distancePercent }, index) => {
     const prefix = kind === "resistance" ? "R" : "S";
     return {
@@ -317,14 +375,139 @@ function selectLevels(
       zone_high: zone.zoneHigh,
       strength: zone.strength,
       strength_band: strengthBand(zone.strength),
-      touch_count: zone.pivots.length,
+      pivot_count: zone.pivots.length,
       last_tested_at:
         [...zone.pivots].sort((a, b) => b.index - a.index)[0]?.time ?? "",
       distance_percent: distancePercent,
       timeframe,
+      higher_timeframe_available: zone.higherTimeframeAvailable,
       higher_timeframe_confluence: zone.higherTimeframeConfluence,
     };
   });
+}
+
+export function calculateSeededEma(
+  values: number[],
+  period: number,
+): Array<number | null> {
+  const result: Array<number | null> = Array(values.length).fill(null);
+  if (period <= 0 || values.length < period) return result;
+  const seedIndex = period - 1;
+  result[seedIndex] = mean(values.slice(0, period));
+  const multiplier = 2 / (period + 1);
+  for (let index = period; index < values.length; index += 1) {
+    const previous = result[index - 1];
+    if (previous === null || previous === undefined) continue;
+    result[index] =
+      (values[index] ?? 0) * multiplier + previous * (1 - multiplier);
+  }
+  return result;
+}
+
+export function calculateWilderAdx(
+  candles: NumericCandle[],
+  period = 14,
+): WilderAdxSeries {
+  const length = candles.length;
+  const trueRange = Array<number>(length).fill(0);
+  const plusDm = Array<number>(length).fill(0);
+  const minusDm = Array<number>(length).fill(0);
+  for (let index = 0; index < length; index += 1) {
+    const current = candles[index]!;
+    const previous = candles[index - 1];
+    if (!previous) {
+      trueRange[index] = current.high - current.low;
+      continue;
+    }
+    trueRange[index] = Math.max(
+      current.high - current.low,
+      Math.abs(current.high - previous.close),
+      Math.abs(current.low - previous.close),
+    );
+    const upMove = current.high - previous.high;
+    const downMove = previous.low - current.low;
+    plusDm[index] = upMove > downMove && upMove > 0 ? upMove : 0;
+    minusDm[index] = downMove > upMove && downMove > 0 ? downMove : 0;
+  }
+  const smoothedTrueRange: Array<number | null> = Array(length).fill(null);
+  const smoothedPlusDm: Array<number | null> = Array(length).fill(null);
+  const smoothedMinusDm: Array<number | null> = Array(length).fill(null);
+  const plusDi: Array<number | null> = Array(length).fill(null);
+  const minusDi: Array<number | null> = Array(length).fill(null);
+  const dx: Array<number | null> = Array(length).fill(null);
+  const adx: Array<number | null> = Array(length).fill(null);
+  if (period <= 0 || length <= period) {
+    return {
+      trueRange,
+      plusDm,
+      minusDm,
+      smoothedTrueRange,
+      smoothedPlusDm,
+      smoothedMinusDm,
+      plusDi,
+      minusDi,
+      dx,
+      adx,
+    };
+  }
+  smoothedTrueRange[period] = sum(trueRange.slice(1, period + 1));
+  smoothedPlusDm[period] = sum(plusDm.slice(1, period + 1));
+  smoothedMinusDm[period] = sum(minusDm.slice(1, period + 1));
+  for (let index = period; index < length; index += 1) {
+    if (index > period) {
+      smoothedTrueRange[index] =
+        (smoothedTrueRange[index - 1] ?? 0) -
+        (smoothedTrueRange[index - 1] ?? 0) / period +
+        (trueRange[index] ?? 0);
+      smoothedPlusDm[index] =
+        (smoothedPlusDm[index - 1] ?? 0) -
+        (smoothedPlusDm[index - 1] ?? 0) / period +
+        (plusDm[index] ?? 0);
+      smoothedMinusDm[index] =
+        (smoothedMinusDm[index - 1] ?? 0) -
+        (smoothedMinusDm[index - 1] ?? 0) / period +
+        (minusDm[index] ?? 0);
+    }
+    const range = smoothedTrueRange[index] ?? 0;
+    if (range <= 0) {
+      plusDi[index] = 0;
+      minusDi[index] = 0;
+      dx[index] = 0;
+      continue;
+    }
+    plusDi[index] = ((smoothedPlusDm[index] ?? 0) / range) * 100;
+    minusDi[index] = ((smoothedMinusDm[index] ?? 0) / range) * 100;
+    const total = (plusDi[index] ?? 0) + (minusDi[index] ?? 0);
+    dx[index] =
+      total === 0
+        ? 0
+        : (Math.abs((plusDi[index] ?? 0) - (minusDi[index] ?? 0)) / total) *
+          100;
+  }
+  const firstAdxIndex = period * 2 - 1;
+  if (length > firstAdxIndex) {
+    adx[firstAdxIndex] = mean(
+      dx
+        .slice(period, firstAdxIndex + 1)
+        .filter((value): value is number => value !== null),
+    );
+    for (let index = firstAdxIndex + 1; index < length; index += 1) {
+      adx[index] =
+        ((adx[index - 1] ?? 0) * (period - 1) + (dx[index] ?? 0)) / period;
+    }
+  }
+  return {
+    trueRange,
+    plusDm,
+    minusDm,
+    smoothedTrueRange,
+    smoothedPlusDm,
+    smoothedMinusDm,
+    plusDi,
+    minusDi,
+    dx,
+    adx,
+  };
 }
 
 export function calculateTrendRegime(
@@ -337,37 +520,35 @@ export function calculateTrendRegime(
     ema_slopes: 0,
     price_location: 0,
     adx: 0,
-    higher_timeframe_alignment: 0,
+    higher_timeframe_alignment: null,
   };
-  if (candles.length < 200) {
+  if (candles.length < TREND_MIN_CANDLES) {
     return {
       direction: "unavailable",
       strength: 0,
       version: TREND_REGIME_VERSION,
       breakdown: emptyBreakdown,
-      reason: "At least 200 closed candles are required for EMA 200.",
+      reason:
+        "At least 250 closed candles are required to seed EMA 200 and retain 50 warm-up observations.",
     };
   }
   const closes = candles.map((candle) => candle.close);
-  const ema20 = ema(closes, 20);
-  const ema50 = ema(closes, 50);
-  const ema200 = ema(closes, 200);
+  const ema20 = calculateSeededEma(closes, 20);
+  const ema50 = calculateSeededEma(closes, 50);
+  const ema200 = calculateSeededEma(closes, 200);
   const last = closes.at(-1) ?? 0;
-  const e20 = ema20.at(-1) ?? last;
-  const e50 = ema50.at(-1) ?? last;
-  const e200 = ema200.at(-1) ?? last;
-  const slopeLookback = 5;
-  const slope = (values: number[]) => {
-    const previous = values.at(-(slopeLookback + 1)) ?? values[0] ?? 0;
-    const current = values.at(-1) ?? previous;
-    return previous === 0
+  const e20 = lastNumber(ema20);
+  const e50 = lastNumber(ema50);
+  const e200 = lastNumber(ema200);
+  const slope = (values: Array<number | null>) => {
+    const available = values.filter((value): value is number => value !== null);
+    const previous = available.at(-6);
+    const current = available.at(-1);
+    return previous === undefined || current === undefined || previous === 0
       ? 0
       : clamp(((current - previous) / previous) * 100, -1, 1);
   };
-  const pivots = detectConfirmedPivots(candles, {
-    pivotLeft: 3,
-    pivotRight: 3,
-  });
+  const pivots = detectConfirmedPivots(candles);
   const highs = pivots.filter((pivot) => pivot.side === "high").slice(-2);
   const lows = pivots.filter((pivot) => pivot.side === "low").slice(-2);
   const structure =
@@ -386,21 +567,37 @@ export function calculateTrendRegime(
     last > e50 ? 1 : -1,
     last > e200 ? 1 : -1,
   ]);
-  const adxValue = adx(candles, 14);
+  const adxSeries = calculateWilderAdx(candles, 14);
+  const adxValue = lastNumber(adxSeries.adx);
   const adxDirectionalWeight = clamp(adxValue / 50, 0, 1);
   const higher =
-    higherTimeframeDirection === "bullish"
-      ? 1
-      : higherTimeframeDirection === "bearish"
-        ? -1
-        : 0;
+    higherTimeframeDirection === undefined
+      ? null
+      : higherTimeframeDirection === "bullish"
+        ? 1
+        : higherTimeframeDirection === "bearish"
+          ? -1
+          : 0;
+  const components = [
+    { value: structure, weight: 0.25 },
+    { value: ordering, weight: 0.25 },
+    { value: slopes, weight: 0.15 },
+    { value: location, weight: 0.15 },
+    {
+      value: Math.sign(ordering || structure) * adxDirectionalWeight,
+      weight: 0.1,
+    },
+  ];
+  if (higher !== null) components.push({ value: higher, weight: 0.1 });
+  const totalWeight = components.reduce(
+    (total, component) => total + component.weight,
+    0,
+  );
   const directionalScore =
-    0.25 * structure +
-    0.25 * ordering +
-    0.15 * slopes +
-    0.15 * location +
-    0.1 * Math.sign(ordering || structure) * adxDirectionalWeight +
-    0.1 * higher;
+    components.reduce(
+      (total, component) => total + component.value * component.weight,
+      0,
+    ) / totalWeight;
   const direction =
     directionalScore >= 0.2
       ? "bullish"
@@ -427,7 +624,7 @@ export function calculateTrendRegime(
       higher_timeframe_alignment: higher,
     },
     reason:
-      "Regime combines closed-candle structure, EMA ordering/slopes, price location and ADX.",
+      "Regime combines closed-candle structure, SMA-seeded EMAs, Wilder ADX and available higher-timeframe alignment.",
   };
 }
 
@@ -449,78 +646,38 @@ export function calculateTechnicalSnapshot(
     closedCandles,
     supports: selectLevels(zones, currentPrice, timeframe, "support"),
     resistances: selectLevels(zones, currentPrice, timeframe, "resistance"),
-    trend: calculateTrendRegime(closedCandles),
+    trend: calculateTrendRegime(
+      closedCandles,
+      options.higherTimeframeDirection,
+    ),
     version: TECHNICAL_LEVELS_VERSION,
-    insufficientData: closedCandles.length < 200 || pivots.length < 2,
+    insufficientData:
+      closedCandles.length < TREND_MIN_CANDLES || pivots.length < 2,
   };
 }
 
 function weightedPrice(pivots: ConfirmedPivot[]): number {
   const weights = pivots.map((pivot) => Math.max(pivot.pivotQuality, 0.1));
-  const total = weights.reduce((sum, value) => sum + value, 0);
+  const total = sum(weights);
   return (
     pivots.reduce(
-      (sum, pivot, index) => sum + pivot.price * (weights[index] ?? 0),
+      (totalPrice, pivot, index) =>
+        totalPrice + pivot.price * (weights[index] ?? 0),
       0,
     ) / total
   );
 }
 
-function ema(values: number[], period: number): number[] {
-  if (values.length === 0) return [];
-  const multiplier = 2 / (period + 1);
-  const result = [values[0] ?? 0];
-  for (let index = 1; index < values.length; index += 1) {
-    result.push(
-      (values[index] ?? 0) * multiplier +
-        (result[index - 1] ?? 0) * (1 - multiplier),
-    );
-  }
-  return result;
+function lastNumber(values: Array<number | null>): number {
+  return values.findLast((value): value is number => value !== null) ?? 0;
 }
 
-function adx(candles: NumericCandle[], period: number): number {
-  if (candles.length < period * 2 + 1) return 0;
-  const tr: number[] = [];
-  const plusDm: number[] = [];
-  const minusDm: number[] = [];
-  for (let index = 1; index < candles.length; index += 1) {
-    const current = candles[index]!;
-    const previous = candles[index - 1]!;
-    const upMove = current.high - previous.high;
-    const downMove = previous.low - current.low;
-    tr.push(
-      Math.max(
-        current.high - current.low,
-        Math.abs(current.high - previous.close),
-        Math.abs(current.low - previous.close),
-      ),
-    );
-    plusDm.push(upMove > downMove && upMove > 0 ? upMove : 0);
-    minusDm.push(downMove > upMove && downMove > 0 ? downMove : 0);
-  }
-  const dx: number[] = [];
-  for (let index = period - 1; index < tr.length; index += 1) {
-    const range = mean(tr.slice(index - period + 1, index + 1));
-    if (range === 0) {
-      dx.push(0);
-      continue;
-    }
-    const plus =
-      (mean(plusDm.slice(index - period + 1, index + 1)) / range) * 100;
-    const minus =
-      (mean(minusDm.slice(index - period + 1, index + 1)) / range) * 100;
-    dx.push(
-      plus + minus === 0 ? 0 : (Math.abs(plus - minus) / (plus + minus)) * 100,
-    );
-  }
-  return mean(dx.slice(-period));
+function sum(values: number[]): number {
+  return values.reduce((total, value) => total + value, 0);
 }
 
 function mean(values: number[]): number {
-  return values.length === 0
-    ? 0
-    : values.reduce((sum, value) => sum + value, 0) / values.length;
+  return values.length === 0 ? 0 : sum(values) / values.length;
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

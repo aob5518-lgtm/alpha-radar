@@ -7,16 +7,20 @@ import {
   parseAnalystHandoff,
 } from "../src/lib/market/analyst-context.ts";
 import {
+  higherMarketInterval,
   marketIntervals,
   parseMarketInterval,
 } from "../src/lib/market/intervals.ts";
 import {
+  calculateSeededEma,
   calculateTechnicalSnapshot,
   calculateTrendRegime,
+  calculateWilderAdx,
   clusterPivots,
   detectConfirmedPivots,
   normalizeClosedCandles,
 } from "../src/lib/market/technical-levels.ts";
+import { calculateTechnicalContext } from "../src/lib/market/technical-context.ts";
 import { formatEventSchedule } from "../src/lib/events/time.ts";
 
 function candle(index, close, options = {}) {
@@ -114,6 +118,30 @@ test("all seven chart timeframes parse independently", () => {
   for (const interval of marketIntervals)
     assert.equal(parseMarketInterval(interval), interval);
   assert.equal(parseMarketInterval("bad"), "1h");
+  assert.deepEqual(higherMarketInterval, {
+    "1m": "5m",
+    "5m": "15m",
+    "15m": "1h",
+    "1h": "4h",
+    "4h": "1d",
+    "1d": "1w",
+    "1w": null,
+  });
+});
+
+test("equal-price pivot plateaus resolve to the final plateau candle", () => {
+  const highs = [10, 11, 15, 15, 15, 11, 10];
+  const source = highs.map((high, index) =>
+    candle(index, high - 1, { high, low: high - 2 }),
+  );
+  const highPivots = detectConfirmedPivots(normalizeClosedCandles(source), {
+    pivotLeft: 2,
+    pivotRight: 2,
+  }).filter((pivot) => pivot.side === "high");
+  assert.deepEqual(
+    highPivots.map((pivot) => pivot.index),
+    [4],
+  );
 });
 
 test("pivots require right-side confirmation and open candles are excluded", () => {
@@ -172,6 +200,70 @@ test("ATR-relative clustering merges nearby levels and leaves separated zones", 
   assert.equal(zones[0].pivots.length, 2);
 });
 
+test("missing volume and higher-timeframe inputs are omitted, not scored as zero", () => {
+  const base = {
+    index: 10,
+    time: "2026-01-01T00:00:00Z",
+    side: "high",
+    atr: 100,
+    pivotQuality: 0.8,
+    rejectionStrength: 0.7,
+  };
+  const unavailable = clusterPivots(
+    [{ ...base, price: 70_850, volumeConfirmation: null }],
+    40,
+    0.6,
+  )[0];
+  const explicitZero = clusterPivots(
+    [{ ...base, price: 70_850, volumeConfirmation: 0 }],
+    40,
+    0.6,
+    [],
+  )[0];
+  assert.equal(unavailable.volumeEvidenceAvailable, false);
+  assert.equal(unavailable.higherTimeframeAvailable, false);
+  assert.equal(explicitZero.volumeEvidenceAvailable, true);
+  assert.equal(explicitZero.higherTimeframeAvailable, true);
+  assert.ok(unavailable.strength > explicitZero.strength);
+});
+
+test("EMA uses an SMA seed and Wilder ADX exposes standard intermediates", () => {
+  assert.deepEqual(calculateSeededEma([1, 2, 3, 4, 5], 3), [
+    null,
+    null,
+    2,
+    3,
+    4,
+  ]);
+  const values = [
+    { high: 30, low: 28, close: 29 },
+    { high: 32, low: 29, close: 31 },
+    { high: 31, low: 28, close: 29 },
+    { high: 34, low: 30, close: 33 },
+    { high: 35, low: 32, close: 34 },
+    { high: 34, low: 30, close: 31 },
+  ];
+  const normalized = values.map((value, index) => ({
+    openTime: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+    closeTime: new Date(Date.UTC(2026, 0, index + 2)).toISOString(),
+    open: value.close,
+    ...value,
+    volume: 100,
+    isClosed: true,
+  }));
+  const adx = calculateWilderAdx(normalized, 3);
+  assert.deepEqual(adx.trueRange, [2, 3, 3, 5, 3, 4]);
+  assert.deepEqual(adx.plusDm, [0, 2, 0, 3, 1, 0]);
+  assert.deepEqual(adx.minusDm, [0, 0, 1, 0, 0, 2]);
+  assert.ok(Math.abs(adx.smoothedTrueRange[3] - 11) < 1e-9);
+  assert.ok(Math.abs(adx.smoothedPlusDm[3] - 5) < 1e-9);
+  assert.ok(Math.abs(adx.smoothedMinusDm[3] - 1) < 1e-9);
+  assert.ok(Math.abs(adx.plusDi[3] - 45.4545454545) < 1e-6);
+  assert.ok(Math.abs(adx.minusDi[3] - 9.0909090909) < 1e-6);
+  assert.ok(Math.abs(adx.dx[3] - 66.6666666667) < 1e-6);
+  assert.ok(Math.abs(adx.adx[5] - 49.4444444444) < 1e-6);
+});
+
 test("technical calculation is deterministic, timeframe-specific and non-repainting", () => {
   const closes = Array.from(
     { length: 260 },
@@ -193,6 +285,34 @@ test("technical calculation is deterministic, timeframe-specific and non-repaint
   assert.ok(first.resistances.length <= 3 && first.supports.length <= 3);
 });
 
+test("available higher-timeframe history is wired into level and trend evidence", () => {
+  const current = Array.from({ length: 260 }, (_, index) =>
+    candle(index, 100 + index * 0.1 + Math.sin(index / 3) * 5),
+  );
+  const higher = Array.from({ length: 260 }, (_, index) =>
+    candle(index, 100 + index * 0.2 + Math.sin(index / 4) * 8, {
+      interval: "4h",
+    }),
+  );
+  const currentPrice = Number(current.at(-1).close);
+  const withoutHigher = calculateTechnicalContext(current, currentPrice, "1h");
+  const withHigher = calculateTechnicalContext(
+    current,
+    currentPrice,
+    "1h",
+    higher,
+  );
+  const levels = [...withHigher.supports, ...withHigher.resistances];
+  assert.ok(levels.length > 0);
+  assert.ok(levels.every((level) => level.higher_timeframe_available));
+  assert.ok(
+    [...withoutHigher.supports, ...withoutHigher.resistances].every(
+      (level) => !level.higher_timeframe_available,
+    ),
+  );
+  assert.notEqual(withHigher.trend.breakdown.higher_timeframe_alignment, null);
+});
+
 test("historical replay does not change already-confirmed pivots with future candles", () => {
   const source = Array.from({ length: 100 }, (_, index) =>
     candle(index, 100 + Math.sin(index / 3) * 8),
@@ -211,6 +331,10 @@ test("trend regime handles insufficient, rising, flat and volatile markets", () 
     Array.from({ length: 50 }, (_, index) => candle(index, 100)),
   );
   assert.equal(calculateTrendRegime(insufficient).direction, "unavailable");
+  const notEnoughWarmup = normalizeClosedCandles(
+    Array.from({ length: 249 }, (_, index) => candle(index, 100 + index)),
+  );
+  assert.equal(calculateTrendRegime(notEnoughWarmup).direction, "unavailable");
 
   const rising = normalizeClosedCandles(
     Array.from({ length: 260 }, (_, index) =>
@@ -233,6 +357,11 @@ test("trend regime handles insufficient, rising, flat and volatile markets", () 
   );
   const volatileRegime = calculateTrendRegime(volatile);
   assert.ok(volatileRegime.strength >= 0 && volatileRegime.strength <= 100);
+  assert.equal(
+    calculateTrendRegime(rising, "bullish").breakdown
+      .higher_timeframe_alignment,
+    1,
+  );
 });
 
 test("Chart handoff carries only asset identity and timeframe", () => {

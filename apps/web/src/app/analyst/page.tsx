@@ -1,13 +1,14 @@
 import type { AnalystMarketContext } from "@alpha-radar/types/core-3";
 import { Bot, Database, LockKeyhole, Send } from "lucide-react";
 
-import { getAsset, getMarketHistory, getMarketQuote } from "@/lib/api/assets";
+import { getAsset } from "@/lib/api/assets";
 import { formatMarketPrice } from "@/lib/i18n/format";
 import { getTranslations } from "@/lib/i18n/server";
 import { parseAnalystHandoff } from "@/lib/market/analyst-context";
+import { getTechnicalMarketContext } from "@/lib/market/context";
 import {
   TECHNICAL_LEVELS_VERSION,
-  calculateTechnicalSnapshot,
+  TREND_REGIME_VERSION,
 } from "@/lib/market/technical-levels";
 
 export const dynamic = "force-dynamic";
@@ -22,23 +23,12 @@ export default async function AnalystPage({
   const asset = handoff
     ? await getAsset(handoff.asset).catch(() => null)
     : null;
-  const [quote, history] =
+  const marketContext =
     asset && handoff
-      ? await Promise.all([
-          getMarketQuote(asset.id).catch(() => null),
-          getMarketHistory(asset.id, handoff.interval, 1000).catch(() => null),
-        ])
-      : [null, null];
-  const lastClosed = history?.items.filter((item) => item.is_closed).at(-1);
-  const currentPrice = Number(quote?.price ?? lastClosed?.close ?? 0);
-  const snapshot =
-    history && handoff && currentPrice > 0
-      ? calculateTechnicalSnapshot(
-          history.items,
-          currentPrice,
-          handoff.interval,
-        )
+      ? await getTechnicalMarketContext(asset.id, handoff.interval)
       : null;
+  const { history = null, quote = null, snapshot = null } = marketContext ?? {};
+  const lastClosed = history?.items.filter((item) => item.is_closed).at(-1);
   const context: AnalystMarketContext | null =
     asset && handoff
       ? {
@@ -56,14 +46,14 @@ export default async function AnalystPage({
           trend: snapshot?.trend ?? {
             direction: "unavailable",
             strength: 0,
-            version: "trend-regime-v1",
+            version: TREND_REGIME_VERSION,
             breakdown: {
               market_structure: 0,
               ema_ordering: 0,
               ema_slopes: 0,
               price_location: 0,
               adx: 0,
-              higher_timeframe_alignment: 0,
+              higher_timeframe_alignment: null,
             },
             reason: messages.chart.insufficientDescription,
           },

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import asyncio
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import httpx
 from pydantic import AwareDatetime, BaseModel, TypeAdapter
 
 from alpha_radar.market_data.constants import (
+    COINBASE_MAX_BACKFILL_TARGET_CANDLES,
     COINBASE_MAX_CANDLES_PER_REQUEST,
     INTERVAL_DEFINITIONS,
     MarketInterval,
@@ -28,7 +31,8 @@ class _CoinbaseTicker(BaseModel):
     trade_id: int
 
 
-_candle_rows = TypeAdapter(list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]])
+CandleRow = tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]
+_candle_rows = TypeAdapter(list[CandleRow])
 
 
 class CoinbaseMarketDataProvider:
@@ -39,11 +43,17 @@ class CoinbaseMarketDataProvider:
         *,
         base_url: str,
         timeout_seconds: float = 10.0,
+        requests_per_second: float = 8.0,
         transport: httpx.AsyncBaseTransport | None = None,
+        clock: Callable[[], datetime] | None = None,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
+        self.request_interval_seconds = 1 / requests_per_second
         self.transport = transport
+        self.clock = clock or (lambda: datetime.now(UTC))
+        self.sleep = sleep
 
     async def get_quote(self, instrument: MarketInstrumentRef) -> ProviderQuote:
         payload = await self._get(f"/products/{instrument.provider_instrument_id}/ticker")
@@ -57,7 +67,7 @@ class CoinbaseMarketDataProvider:
             base_currency=instrument.base_currency,
             quote_currency=instrument.quote_currency,
             provider_timestamp=ticker.time,
-            observed_at=datetime.now(UTC),
+            observed_at=self._as_utc(self.clock()),
             metadata={"trade_id": ticker.trade_id, "last_size": str(ticker.size)},
         )
 
@@ -70,30 +80,27 @@ class CoinbaseMarketDataProvider:
         end: datetime | None = None,
         limit: int = COINBASE_MAX_CANDLES_PER_REQUEST,
     ) -> list[ProviderCandle]:
+        if limit <= 0:
+            return []
         definition = INTERVAL_DEFINITIONS[interval]
-        source_limit = min(
-            limit * definition.coinbase_aggregation,
-            COINBASE_MAX_CANDLES_PER_REQUEST,
+        bounded_limit = min(limit, COINBASE_MAX_BACKFILL_TARGET_CANDLES)
+        observed_at = self._as_utc(self.clock())
+        effective_end = self._as_utc(end) if end is not None else observed_at
+        effective_start = self._as_utc(start) if start is not None else None
+        rows = await self._fetch_candle_rows(
+            instrument,
+            granularity=definition.coinbase_granularity,
+            aggregation=definition.coinbase_aggregation,
+            target_limit=bounded_limit,
+            start=effective_start,
+            end=effective_end,
         )
-        bounded_limit = max(1, source_limit // definition.coinbase_aggregation)
-        params: dict[str, str | int] = {"granularity": definition.coinbase_granularity}
-        if end is not None:
-            params["end"] = end.isoformat()
-        if start is not None:
-            params["start"] = start.isoformat()
-        elif end is not None:
-            params["start"] = (end - definition.duration * bounded_limit).isoformat()
-
-        payload = await self._get(
-            f"/products/{instrument.provider_instrument_id}/candles", params=params
-        )
-        rows = _candle_rows.validate_python(payload)
         normalized_rows = self._aggregate_rows(
             rows,
-            target_seconds=int(definition.duration.total_seconds()),
+            interval=interval,
+            source_seconds=definition.coinbase_granularity,
             aggregation=definition.coinbase_aggregation,
         )
-        observed_at = datetime.now(UTC)
         candles = [
             ProviderCandle(
                 provider=self.name,
@@ -109,27 +116,73 @@ class CoinbaseMarketDataProvider:
                 is_closed=datetime.fromtimestamp(timestamp, UTC) + definition.duration
                 <= observed_at,
             )
-            for timestamp, low, high, open_price, close, volume in normalized_rows[-bounded_limit:]
+            for timestamp, low, high, open_price, close, volume in normalized_rows
         ]
-        return sorted(candles, key=lambda candle: candle.open_time)
+        return [candle for candle in candles if candle.is_closed][-bounded_limit:]
 
-    @staticmethod
-    def _aggregate_rows(
-        rows: list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]],
+    async def _fetch_candle_rows(
+        self,
+        instrument: MarketInstrumentRef,
         *,
-        target_seconds: int,
+        granularity: int,
         aggregation: int,
-    ) -> list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]]:
+        target_limit: int,
+        start: datetime | None,
+        end: datetime,
+    ) -> list[CandleRow]:
+        # One extra target bucket covers alignment and a possibly open trailing bucket.
+        source_remaining = target_limit * aggregation + aggregation
+        cursor_end = end
+        rows_by_timestamp: dict[int, CandleRow] = {}
+        request_number = 0
+        while source_remaining > 0 and (start is None or cursor_end > start):
+            request_size = min(source_remaining, COINBASE_MAX_CANDLES_PER_REQUEST)
+            cursor_start = cursor_end - timedelta(seconds=granularity * request_size)
+            if start is not None and cursor_start < start:
+                cursor_start = start
+            if cursor_start >= cursor_end:
+                break
+            if request_number > 0:
+                await self.sleep(self.request_interval_seconds)
+            payload = await self._get(
+                f"/products/{instrument.provider_instrument_id}/candles",
+                params={
+                    "granularity": granularity,
+                    "start": cursor_start.isoformat(),
+                    "end": cursor_end.isoformat(),
+                },
+            )
+            for row in _candle_rows.validate_python(payload):
+                rows_by_timestamp[row[0]] = row
+            source_remaining -= request_size
+            cursor_end = cursor_start
+            request_number += 1
+        return [rows_by_timestamp[timestamp] for timestamp in sorted(rows_by_timestamp)]
+
+    @classmethod
+    def _aggregate_rows(
+        cls,
+        rows: list[CandleRow],
+        *,
+        interval: MarketInterval,
+        source_seconds: int,
+        aggregation: int,
+    ) -> list[CandleRow]:
+        unique = {row[0]: row for row in rows}
+        ordered_rows = [unique[timestamp] for timestamp in sorted(unique)]
         if aggregation == 1:
-            return sorted(rows, key=lambda row: row[0])
-        buckets: dict[int, list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]]] = {}
-        for row in rows:
-            bucket = row[0] - (row[0] % target_seconds)
+            return ordered_rows
+        buckets: dict[int, list[CandleRow]] = {}
+        for row in ordered_rows:
+            bucket = cls._bucket_start(row[0], interval)
             buckets.setdefault(bucket, []).append(row)
-        result: list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]] = []
+        result: list[CandleRow] = []
         for timestamp, values in sorted(buckets.items()):
             ordered = sorted(values, key=lambda row: row[0])
-            if len(ordered) != aggregation:
+            expected_timestamps = [
+                timestamp + index * source_seconds for index in range(aggregation)
+            ]
+            if [row[0] for row in ordered] != expected_timestamps:
                 continue
             result.append(
                 (
@@ -143,6 +196,16 @@ class CoinbaseMarketDataProvider:
             )
         return result
 
+    @staticmethod
+    def _bucket_start(timestamp: int, interval: MarketInterval) -> int:
+        if interval == MarketInterval.ONE_WEEK:
+            value = datetime.fromtimestamp(timestamp, UTC)
+            day_start = value.replace(hour=0, minute=0, second=0, microsecond=0)
+            monday = day_start - timedelta(days=day_start.weekday())
+            return int(monday.timestamp())
+        duration_seconds = int(INTERVAL_DEFINITIONS[interval].duration.total_seconds())
+        return timestamp - (timestamp % duration_seconds)
+
     async def _get(self, path: str, *, params: dict[str, str | int] | None = None) -> object:
         async with httpx.AsyncClient(
             base_url=self.base_url,
@@ -153,3 +216,9 @@ class CoinbaseMarketDataProvider:
             response = await client.get(path, params=params)
             response.raise_for_status()
             return response.json()
+
+    @staticmethod
+    def _as_utc(value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)

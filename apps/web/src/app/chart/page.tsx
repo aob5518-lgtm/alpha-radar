@@ -4,12 +4,12 @@ import { Activity, ArrowRight, DatabaseZap } from "lucide-react";
 import Link from "next/link";
 
 import { StructuralMarketChart } from "@/components/structural-market-chart";
-import { getAssets, getMarketHistory, getMarketQuote } from "@/lib/api/assets";
+import { getAssets } from "@/lib/api/assets";
 import { formatDateTime, formatMarketPrice } from "@/lib/i18n/format";
 import { getTranslations } from "@/lib/i18n/server";
 import { analystHref } from "@/lib/market/analyst-context";
+import { getTechnicalMarketContext } from "@/lib/market/context";
 import { marketIntervals, parseMarketInterval } from "@/lib/market/intervals";
-import { calculateTechnicalSnapshot } from "@/lib/market/technical-levels";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -51,18 +51,15 @@ export default async function ChartPage({
     apiUnavailable = true;
   }
   const asset = resolveAsset(assets, first(query.asset));
-  const [quote, history] = asset
-    ? await Promise.all([
-        getMarketQuote(asset.id).catch(() => null),
-        getMarketHistory(asset.id, interval, 1000).catch(() => null),
-      ])
-    : [null, null];
-  const lastClosed = history?.items.filter((item) => item.is_closed).at(-1);
-  const currentPrice = Number(quote?.price ?? lastClosed?.close ?? 0);
-  const snapshot =
-    history && currentPrice > 0
-      ? calculateTechnicalSnapshot(history.items, currentPrice, interval)
-      : null;
+  const marketContext = asset
+    ? await getTechnicalMarketContext(asset.id, interval)
+    : null;
+  const {
+    currentPrice = 0,
+    history = null,
+    quote = null,
+    snapshot = null,
+  } = marketContext ?? {};
   const levels = snapshot
     ? [...snapshot.resistances, ...snapshot.supports]
     : [];
@@ -303,7 +300,7 @@ function LevelTable({
                   )}
                 </p>
                 <p className="mt-1 text-[var(--muted)]">
-                  {messages.chart.touches}: {level.touch_count} ·{" "}
+                  {messages.chart.pivots}: {level.pivot_count} ·{" "}
                   {messages.chart.distance}: {level.distance_percent.toFixed(2)}
                   %
                 </p>

@@ -17,6 +17,19 @@ export const intervalSeconds: Record<MarketInterval, number> = {
   "1w": 604_800,
 };
 
+export const higherMarketInterval: Record<
+  MarketInterval,
+  MarketInterval | null
+> = {
+  "1m": "5m",
+  "5m": "15m",
+  "15m": "1h",
+  "1h": "4h",
+  "4h": "1d",
+  "1d": "1w",
+  "1w": null,
+};
+
 export function parseMarketInterval(value: string | undefined): MarketInterval {
   return marketIntervals.includes(value as MarketInterval)
     ? (value as MarketInterval)

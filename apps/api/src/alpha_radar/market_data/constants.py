@@ -65,6 +65,7 @@ INTERVAL_DEFINITIONS: dict[MarketInterval, IntervalDefinition] = {
 
 MAX_HISTORY_LIMIT = 1000
 COINBASE_MAX_CANDLES_PER_REQUEST = 300
+COINBASE_MAX_BACKFILL_TARGET_CANDLES = 500
 
 
 class QualityFlag(str, enum.Enum):

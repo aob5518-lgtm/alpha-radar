@@ -1,6 +1,11 @@
 import type { MarketFreshness, MarketInterval } from "./market-data.ts";
 
-export const eventImportanceLevels = ["critical", "high", "medium", "low"] as const;
+export const eventImportanceLevels = [
+  "critical",
+  "high",
+  "medium",
+  "low",
+] as const;
 export type EventImportance = (typeof eventImportanceLevels)[number];
 
 export const eventStatuses = [
@@ -59,10 +64,11 @@ export interface StructuralLevel {
   zone_high: number;
   strength: number;
   strength_band: StructuralStrengthBand;
-  touch_count: number;
+  pivot_count: number;
   last_tested_at: string;
   distance_percent: number;
   timeframe: MarketInterval;
+  higher_timeframe_available: boolean;
   higher_timeframe_confluence: boolean;
 }
 
@@ -74,7 +80,7 @@ export interface TrendBreakdown {
   ema_slopes: number;
   price_location: number;
   adx: number;
-  higher_timeframe_alignment: number;
+  higher_timeframe_alignment: number | null;
 }
 
 export interface TrendRegime {

@@ -71,7 +71,7 @@
     "resistance": "阻力",
     "support": "支撑",
     "strength": "强度",
-    "touches": "触及次数",
+    "pivots": "枢轴确认数",
     "distance": "距离",
     "lastTested": "最近测试",
     "trend": "趋势状态",
