@@ -102,6 +102,6 @@ async def readiness(
                 history_latest=market.history_latest,
             ),
             event_sync=EventSyncOperations.model_validate(event_sync),
-            streaming_enabled=settings.market_data_provider == "coinbase",
+            streaming_enabled=settings.market_data_provider in {"coinbase", "bybit"},
         ),
     )

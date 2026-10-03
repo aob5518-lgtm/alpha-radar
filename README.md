@@ -42,15 +42,15 @@ For an approved real-provider production deployment, set at minimum:
 
 ```dotenv
 APP_ENV=production
-MARKET_DATA_PROVIDER=coinbase
+MARKET_DATA_PROVIDER=bybit
 MARKET_DATA_INGESTION_ENABLED=true
 EVENT_SYNC_ENABLED=true
 SOURCE_CONTACT_IDENTITY=Alpha Radar Operations <monitored@example.com>
 ```
 
 Run all required interval backfills once, then execute `python scripts/verify-production.py`.
-Production readiness returns HTTP 503 when mock/disabled market data is configured or any supported
-timeframe lacks current closed history. The report includes provider/ingestion mode, latest history
+Production readiness returns HTTP 503 when mock/disabled market data is configured or BTCUSDT,
+ETHUSDT, or SOLUSDT lacks current closed history on any supported timeframe. The report includes provider/ingestion mode, latest history
 timestamps, Event sync status, AI configuration and Redis limiter status, and streaming mode.
 
 Load the deliberate, idempotent development asset seed after the stack is ready:

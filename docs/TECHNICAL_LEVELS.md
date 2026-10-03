@@ -81,12 +81,14 @@ candle and not guaranteed future performance.
 
 Every timeframe recalculates candles, zones and trend independently. Live hierarchy is
 `1m→5m→15m→1h→4h→1d→1w`; weekly has no higher timeframe. The higher-period snapshot supplies real
-level confluence and trend direction only when its persisted history is available. Coinbase natively
+level confluence and trend direction only when its persisted history is available. Bybit natively
+supplies every supported timeframe for the primary USDT perpetual Chart, so those bars are not
+aggregated. The retained Coinbase spot adapter natively
 supplies 1m/5m/15m/1h/1d granularities. The adapter aggregates complete 1h groups into UTC-aligned
 4h bars and complete 1d groups into Monday 00:00 UTC-aligned 1w bars. Aggregation requires every
 expected source timestamp; incomplete or gapped groups are discarded.
 
-The provider pages backward in chunks of at most 300 source candles, is paced below Coinbase's public
+The Coinbase provider pages backward in chunks of at most 300 source candles, is paced below its public
 limit, deduplicates overlaps, and returns at most 500 target candles. A manual, unscheduled worker
 backfill task persists deeper histories; normal request handlers remain database-only.
 

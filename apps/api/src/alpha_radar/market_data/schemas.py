@@ -7,6 +7,28 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 from alpha_radar.market_data.constants import Freshness, MarketInterval
+from alpha_radar.market_data.models import InstrumentStatus, InstrumentType
+
+
+class MarketInstrumentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    asset_id: UUID
+    asset_slug: str
+    asset_name: str
+    symbol: str
+    provider: str
+    provider_instrument_id: str
+    instrument_type: InstrumentType
+    base_currency: str
+    quote_currency: str
+    venue: str | None
+    status: InstrumentStatus
+
+
+class MarketInstrumentListResponse(BaseModel):
+    items: list[MarketInstrumentResponse]
 
 
 class MarketQuoteResponse(BaseModel):

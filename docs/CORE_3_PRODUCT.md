@@ -46,9 +46,9 @@ elapsed wall-clock time alone never completes an Event.
 ## Chart
 
 Chart supports `1m`, `5m`, `15m`, `1h`, `4h`, `1d` and `1w` from centralized interval definitions.
-It requests up to 1,000 persisted observations and never fills missing candles. Coinbase production
-mode uses the provider adapter's public ticker WebSocket to update the live price and open visual
-candle. Each new live bucket opens at its first observed tick and remains labeled LIVE / PARTIAL.
+It requests up to 1,000 persisted observations and never fills missing candles. Bybit production
+mode uses the provider adapter's public Kline WebSocket to render exchange OHLCV directly. The
+exchange `confirm=false` state remains labeled LIVE / PARTIAL and `confirm=true` closes the candle.
 The persisted REST/backfill series remains authoritative history. Structural Levels and
 Trend consume closed candles only; the streamed open candle never enters either engine.
 
@@ -61,9 +61,15 @@ See `TECHNICAL_LEVELS.md`.
 
 ## Analyst
 
-Chart links to Analyst with canonical asset UUID and timeframe only. Analyst re-resolves the Asset,
-retrieves persisted quote/history and recomputes technical values. It does not trust price, level or
-event facts supplied through URL state.
+Chart URLs use `/chart?instrument=<market_instrument_id>&interval=1h`. Chart links to Analyst with
+that exact instrument UUID and timeframe. Analyst re-resolves the instrument, retrieves its
+persisted quote/history and recomputes technical values; its linked Asset UUID is used only for
+Event lookup. It does not trust price, level or event facts supplied through URL state.
+
+Simplified Chinese Events use deterministic presentation mappings for titles, status, importance,
+analysis/scenario copy, watch items, and official source names. Canonical IDs, URLs, provider
+identities, and raw provenance remain unchanged. English retains canonical English presentation.
+An empty filtered Event set clears the detail panel.
 
 The provider-neutral runtime is disabled unless `AI_PROVIDER=openai`, `AI_MODEL` and the server-only
 `OPENAI_API_KEY` are configured. The OpenAI adapter uses the Responses API with strict JSON Schema

@@ -97,3 +97,10 @@ class MarketDataProvider(Protocol):
 @runtime_checkable
 class StreamingMarketDataProvider(Protocol):
     def stream_ticks(self, instrument: MarketInstrumentRef) -> AsyncIterator[ProviderTick]: ...
+
+
+@runtime_checkable
+class StreamingCandleMarketDataProvider(Protocol):
+    def stream_candles(
+        self, instrument: MarketInstrumentRef, interval: MarketInterval
+    ) -> AsyncIterator[ProviderCandle]: ...

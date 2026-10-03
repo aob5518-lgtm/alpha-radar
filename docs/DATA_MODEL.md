@@ -44,6 +44,11 @@ hypertable partitioned by `open_time`; its primary/unique identity is
 `(provider, market_instrument_id, interval, open_time)`, which includes the partition column and
 supports idempotent upserts.
 
+Core 3 Chart routes, quotes, history, live Klines, and Analyst handoff use `MarketInstrument.id` as
+the market context. The linked canonical `Asset.id` remains the identity for Events. The bounded
+Bybit universe uses `instrument_type=perpetual`, `quote_currency=USDT`, and provider-native symbols
+such as `BTCUSDT`.
+
 Prices, bid/ask, sizes, OHLC, volume, and quote volume use `numeric(38, 18)` / `Decimal`. Quality and
 provider metadata use JSONB. All market observations reference `Asset.id`, never a ticker.
 

@@ -5,6 +5,8 @@ import type {
 } from "@alpha-radar/types/assets";
 import type {
   MarketHistory,
+  MarketInstrument,
+  MarketInstrumentListResponse,
   MarketInterval,
   MarketQuote,
 } from "@alpha-radar/types/market-data";
@@ -89,6 +91,54 @@ export async function getMarketHistory(
     });
     return await request<MarketHistory>(
       `/api/v1/assets/${encodeURIComponent(identifier)}/history?${params.toString()}`,
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+export function getMarketInstruments(): Promise<MarketInstrumentListResponse> {
+  return request<MarketInstrumentListResponse>(
+    "/api/v1/market-instruments?provider=bybit&instrument_type=perpetual",
+  );
+}
+
+export async function getMarketInstrument(
+  instrumentId: string,
+): Promise<MarketInstrument | null> {
+  try {
+    return await request<MarketInstrument>(
+      `/api/v1/market-instruments/${encodeURIComponent(instrumentId)}`,
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+export async function getInstrumentQuote(
+  instrumentId: string,
+): Promise<MarketQuote | null> {
+  try {
+    return await request<MarketQuote>(
+      `/api/v1/market-instruments/${encodeURIComponent(instrumentId)}/quote`,
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+export async function getInstrumentHistory(
+  instrumentId: string,
+  interval: MarketInterval = "1h",
+  limit = 48,
+): Promise<MarketHistory | null> {
+  try {
+    const params = new URLSearchParams({ interval, limit: String(limit) });
+    return await request<MarketHistory>(
+      `/api/v1/market-instruments/${encodeURIComponent(instrumentId)}/history?${params.toString()}`,
     );
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;

@@ -61,7 +61,7 @@ threshold (`MARKET_DATA_QUOTE_FRESHNESS_SECONDS`, default 90 seconds). API respo
 payloads into `ProviderQuote` and `ProviderCandle`; repository and API code never see raw vendor JSON.
 `MockMarketDataProvider` is deterministic and is the only provider used by CI.
 
-The initial real adapter targets Coinbase Exchange public REST endpoints for limited crypto
+The spot adapter targets Coinbase Exchange public REST endpoints for limited crypto
 development:
 
 - [Get product ticker](https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-ticker)
@@ -97,11 +97,26 @@ candles are required by the current acceptance contract, while 500 is preferred 
 External ingestion remains opt-in through
 `MARKET_DATA_INGESTION_ENABLED=false` by default.
 
-Production must set `APP_ENV=production`, `MARKET_DATA_PROVIDER=coinbase`, and
-`MARKET_DATA_INGESTION_ENABLED=true` for the currently approved real provider mode. Readiness is
-HTTP 503 until all seven interval histories contain current closed candles; it reports the latest
-close timestamp for each interval. The mock provider remains the safe development/CI default and
-can never produce a market-ready production response.
+The primary Core 3 Chart market is the bounded set of 12 seeded Bybit V5 USDT linear perpetuals.
+Chart, history, streaming, and Analyst handoff use canonical `market_instrument_id`; the linked
+Asset UUID remains the identity for Event retrieval. This prevents a Coinbase spot observation from
+being selected while the user is viewing a Bybit perpetual.
+
+The Bybit adapter uses the official [V5 Get Kline](https://bybit-exchange.github.io/docs/v5/market/kline)
+endpoint with `GET /v5/market/kline?category=linear` and the official
+[Kline WebSocket](https://bybit-exchange.github.io/docs/v5/websocket/public/kline) on the public
+linear stream. Alpha
+Radar maps `1m`, `5m`, `15m`, `1h`, `4h`, `1d`, and `1w` to native `1`, `5`, `15`, `60`, `240`,
+`D`, and `W` intervals. It does not re-aggregate native intervals or fill missing bars. WebSocket
+subscriptions use `kline.{interval}.{symbol}`. Exchange `confirm=false` candles are visual
+LIVE/PARTIAL state only; `confirm=true` identifies a closed candle. Structural Levels and Trend
+Regime continue to consume persisted, confirmed candles only.
+
+Production must set `APP_ENV=production`, `MARKET_DATA_PROVIDER=bybit`, and
+`MARKET_DATA_INGESTION_ENABLED=true`. Readiness is HTTP 503 until BTCUSDT, ETHUSDT, and SOLUSDT each
+have current closed history for all seven intervals. It deliberately does not require every seeded
+contract. Coinbase remains available as a backend spot adapter. The mock provider remains the safe
+development/CI default and can never produce a market-ready production response.
 
 Celery tasks make provider calls outside the HTTP request path. The API reads PostgreSQL only. The
 existing Redis broker and worker are reused; no new queue, service boundary, or streaming system is

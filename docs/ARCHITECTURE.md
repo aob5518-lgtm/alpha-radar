@@ -68,7 +68,9 @@ Celery tasks reuse the existing worker and Redis broker. Beat schedules provide 
 polling plus bounded closed-candle maintenance for all seven timeframes, while external ingestion is
 disabled unless explicitly configured.
 The deterministic mock provider supports tests and integration verification without network access.
-The Coinbase adapter is an optional development adapter, not a commercial data entitlement.
+The Coinbase adapter remains an optional spot adapter, not a commercial data entitlement. The Core
+3 Chart selects canonical Bybit USDT-linear perpetual MarketInstrument IDs; provider payloads are
+normalized before reaching services or technical calculations.
 
 ## Sources domain
 

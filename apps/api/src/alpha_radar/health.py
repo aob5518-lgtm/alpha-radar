@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal, cast
@@ -11,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alpha_radar.config import Settings
 from alpha_radar.market_data.constants import INTERVAL_DEFINITIONS, MarketInterval
-from alpha_radar.market_data.models import MarketCandle
+from alpha_radar.market_data.models import MarketCandle, MarketInstrument
 
 EVENT_SYNC_STATE_KEY = "alpha-radar:event-sync:status"
 
@@ -77,15 +78,53 @@ async def get_market_operational_status(
 ) -> MarketOperationalStatus:
     try:
         async with engine.connect() as connection:
+            if settings.market_data_provider == "bybit":
+                raw_rows = (
+                    await connection.execute(
+                        select(
+                            MarketInstrument.provider_instrument_id,
+                            MarketCandle.interval,
+                            func.max(MarketCandle.close_time),
+                        )
+                        .join(
+                            MarketInstrument,
+                            MarketInstrument.id == MarketCandle.market_instrument_id,
+                        )
+                        .where(
+                            MarketCandle.is_closed.is_(True),
+                            MarketInstrument.provider == "bybit",
+                            MarketInstrument.provider_instrument_id.in_(
+                                ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+                            ),
+                        )
+                        .group_by(
+                            MarketInstrument.provider_instrument_id,
+                            MarketCandle.interval,
+                        )
+                    )
+                ).tuples()
+                instrument_rows = cast(
+                    list[tuple[str, MarketInterval, datetime | None]], list(raw_rows)
+                )
+                return bybit_operational_status(settings, instrument_rows, now=now)
             raw_rows = (
                 await connection.execute(
                     select(MarketCandle.interval, func.max(MarketCandle.close_time))
-                    .where(MarketCandle.is_closed.is_(True))
+                    .join(
+                        MarketInstrument,
+                        MarketInstrument.id == MarketCandle.market_instrument_id,
+                    )
+                    .where(
+                        MarketCandle.is_closed.is_(True),
+                        MarketInstrument.provider == settings.market_data_provider,
+                    )
                     .group_by(MarketCandle.interval)
                 )
             ).tuples()
             rows = cast(list[tuple[MarketInterval, datetime | None]], list(raw_rows))
     except Exception:
+        if settings.market_data_provider == "bybit":
+            return bybit_operational_status(settings, [], now=now)
         rows = []
     latest_by_interval: dict[MarketInterval, datetime] = {
         interval: _utc(close_time) for interval, close_time in rows if close_time is not None
@@ -99,6 +138,43 @@ async def get_market_operational_status(
         and reference - timestamp <= INTERVAL_DEFINITIONS[interval].duration * 2
         for interval, timestamp in (
             (interval, latest_by_interval.get(interval)) for interval in MarketInterval
+        )
+    )
+    return MarketOperationalStatus(
+        provider=settings.market_data_provider,
+        ingestion_enabled=settings.market_data_ingestion_enabled,
+        history_latest=history_latest,
+        history_current=history_current,
+    )
+
+
+def bybit_operational_status(
+    settings: Settings,
+    rows: Sequence[tuple[str, MarketInterval, datetime | None]],
+    *,
+    now: datetime | None,
+) -> MarketOperationalStatus:
+    reference = _utc(now or datetime.now(UTC))
+    latest = {
+        (instrument, interval): _utc(close_time)
+        for instrument, interval, close_time in rows
+        if close_time is not None
+    }
+    required = [
+        (instrument, interval)
+        for instrument in ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+        for interval in MarketInterval
+    ]
+    history_latest = {
+        f"{instrument}:{interval.value}": latest.get((instrument, interval))
+        for instrument, interval in required
+    }
+    history_current = all(
+        timestamp is not None
+        and reference - timestamp <= INTERVAL_DEFINITIONS[interval].duration * 2
+        for (_instrument, interval), timestamp in (
+            ((instrument, interval), latest.get((instrument, interval)))
+            for instrument, interval in required
         )
     )
     return MarketOperationalStatus(

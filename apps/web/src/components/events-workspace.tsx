@@ -5,6 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { Locale } from "@/lib/i18n/config";
+import { presentEvent, resolveSelectedEvent } from "@/lib/events/presentation";
 import { getMessages } from "@/lib/i18n/messages";
 import { cn } from "@/lib/utils";
 
@@ -39,8 +40,7 @@ export function EventsWorkspace({
       return value ? value >= start && value < end : view === "calendar";
     });
   }, [events, includeMedium, view]);
-  const selected =
-    events.find((event) => event.id === selectedId) ?? filtered[0] ?? null;
+  const selected = resolveSelectedEvent(filtered, selectedId);
   const labels = {
     today: messages.events.today,
     week: messages.events.thisWeek,
@@ -89,48 +89,51 @@ export function EventsWorkspace({
           </p>
         ) : (
           <div className="divide-y">
-            {filtered.map((event) => (
-              <button
-                key={event.id}
-                onClick={() => setSelectedId(event.id)}
-                className={cn(
-                  "grid w-full gap-2 px-4 py-4 text-left hover:bg-white/[.03] xl:grid-cols-[7rem_minmax(14rem,1fr)_5rem_repeat(3,5rem)_8rem]",
-                  selected?.id === event.id && "bg-white/[.04]",
-                )}
-              >
-                <span className="font-mono text-xs">
-                  {formatEventTime(
-                    event,
-                    locale,
-                    messages.events.timeNotAnnounced,
-                  )}
-                </span>
-                <span>
-                  <strong className="text-sm">{event.title}</strong>
-                  <small className="mt-1 block text-[var(--muted)]">
-                    {event.event_type} · {event.status}
-                  </small>
-                </span>
-                <span
+            {filtered.map((event) => {
+              const presentation = presentEvent(event, locale);
+              return (
+                <button
+                  key={event.id}
+                  onClick={() => setSelectedId(event.id)}
                   className={cn(
-                    "text-xs font-semibold uppercase",
-                    event.importance === "critical"
-                      ? "text-rose-300"
-                      : "text-amber-300",
+                    "grid w-full gap-2 px-4 py-4 text-left hover:bg-white/[.03] xl:grid-cols-[7rem_minmax(14rem,1fr)_5rem_repeat(3,5rem)_8rem]",
+                    selected?.id === event.id && "bg-white/[.04]",
                   )}
                 >
-                  {event.importance}
-                </span>
-                <Value value={event.actual} />
-                <Value value={event.forecast} />
-                <Value value={event.previous} />
-                <span className="text-xs">
-                  {event.affected_assets
-                    .map((asset) => asset.symbol)
-                    .join(" · ") || "—"}
-                </span>
-              </button>
-            ))}
+                  <span className="font-mono text-xs">
+                    {formatEventTime(
+                      event,
+                      locale,
+                      messages.events.timeNotAnnounced,
+                    )}
+                  </span>
+                  <span>
+                    <strong className="text-sm">{presentation.title}</strong>
+                    <small className="mt-1 block text-[var(--muted)]">
+                      {presentation.eventType} · {presentation.status}
+                    </small>
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs font-semibold uppercase",
+                      event.importance === "critical"
+                        ? "text-rose-300"
+                        : "text-amber-300",
+                    )}
+                  >
+                    {presentation.importance}
+                  </span>
+                  <Value value={event.actual} />
+                  <Value value={event.forecast} />
+                  <Value value={event.previous} />
+                  <span className="text-xs">
+                    {event.affected_assets
+                      .map((asset) => asset.symbol)
+                      .join(" · ") || "—"}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </section>
@@ -154,11 +157,12 @@ function EventDetail({
         {messages.events.eventDetail}
       </aside>
     );
+  const presentation = presentEvent(event, locale);
   return (
     <aside className="space-y-5 p-5">
       <div>
-        <span className="data-pill">{event.importance}</span>
-        <h2 className="mt-3 text-lg font-semibold">{event.title}</h2>
+        <span className="data-pill">{presentation.importance}</span>
+        <h2 className="mt-3 text-lg font-semibold">{presentation.title}</h2>
         <p className="mt-2 text-xs text-[var(--muted)]">
           {formatEventTime(event, locale, messages.events.timeNotAnnounced)} ·
           UTC{" "}
@@ -168,24 +172,27 @@ function EventDetail({
           · {event.scheduled_timezone ?? "—"}
         </p>
       </div>
-      <Detail title={messages.analyst.fact} text={event.summary} />
-      <Detail title={messages.analyst.analysis} text={event.why_it_matters} />
-      {event.bull_case && (
+      <Detail title={messages.analyst.fact} text={presentation.summary} />
+      <Detail
+        title={messages.analyst.analysis}
+        text={presentation.whyItMatters}
+      />
+      {presentation.bullCase && (
         <Detail
           title={`${messages.analyst.scenario} · ${messages.analyst.bullCase}`}
-          text={event.bull_case}
+          text={presentation.bullCase}
         />
       )}
-      {event.bear_case && (
+      {presentation.bearCase && (
         <Detail
           title={`${messages.analyst.scenario} · ${messages.analyst.bearCase}`}
-          text={event.bear_case}
+          text={presentation.bearCase}
         />
       )}
       <section>
         <h3 className="section-label">{messages.analyst.watchNext}</h3>
         <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-[var(--muted)]">
-          {event.watch_next.map((item) => (
+          {presentation.watchNext.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
@@ -202,7 +209,7 @@ function EventDetail({
               className="flex items-center gap-2 text-xs text-emerald-300"
             >
               <ExternalLink className="size-3" />
-              {source.source_name}
+              {presentation.sourceNames[source.source_document_id]}
             </a>
           ))}
         </div>

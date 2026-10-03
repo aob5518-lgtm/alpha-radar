@@ -19,12 +19,14 @@ interface Turn {
 
 export function AnalystWorkspace({
   assetId,
+  instrumentId,
   symbol,
   timeframe,
   configured,
   locale,
 }: {
   assetId: string | null;
+  instrumentId: string | null;
   symbol: string | null;
   timeframe: MarketInterval;
   configured: boolean;
@@ -34,7 +36,7 @@ export function AnalystWorkspace({
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [pending, setPending] = useState(false);
-  const enabled = configured && !!assetId;
+  const enabled = configured && !!assetId && !!instrumentId;
   async function submit(event: FormEvent) {
     event.preventDefault();
     const value = question.trim();
@@ -45,7 +47,11 @@ export function AnalystWorkspace({
       const response = await fetch("/api/analyst", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: value, asset_id: assetId, timeframe }),
+        body: JSON.stringify({
+          question: value,
+          market_instrument_id: instrumentId,
+          timeframe,
+        }),
       });
       if (!response.ok) throw new Error(`Request failed (${response.status})`);
       const answer = (await response.json()) as AnalystResponse;

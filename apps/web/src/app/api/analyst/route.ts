@@ -8,7 +8,7 @@ import {
   analystLimits,
   getAnalystLimiter,
 } from "@/lib/ai/rate-limit";
-import { getAsset } from "@/lib/api/assets";
+import { getAsset, getMarketInstrument } from "@/lib/api/assets";
 import { getRecentEventsForAsset } from "@/lib/api/events";
 import { getTechnicalMarketContext } from "@/lib/market/context";
 import { marketIntervals } from "@/lib/market/intervals";
@@ -25,17 +25,26 @@ export async function POST(request: Request) {
   const body = parsed.body;
   const question =
     typeof body?.question === "string" ? body.question.trim() : "";
-  const assetId = typeof body?.asset_id === "string" ? body.asset_id : "";
+  const instrumentId =
+    typeof body?.market_instrument_id === "string"
+      ? body.market_instrument_id
+      : "";
   const interval = body?.timeframe;
   if (
     !question ||
     question.length > 2000 ||
-    !assetId ||
+    !instrumentId ||
     !marketIntervals.includes(interval as MarketInterval)
   ) {
     return NextResponse.json({ error: "invalid_request" }, { status: 422 });
   }
-  const asset = await getAsset(assetId);
+  const instrument = await getMarketInstrument(instrumentId);
+  if (!instrument)
+    return NextResponse.json(
+      { error: "instrument_not_found" },
+      { status: 404 },
+    );
+  const asset = await getAsset(instrument.asset_id);
   if (!asset)
     return NextResponse.json({ error: "asset_not_found" }, { status: 404 });
   const limiter = await getAnalystLimiter().catch(() => null);
@@ -52,7 +61,7 @@ export async function POST(request: Request) {
     );
   }
   const [market, events] = await Promise.all([
-    getTechnicalMarketContext(asset.id, interval as MarketInterval),
+    getTechnicalMarketContext(instrument.id, interval as MarketInterval),
     getRecentEventsForAsset(asset.id).catch(() => []),
   ]);
   const sourceIds = [
@@ -76,6 +85,7 @@ export async function POST(request: Request) {
   ];
   const grounding = {
     asset: { id: asset.id, symbol: asset.symbol, name: asset.name },
+    market_instrument: instrument,
     timeframe: interval,
     quote: market.quote,
     closed_candles:

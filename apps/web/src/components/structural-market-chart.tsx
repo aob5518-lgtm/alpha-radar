@@ -13,30 +13,31 @@ import {
 } from "lightweight-charts";
 import { useEffect, useRef, useState } from "react";
 
-import {
-  updateLivePartialCandle,
-  type LivePartialCandle,
-} from "@/lib/market/live-candle";
-
 interface Props {
   candles: MarketCandle[];
   levels: StructuralLevel[];
   currentPrice: number | null;
-  assetId: string;
+  instrumentId: string;
   interval: MarketInterval;
+  liveLabel: string;
+  partialLabel: string;
+  closedLabel: string;
 }
 
 export function StructuralMarketChart({
   candles,
   levels,
   currentPrice,
-  assetId,
+  instrumentId,
   interval,
+  liveLabel,
+  partialLabel,
+  closedLabel,
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const [live, setLive] = useState<{
     price: number;
-    change: number | null;
+    isClosed: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -121,35 +122,54 @@ export function StructuralMarketChart({
         : null;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
     const socketUrl = new URL(
-      `/api/v1/assets/${encodeURIComponent(assetId)}/stream`,
+      `/api/v1/market-instruments/${encodeURIComponent(instrumentId)}/stream?interval=${interval}`,
       apiUrl,
     );
     socketUrl.protocol = socketUrl.protocol === "https:" ? "wss:" : "ws:";
     const socket = new WebSocket(socketUrl);
-    let current: LivePartialCandle | null = null;
     socket.onmessage = (message) => {
-      const tick = JSON.parse(String(message.data)) as {
+      const candle = JSON.parse(String(message.data)) as {
         type: string;
-        price?: string;
-        open_24h?: string | null;
-        provider_timestamp?: string;
+        open_time?: string;
+        open?: string;
+        high?: string;
+        low?: string;
+        close?: string;
+        volume?: string | null;
+        is_closed?: boolean;
       };
-      if (tick.type !== "tick" || !tick.price || !tick.provider_timestamp)
+      if (
+        candle.type !== "candle" ||
+        !candle.open_time ||
+        !candle.open ||
+        !candle.high ||
+        !candle.low ||
+        !candle.close
+      )
         return;
-      const price = Number(tick.price);
-      current = updateLivePartialCandle(
-        current,
-        price,
-        Date.parse(tick.provider_timestamp) / 1000,
-        interval,
-      );
-      candleSeries.update({ ...current, time: current.time as UTCTimestamp });
-      liveLine?.applyOptions({ price });
-      const open24 = tick.open_24h ? Number(tick.open_24h) : null;
-      setLive({
-        price,
-        change: open24 && open24 > 0 ? ((price - open24) / open24) * 100 : null,
+      const time = Math.floor(
+        Date.parse(candle.open_time) / 1000,
+      ) as UTCTimestamp;
+      const price = Number(candle.close);
+      candleSeries.update({
+        time,
+        open: Number(candle.open),
+        high: Number(candle.high),
+        low: Number(candle.low),
+        close: price,
       });
+      if (candle.volume !== null && candle.volume !== undefined) {
+        volumeSeries.update({
+          time,
+          value: Number(candle.volume),
+          color:
+            price >= Number(candle.open)
+              ? "rgba(52,211,153,.28)"
+              : "rgba(251,113,133,.28)",
+        });
+      }
+      liveLine?.applyOptions({ price });
+      setLive({ price, isClosed: candle.is_closed === true });
     };
     chart.timeScale().fitContent();
     const observer = new ResizeObserver(([entry]) => {
@@ -161,25 +181,17 @@ export function StructuralMarketChart({
       socket.close();
       chart.remove();
     };
-  }, [assetId, candles, currentPrice, interval, levels]);
+  }, [candles, currentPrice, instrumentId, interval, levels]);
 
   return (
     <div className="relative">
       <div ref={container} className="min-h-[500px] w-full" />
       {live && (
         <div className="absolute top-3 left-3 rounded bg-black/70 px-2 py-1 font-mono text-xs">
-          <span className="mr-2 text-emerald-300">LIVE / PARTIAL</span>
-          {live.price.toLocaleString()}{" "}
-          {live.change !== null && (
-            <span
-              className={
-                live.change >= 0 ? "text-emerald-300" : "text-rose-300"
-              }
-            >
-              {live.change >= 0 ? "+" : ""}
-              {live.change.toFixed(2)}%
-            </span>
-          )}
+          <span className="mr-2 text-emerald-300">
+            {liveLabel} / {live.isClosed ? closedLabel : partialLabel}
+          </span>
+          {live.price.toLocaleString()}
         </div>
       )}
     </div>
