@@ -56,6 +56,34 @@ async def test_instrument_identity_is_unique_and_links_asset_uuid(session: Async
 
 
 @pytest.mark.asyncio
+async def test_seed_contains_only_the_bounded_bybit_perpetual_universe(
+    session: AsyncSession,
+) -> None:
+    await seed_assets(session)
+    await seed_market_instruments(session)
+    instruments = await MarketDataRepository(session).list_active_instruments("bybit")
+
+    assert [item.provider_instrument_id for item in instruments] == sorted(
+        [
+            "BTCUSDT",
+            "ETHUSDT",
+            "SOLUSDT",
+            "BNBUSDT",
+            "XRPUSDT",
+            "DOGEUSDT",
+            "ADAUSDT",
+            "SUIUSDT",
+            "LINKUSDT",
+            "AVAXUSDT",
+            "LTCUSDT",
+            "BCHUSDT",
+        ]
+    )
+    assert all(item.instrument_type.value == "perpetual" for item in instruments)
+    assert all(item.quote_currency == "USDT" for item in instruments)
+
+
+@pytest.mark.asyncio
 async def test_quote_round_trip_preserves_decimal_and_freshness(session: AsyncSession) -> None:
     service, instrument, now = await configured_service(session)
     provider = MockMarketDataProvider(clock=lambda: now, price=Decimal("60000.125"))

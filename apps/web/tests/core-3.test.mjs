@@ -22,6 +22,10 @@ import {
 } from "../src/lib/market/technical-levels.ts";
 import { calculateTechnicalContext } from "../src/lib/market/technical-context.ts";
 import { formatEventSchedule } from "../src/lib/events/time.ts";
+import {
+  presentEvent,
+  resolveSelectedEvent,
+} from "../src/lib/events/presentation.ts";
 
 function candle(index, close, options = {}) {
   const open = options.open ?? close - 0.25;
@@ -364,18 +368,85 @@ test("trend regime handles insufficient, rising, flat and volatile markets", () 
   );
 });
 
-test("Chart handoff carries only asset identity and timeframe", () => {
+test("Chart handoff carries exact market instrument identity and timeframe", () => {
   const href = analystHref("canonical-uuid", "4h");
-  assert.equal(href, "/analyst?asset=canonical-uuid&interval=4h&from=chart");
+  assert.equal(
+    href,
+    "/analyst?instrument=canonical-uuid&interval=4h&from=chart",
+  );
   assert.deepEqual(
     parseAnalystHandoff({
-      asset: "canonical-uuid",
+      instrument: "canonical-uuid",
       interval: "4h",
       from: "chart",
     }),
-    { asset: "canonical-uuid", interval: "4h", fromChart: true },
+    { instrument: "canonical-uuid", interval: "4h", fromChart: true },
   );
   assert.equal(parseAnalystHandoff({ interval: "1h" }), null);
+});
+
+test("zh-CN Events use deterministic Chinese presentation while English is unchanged", () => {
+  const event = {
+    id: "event-1",
+    title: "Consumer Price Index — September 2026",
+    event_type: "cpi",
+    status: "scheduled",
+    scheduled_date: "2026-10-14",
+    scheduled_at: "2026-10-14T12:30:00Z",
+    scheduled_timezone: "America/New_York",
+    actual_release_at: null,
+    detected_at: "2026-10-01T00:00:00Z",
+    updated_at: "2026-10-01T00:00:00Z",
+    importance: "critical",
+    summary: "FACT: Original canonical summary.",
+    why_it_matters: "ANALYSIS: Original canonical analysis.",
+    actual: null,
+    forecast: null,
+    previous: null,
+    affected_assets: [],
+    impact_analysis: {},
+    bull_case: "SCENARIO: Original bull case.",
+    bear_case: "SCENARIO: Original bear case.",
+    watch_next: ["Official release", "Market reaction"],
+    sources: [
+      {
+        source_id: "source-1",
+        source_document_id: "document-1",
+        source_name: "U.S. Bureau of Labor Statistics Release Calendar",
+        title: "Calendar",
+        canonical_url: "https://www.bls.gov/schedule/",
+        published_at: null,
+      },
+    ],
+  };
+  const english = presentEvent(event, "en");
+  const chinese = presentEvent(event, "zh-CN");
+
+  assert.equal(english.title, event.title);
+  assert.equal(english.summary, event.summary);
+  assert.equal(english.sourceNames["document-1"], event.sources[0].source_name);
+  assert.match(chinese.title, /美国消费者价格指数（CPI）/);
+  assert.equal(chinese.status, "待公布");
+  assert.equal(chinese.importance, "极高");
+  assert.match(chinese.summary, /^事实：/);
+  assert.match(chinese.whyItMatters, /^分析：/);
+  assert.match(chinese.bullCase, /^情景：/);
+  assert.equal(chinese.sourceNames["document-1"], "美国劳工统计局（BLS）");
+});
+
+test("empty Event filters clear stale selected detail", () => {
+  assert.equal(resolveSelectedEvent([], "stale-event"), null);
+});
+
+test("Chart quick switches preserve timeframe and use instrument URLs", async () => {
+  const source = await readFile(
+    new URL("../src/components/chart-asset-selector.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /BTC.*ETH.*SOL.*XRP.*BNB.*DOGE/s);
+  assert.match(source, /ADA.*SUI.*LINK.*AVAX.*LTC.*BCH/s);
+  assert.match(source, /instrument=.*interval=\$\{interval\}/);
+  assert.doesNotMatch(source, /datalist|Apply/);
 });
 
 test("Core 3 copy has English and Simplified Chinese parity", async () => {

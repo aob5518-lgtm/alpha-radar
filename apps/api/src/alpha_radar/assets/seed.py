@@ -68,6 +68,7 @@ ASSETS = (
     AssetSeed(
         "SOL", "solana", "Solana", AssetType.CRYPTO, sector="Smart contracts", chain="Solana"
     ),
+    AssetSeed("BNB", "bnb", "BNB", AssetType.CRYPTO, sector="Smart contracts", chain="BNB Chain"),
     AssetSeed("XRP", "xrp", "XRP", AssetType.CRYPTO, sector="Payments", chain="XRP Ledger"),
     AssetSeed(
         "ADA", "cardano", "Cardano", AssetType.CRYPTO, sector="Smart contracts", chain="Cardano"
@@ -85,6 +86,18 @@ ASSETS = (
     ),
     AssetSeed(
         "DOGE", "dogecoin", "Dogecoin", AssetType.CRYPTO, sector="Digital assets", chain="Dogecoin"
+    ),
+    AssetSeed("SUI", "sui", "Sui", AssetType.CRYPTO, sector="Smart contracts", chain="Sui"),
+    AssetSeed(
+        "LTC", "litecoin", "Litecoin", AssetType.CRYPTO, sector="Digital assets", chain="Litecoin"
+    ),
+    AssetSeed(
+        "BCH",
+        "bitcoin-cash",
+        "Bitcoin Cash",
+        AssetType.CRYPTO,
+        sector="Digital assets",
+        chain="Bitcoin Cash",
     ),
     AssetSeed(
         "COIN",
@@ -166,6 +179,18 @@ MAPPINGS = (
     MappingSeed("solana", "binance", "SOLUSDT", "SOLUSDT"),
     MappingSeed("solana", "coinbase", "SOL-USD", "SOL-USD"),
     MappingSeed("solana", "coingecko", "solana", "SOL"),
+    MappingSeed("bitcoin", "bybit", "BTCUSDT", "BTCUSDT"),
+    MappingSeed("ethereum", "bybit", "ETHUSDT", "ETHUSDT"),
+    MappingSeed("solana", "bybit", "SOLUSDT", "SOLUSDT"),
+    MappingSeed("bnb", "bybit", "BNBUSDT", "BNBUSDT"),
+    MappingSeed("xrp", "bybit", "XRPUSDT", "XRPUSDT"),
+    MappingSeed("dogecoin", "bybit", "DOGEUSDT", "DOGEUSDT"),
+    MappingSeed("cardano", "bybit", "ADAUSDT", "ADAUSDT"),
+    MappingSeed("sui", "bybit", "SUIUSDT", "SUIUSDT"),
+    MappingSeed("chainlink", "bybit", "LINKUSDT", "LINKUSDT"),
+    MappingSeed("avalanche", "bybit", "AVAXUSDT", "AVAXUSDT"),
+    MappingSeed("litecoin", "bybit", "LTCUSDT", "LTCUSDT"),
+    MappingSeed("bitcoin-cash", "bybit", "BCHUSDT", "BCHUSDT"),
 )
 
 ALIASES = tuple(

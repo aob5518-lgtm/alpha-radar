@@ -4,7 +4,7 @@ set -eu
 API_URL="${API_URL:-http://localhost:8000}"
 POSTGRES_USER="${POSTGRES_USER:-alpha_radar}"
 POSTGRES_DB="${POSTGRES_DB:-alpha_radar}"
-EXPECTED_ASSET_COUNT=16
+EXPECTED_ASSET_COUNT=20
 
 curl --fail --silent "${API_URL}/api/v1/health"
 curl --fail --silent "${API_URL}/api/v1/health/ready"
@@ -51,6 +51,7 @@ expected_mappings = {
     ("binance", "BTCUSDT", "BTCUSDT"),
     ("coinbase", "BTC-USD", "BTC-USD"),
     ("coingecko", "bitcoin", "BTC"),
+    ("bybit", "BTCUSDT", "BTCUSDT"),
 }
 actual_mappings = {
     (
@@ -78,7 +79,7 @@ if [ "${COUNTS_AFTER_FIRST_SEED}" != "${COUNTS_AFTER_SECOND_SEED}" ]; then
   exit 1
 fi
 
-if [ "${COUNTS_AFTER_SECOND_SEED}" != "16|9|38" ]; then
+if [ "${COUNTS_AFTER_SECOND_SEED}" != "20|21|45" ]; then
   printf 'Unexpected asset table counts after second seed: %s\n' \
     "${COUNTS_AFTER_SECOND_SEED}" >&2
   exit 1
@@ -163,7 +164,7 @@ SECOND_INSTRUMENTS="$(printf '%s' "${MARKET_COUNTS_AFTER_SECOND}" | cut -d'|' -f
 SECOND_QUOTES="$(printf '%s' "${MARKET_COUNTS_AFTER_SECOND}" | cut -d'|' -f2)"
 SECOND_CANDLES="$(printf '%s' "${MARKET_COUNTS_AFTER_SECOND}" | cut -d'|' -f3)"
 
-if [ "${FIRST_INSTRUMENTS}" != "4" ] || [ "${SECOND_INSTRUMENTS}" != "4" ]; then
+if [ "${FIRST_INSTRUMENTS}" != "16" ] || [ "${SECOND_INSTRUMENTS}" != "16" ]; then
   printf 'Market instrument seed is not idempotent: %s -> %s\n' \
     "${FIRST_INSTRUMENTS}" "${SECOND_INSTRUMENTS}" >&2
   exit 1

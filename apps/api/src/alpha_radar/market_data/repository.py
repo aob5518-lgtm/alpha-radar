@@ -8,10 +8,12 @@ from sqlalchemy import Table, select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from alpha_radar.market_data.constants import MarketInterval
 from alpha_radar.market_data.models import (
     InstrumentStatus,
+    InstrumentType,
     MarketCandle,
     MarketInstrument,
     MarketQuote,
@@ -23,7 +25,12 @@ class MarketDataRepository:
         self.session = session
 
     async def get_instrument(self, instrument_id: UUID) -> MarketInstrument | None:
-        return await self.session.get(MarketInstrument, instrument_id)
+        query = (
+            select(MarketInstrument)
+            .where(MarketInstrument.id == instrument_id)
+            .options(selectinload(MarketInstrument.asset))
+        )
+        return (await self.session.scalars(query)).one_or_none()
 
     async def get_instrument_by_provider_identity(
         self, provider: str, provider_instrument_id: str
@@ -34,13 +41,19 @@ class MarketDataRepository:
         )
         return (await self.session.scalars(query)).one_or_none()
 
-    async def list_active_instruments(self, provider: str) -> list[MarketInstrument]:
+    async def list_active_instruments(
+        self, provider: str, instrument_type: InstrumentType | None = None
+    ) -> list[MarketInstrument]:
+        filters = [
+            MarketInstrument.provider == provider,
+            MarketInstrument.status == InstrumentStatus.ACTIVE,
+        ]
+        if instrument_type is not None:
+            filters.append(MarketInstrument.instrument_type == instrument_type)
         query = (
             select(MarketInstrument)
-            .where(
-                MarketInstrument.provider == provider,
-                MarketInstrument.status == InstrumentStatus.ACTIVE,
-            )
+            .where(*filters)
+            .options(selectinload(MarketInstrument.asset))
             .order_by(MarketInstrument.provider_instrument_id.asc())
         )
         return list((await self.session.scalars(query)).all())

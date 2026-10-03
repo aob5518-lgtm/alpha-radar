@@ -62,13 +62,16 @@ services:
       COINBASE_EXCHANGE_API_URL: ${COINBASE_EXCHANGE_API_URL:-https://api.exchange.coinbase.com}
       COINBASE_WEBSOCKET_URL: ${COINBASE_WEBSOCKET_URL:-wss://ws-feed.exchange.coinbase.com}
       COINBASE_PUBLIC_REQUESTS_PER_SECOND: ${COINBASE_PUBLIC_REQUESTS_PER_SECOND:-8}
+      BYBIT_API_URL: ${BYBIT_API_URL:-https://api.bybit.com}
+      BYBIT_WEBSOCKET_URL: ${BYBIT_WEBSOCKET_URL:-wss://stream.bybit.com/v5/public/linear}
+      BYBIT_PUBLIC_REQUESTS_PER_SECOND: ${BYBIT_PUBLIC_REQUESTS_PER_SECOND:-8}
       MARKET_STREAM_PER_CLIENT_LIMIT: ${MARKET_STREAM_PER_CLIENT_LIMIT:-2}
       MARKET_STREAM_GLOBAL_LIMIT: ${MARKET_STREAM_GLOBAL_LIMIT:-100}
       MARKET_STREAM_IDLE_TIMEOUT_SECONDS: ${MARKET_STREAM_IDLE_TIMEOUT_SECONDS:-90}
       EVENT_SYNC_ENABLED: ${EVENT_SYNC_ENABLED:-false}
       EVENT_SYNC_INTERVAL_SECONDS: ${EVENT_SYNC_INTERVAL_SECONDS:-900}
     command:
-      ["sh", "-c", "alembic upgrade head && python -m alpha_radar.assets.seed && python -m alpha_radar.events.seed && uvicorn alpha_radar.main:app --host 0.0.0.0 --port 8000"]
+      ["sh", "-c", "alembic upgrade head && python -m alpha_radar.assets.seed && python -m alpha_radar.market_data.seed && python -m alpha_radar.events.seed && uvicorn alpha_radar.main:app --host 0.0.0.0 --port 8000"]
     ports:
       - "8000:8000"
     depends_on:
@@ -112,6 +115,9 @@ services:
       COINBASE_EXCHANGE_API_URL: ${COINBASE_EXCHANGE_API_URL:-https://api.exchange.coinbase.com}
       COINBASE_WEBSOCKET_URL: ${COINBASE_WEBSOCKET_URL:-wss://ws-feed.exchange.coinbase.com}
       COINBASE_PUBLIC_REQUESTS_PER_SECOND: ${COINBASE_PUBLIC_REQUESTS_PER_SECOND:-8}
+      BYBIT_API_URL: ${BYBIT_API_URL:-https://api.bybit.com}
+      BYBIT_WEBSOCKET_URL: ${BYBIT_WEBSOCKET_URL:-wss://stream.bybit.com/v5/public/linear}
+      BYBIT_PUBLIC_REQUESTS_PER_SECOND: ${BYBIT_PUBLIC_REQUESTS_PER_SECOND:-8}
       MARKET_STREAM_PER_CLIENT_LIMIT: ${MARKET_STREAM_PER_CLIENT_LIMIT:-2}
       MARKET_STREAM_GLOBAL_LIMIT: ${MARKET_STREAM_GLOBAL_LIMIT:-100}
       MARKET_STREAM_IDLE_TIMEOUT_SECONDS: ${MARKET_STREAM_IDLE_TIMEOUT_SECONDS:-90}

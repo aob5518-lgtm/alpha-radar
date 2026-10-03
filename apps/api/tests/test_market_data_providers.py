@@ -5,12 +5,15 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
+from alpha_radar.config import Settings
 from alpha_radar.market_data.constants import (
     COINBASE_MAX_CANDLES_PER_REQUEST,
     MarketInterval,
 )
+from alpha_radar.market_data.factory import create_market_data_provider
 from alpha_radar.market_data.models import InstrumentType
 from alpha_radar.market_data.providers import (
+    BybitMarketDataProvider,
     CoinbaseMarketDataProvider,
     MarketInstrumentRef,
     MockMarketDataProvider,
@@ -30,6 +33,15 @@ def instrument_ref() -> MarketInstrumentRef:
     )
 
 
+def perpetual_ref() -> MarketInstrumentRef:
+    return MarketInstrumentRef(
+        provider_instrument_id="BTCUSDT",
+        instrument_type=InstrumentType.PERPETUAL,
+        base_currency="BTC",
+        quote_currency="USDT",
+    )
+
+
 def test_core_3_market_intervals_are_centralized() -> None:
     assert [interval.value for interval in MarketInterval] == [
         "1m",
@@ -40,6 +52,133 @@ def test_core_3_market_intervals_are_centralized() -> None:
         "1d",
         "1w",
     ]
+
+
+def test_bybit_maps_all_core_3_intervals_to_native_kline_intervals() -> None:
+    from alpha_radar.market_data.constants import INTERVAL_DEFINITIONS
+
+    assert {
+        interval.value: INTERVAL_DEFINITIONS[interval].bybit_interval for interval in MarketInterval
+    } == {
+        "1m": "1",
+        "5m": "5",
+        "15m": "15",
+        "1h": "60",
+        "4h": "240",
+        "1d": "D",
+        "1w": "W",
+    }
+
+
+def test_bybit_is_selectable_through_provider_configuration() -> None:
+    provider = create_market_data_provider(Settings(market_data_provider="bybit"))
+    assert isinstance(provider, BybitMarketDataProvider)
+
+
+@pytest.mark.asyncio
+async def test_bybit_adapter_normalizes_quote_and_rest_klines() -> None:
+    now = datetime(2026, 10, 3, 12, 1, tzinfo=UTC)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["category"] == "linear"
+        assert request.url.params["symbol"] == "BTCUSDT"
+        if request.url.path.endswith("/tickers"):
+            return httpx.Response(
+                200,
+                json={
+                    "retCode": 0,
+                    "retMsg": "OK",
+                    "time": 1791028860000,
+                    "result": {
+                        "category": "linear",
+                        "list": [
+                            {
+                                "symbol": "BTCUSDT",
+                                "lastPrice": "61234.5",
+                                "bid1Price": "61234.4",
+                                "ask1Price": "61234.6",
+                                "bid1Size": "2.5",
+                                "ask1Size": "1.5",
+                            }
+                        ],
+                    },
+                },
+            )
+        assert request.url.path.endswith("/kline")
+        assert request.url.params["interval"] == "60"
+        return httpx.Response(
+            200,
+            json={
+                "retCode": 0,
+                "retMsg": "OK",
+                "time": 1791028860000,
+                "result": {
+                    "category": "linear",
+                    "symbol": "BTCUSDT",
+                    "list": [
+                        ["1791028800000", "61200", "61300", "61100", "61250", "12", "735000"],
+                        ["1791025200000", "61000", "61250", "60900", "61200", "20", "1224000"],
+                    ],
+                },
+            },
+        )
+
+    provider = BybitMarketDataProvider(
+        base_url="https://api.bybit.com",
+        transport=httpx.MockTransport(handler),
+        clock=lambda: now,
+    )
+    quote = await provider.get_quote(perpetual_ref())
+    candles = await provider.get_candles(perpetual_ref(), MarketInterval.ONE_HOUR, limit=2)
+
+    assert quote.provider == "bybit"
+    assert quote.price == Decimal("61234.5")
+    assert quote.quote_currency == "USDT"
+    assert [candle.open for candle in candles] == [Decimal("61000"), Decimal("61200")]
+    assert candles[0].is_closed is True
+    assert candles[1].is_closed is False
+    assert candles[0].volume == Decimal("20")
+    assert candles[0].quote_volume == Decimal("1224000")
+
+
+def test_bybit_websocket_kline_preserves_exchange_confirm_semantics() -> None:
+    data = {
+        "start": 1672324800000,
+        "end": 1672325099999,
+        "interval": "5",
+        "open": "16649.5",
+        "close": "16677",
+        "high": "16677",
+        "low": "16608",
+        "volume": "2.081",
+        "turnover": "34666.4005",
+        "confirm": False,
+        "timestamp": 1672324988882,
+    }
+    payload: dict[str, object] = {
+        "topic": "kline.5.BTCUSDT",
+        "type": "snapshot",
+        "ts": 1672324988882,
+        "data": [data],
+    }
+    partial = BybitMarketDataProvider.normalize_websocket_message(
+        payload, instrument=perpetual_ref(), interval=MarketInterval.FIVE_MINUTES
+    )[0]
+    closed = BybitMarketDataProvider.normalize_websocket_message(
+        {
+            **payload,
+            "data": [{**data, "confirm": True}],
+        },
+        instrument=perpetual_ref(),
+        interval=MarketInterval.FIVE_MINUTES,
+    )[0]
+
+    assert partial.is_closed is False
+    assert closed.is_closed is True
+    assert partial.open == Decimal("16649.5")
+    assert partial.close == Decimal("16677")
+    assert partial.volume == Decimal("2.081")
+    assert partial.close_time == datetime(2022, 12, 29, 14, 45, tzinfo=UTC)
 
 
 def test_coinbase_exposes_normalized_streaming_capability() -> None:

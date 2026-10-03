@@ -31,9 +31,9 @@ async def test_repository_paginates_filters_and_searches(session: AsyncSession) 
         sort_order="asc",
     )
 
-    assert first_page.total_items == 8
+    assert first_page.total_items == 12
     assert len(first_page.items) == 3
-    assert [asset.symbol for asset in first_page.items] == ["ADA", "AVAX", "BTC"]
+    assert [asset.symbol for asset in first_page.items] == ["ADA", "AVAX", "BCH"]
     assert [asset.symbol for asset in search_result.items] == ["NVDA"]
 
 

@@ -9,6 +9,31 @@ export const marketIntervals = [
 ] as const;
 export type MarketInterval = (typeof marketIntervals)[number];
 export type MarketFreshness = "fresh" | "stale";
+export type MarketInstrumentType =
+  | "spot"
+  | "index"
+  | "perpetual"
+  | "future"
+  | "option";
+
+export interface MarketInstrument {
+  id: string;
+  asset_id: string;
+  asset_slug: string;
+  asset_name: string;
+  symbol: string;
+  provider: string;
+  provider_instrument_id: string;
+  instrument_type: MarketInstrumentType;
+  base_currency: string;
+  quote_currency: string;
+  venue: string | null;
+  status: "active" | "inactive" | "delisted";
+}
+
+export interface MarketInstrumentListResponse {
+  items: MarketInstrument[];
+}
 
 export interface MarketQuote {
   asset_id: string;

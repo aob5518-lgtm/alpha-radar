@@ -37,6 +37,6 @@ async def test_assets_api_lists_filters_and_returns_errors(session: AsyncSession
     assert [item["symbol"] for item in response.json()["items"]] == ["GLD", "IBIT"]
     assert detail.status_code == 200
     assert detail.json()["slug"] == "bitcoin"
-    assert len(detail.json()["provider_mappings"]) == 3
+    assert len(detail.json()["provider_mappings"]) == 4
     assert missing.status_code == 404
     assert missing.json()["error"]["code"] == "asset_not_found"

@@ -1,11 +1,11 @@
-import type { AssetSummary } from "@alpha-radar/types/assets";
 import type { StructuralLevel } from "@alpha-radar/types/core-3";
+import type { MarketInstrument } from "@alpha-radar/types/market-data";
 import { Activity, ArrowRight, DatabaseZap } from "lucide-react";
 import Link from "next/link";
 
 import { StructuralMarketChart } from "@/components/structural-market-chart";
 import { ChartAssetSelector } from "@/components/chart-asset-selector";
-import { getAssets } from "@/lib/api/assets";
+import { getMarketInstruments } from "@/lib/api/assets";
 import { formatDateTime, formatMarketPrice } from "@/lib/i18n/format";
 import { getTranslations } from "@/lib/i18n/server";
 import { analystHref } from "@/lib/market/analyst-context";
@@ -19,20 +19,16 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function resolveAsset(
-  assets: AssetSummary[],
+function resolveInstrument(
+  instruments: MarketInstrument[],
   value: string | undefined,
-): AssetSummary | undefined {
-  const normalized = value?.toLowerCase();
+): MarketInstrument | undefined {
   return (
-    assets.find(
-      (asset) =>
-        asset.id === value ||
-        asset.slug.toLowerCase() === normalized ||
-        asset.symbol.toLowerCase() === normalized,
+    instruments.find((instrument) => instrument.id === value) ??
+    instruments.find(
+      (instrument) => instrument.provider_instrument_id === "BTCUSDT",
     ) ??
-    assets.find((asset) => asset.slug === "bitcoin") ??
-    assets[0]
+    instruments[0]
   );
 }
 
@@ -44,16 +40,16 @@ export default async function ChartPage({
   const { locale, messages } = await getTranslations();
   const query = await searchParams;
   const interval = parseMarketInterval(first(query.interval));
-  let assets: AssetSummary[] = [];
+  let instruments: MarketInstrument[] = [];
   let apiUnavailable = false;
   try {
-    assets = (await getAssets({ pageSize: 100, assetType: "crypto" })).items;
+    instruments = (await getMarketInstruments()).items;
   } catch {
     apiUnavailable = true;
   }
-  const asset = resolveAsset(assets, first(query.asset));
-  const marketContext = asset
-    ? await getTechnicalMarketContext(asset.id, interval)
+  const instrument = resolveInstrument(instruments, first(query.instrument));
+  const marketContext = instrument
+    ? await getTechnicalMarketContext(instrument.id, interval)
     : null;
   const {
     currentPrice = 0,
@@ -67,19 +63,30 @@ export default async function ChartPage({
 
   return (
     <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-7">
-      <header className="flex flex-col gap-4 border-b pb-4 xl:flex-row xl:items-end xl:justify-between">
+      <header className="flex flex-col gap-4 border-b pb-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h1 className="font-mono text-xl font-semibold">
+              {instrument?.provider_instrument_id ?? "—"}{" "}
+              {messages.chart.perpetual}
+            </h1>
+            <span className="font-mono text-xl">
+              {currentPrice > 0
+                ? formatMarketPrice(currentPrice, locale, "USDT")
+                : "—"}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            {instrument?.venue ?? "Bybit"} ·{" "}
+            {quote
+              ? messages.market.freshness[quote.freshness]
+              : messages.chart.unavailable}
+          </p>
+        </div>
         <div className="flex flex-wrap items-end gap-3">
-          {asset && (
-            <ChartAssetSelector
-              assets={assets}
-              selected={asset}
-              interval={interval}
-              label={messages.chart.assetPair}
-            />
-          )}
-          {asset && (
+          {instrument && (
             <Link
-              href={analystHref(asset.id, interval)}
+              href={analystHref(instrument.id, interval)}
               className="flex h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold text-emerald-300"
             >
               {messages.chart.openAnalyst} <ArrowRight className="size-3" />
@@ -87,6 +94,17 @@ export default async function ChartPage({
           )}
         </div>
       </header>
+
+      {instrument && (
+        <div className="mt-4">
+          <ChartAssetSelector
+            instruments={instruments}
+            selected={instrument}
+            interval={interval}
+            moreLabel={messages.chart.more}
+          />
+        </div>
+      )}
 
       <nav
         className="mt-4 flex flex-wrap items-center gap-1"
@@ -98,7 +116,7 @@ export default async function ChartPage({
         {marketIntervals.map((value) => (
           <Link
             key={value}
-            href={`/chart?asset=${encodeURIComponent(asset?.id ?? "bitcoin")}&interval=${value}`}
+            href={`/chart?instrument=${encodeURIComponent(instrument?.id ?? "")}&interval=${value}`}
             aria-current={interval === value ? "page" : undefined}
             className={cn(
               "rounded px-3 py-2 font-mono text-xs text-[var(--muted)]",
@@ -113,15 +131,7 @@ export default async function ChartPage({
         {messages.chart.closedOnly}
       </p>
 
-      <section className="mt-4 grid gap-px border bg-[var(--border)] sm:grid-cols-2 xl:grid-cols-5">
-        <Metric
-          label={
-            asset
-              ? `${asset.symbol} / ${quote?.quote_currency ?? history?.quote_currency ?? "—"}`
-              : messages.chart.asset
-          }
-          value={asset?.name ?? "—"}
-        />
+      <section className="mt-4 grid gap-px border bg-[var(--border)] sm:grid-cols-2 xl:grid-cols-4">
         <Metric
           label={messages.chart.currentPrice}
           value={
@@ -129,7 +139,7 @@ export default async function ChartPage({
               ? formatMarketPrice(
                   currentPrice,
                   locale,
-                  quote?.quote_currency ?? history?.quote_currency ?? "USD",
+                  quote?.quote_currency ?? history?.quote_currency ?? "USDT",
                 )
               : "—"
           }
@@ -148,7 +158,7 @@ export default async function ChartPage({
         />
         <Metric
           label={messages.chart.trend}
-          value={messages.chart[snapshot?.trend.direction ?? "unavailable"]}
+          value={`${messages.chart[snapshot?.trend.direction ?? "unavailable"]} ${snapshot?.trend.strength ?? 0}`}
         />
       </section>
 
@@ -169,8 +179,11 @@ export default async function ChartPage({
               candles={history.items}
               levels={levels}
               currentPrice={currentPrice || null}
-              assetId={asset!.id}
+              instrumentId={instrument!.id}
               interval={interval}
+              liveLabel={messages.chart.live}
+              partialLabel={messages.chart.partial}
+              closedLabel={messages.chart.closed}
             />
           </div>
           <aside className="space-y-4">
@@ -187,8 +200,11 @@ export default async function ChartPage({
                 /100
               </p>
               <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
-                {snapshot?.trend.reason ??
-                  messages.chart.insufficientDescription}
+                {snapshot
+                  ? locale === "zh-CN"
+                    ? messages.chart.trendDescription
+                    : snapshot.trend.reason
+                  : messages.chart.insufficientDescription}
               </p>
             </section>
             <LevelTable

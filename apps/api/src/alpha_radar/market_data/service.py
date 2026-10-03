@@ -11,7 +11,12 @@ from alpha_radar.market_data.constants import (
     MarketInterval,
     QualityFlag,
 )
-from alpha_radar.market_data.models import MarketInstrument, MarketQuote
+from alpha_radar.market_data.models import (
+    InstrumentType,
+    MarketCandle,
+    MarketInstrument,
+    MarketQuote,
+)
 from alpha_radar.market_data.providers.base import (
     MarketDataProvider,
     MarketInstrumentRef,
@@ -23,6 +28,8 @@ from alpha_radar.market_data.repository import MarketDataRepository
 from alpha_radar.market_data.schemas import (
     MarketCandleResponse,
     MarketHistoryResponse,
+    MarketInstrumentListResponse,
+    MarketInstrumentResponse,
     MarketQuoteResponse,
 )
 
@@ -53,12 +60,67 @@ class MarketDataService:
                 status_code=404,
             )
         instrument = await self._require_instrument(quote.market_instrument_id)
+        return self._quote_response(asset.symbol, instrument, quote, now=now)
+
+    async def list_instruments(
+        self, *, provider: str, instrument_type: InstrumentType
+    ) -> MarketInstrumentListResponse:
+        instruments = await self.repository.list_active_instruments(provider, instrument_type)
+        return MarketInstrumentListResponse(
+            items=[self._instrument_response(instrument) for instrument in instruments]
+        )
+
+    async def get_instrument(self, instrument_id: UUID) -> MarketInstrumentResponse:
+        return self._instrument_response(await self._require_instrument(instrument_id))
+
+    async def get_instrument_quote(
+        self, instrument_id: UUID, *, now: datetime | None = None
+    ) -> MarketQuoteResponse:
+        instrument = await self._require_instrument(instrument_id)
+        quote = await self.repository.latest_quote_for_instrument(instrument.id)
+        if quote is None:
+            raise AppError(
+                code="market_quote_not_found",
+                message=f"No persisted quote is available for instrument '{instrument_id}'",
+                status_code=404,
+            )
+        return self._quote_response(instrument.asset.symbol, instrument, quote, now=now)
+
+    async def get_instrument_history(
+        self,
+        instrument_id: UUID,
+        *,
+        interval: MarketInterval,
+        start: datetime | None,
+        end: datetime | None,
+        limit: int,
+    ) -> MarketHistoryResponse:
+        self._validate_history_range(interval=interval, start=start, end=end)
+        instrument = await self._require_instrument(instrument_id)
+        candles = await self.repository.list_candles(
+            asset_id=instrument.asset_id,
+            market_instrument_id=instrument.id,
+            interval=interval,
+            start=start,
+            end=end,
+            limit=limit,
+        )
+        return self._history_response(instrument, interval, candles)
+
+    def _quote_response(
+        self,
+        symbol: str,
+        instrument: MarketInstrument,
+        quote: MarketQuote,
+        *,
+        now: datetime | None,
+    ) -> MarketQuoteResponse:
         reference_time = now or datetime.now(UTC)
         quote_age = self._as_utc(reference_time) - self._as_utc(quote.observed_at)
         is_stale = quote_age > self.quote_freshness
         return MarketQuoteResponse(
-            asset_id=asset.id,
-            symbol=asset.symbol,
+            asset_id=instrument.asset_id,
+            symbol=symbol,
             market_instrument_id=instrument.id,
             provider_instrument_id=instrument.provider_instrument_id,
             price=quote.price,
@@ -115,6 +177,41 @@ class MarketDataService:
             provider=instrument.provider,
             interval=interval,
             items=[MarketCandleResponse.model_validate(candle) for candle in candles],
+        )
+
+    @staticmethod
+    def _history_response(
+        instrument: MarketInstrument,
+        interval: MarketInterval,
+        candles: list[MarketCandle],
+    ) -> MarketHistoryResponse:
+        return MarketHistoryResponse(
+            asset_id=instrument.asset_id,
+            symbol=instrument.asset.symbol,
+            market_instrument_id=instrument.id,
+            provider_instrument_id=instrument.provider_instrument_id,
+            base_currency=instrument.base_currency,
+            quote_currency=instrument.quote_currency,
+            provider=instrument.provider,
+            interval=interval,
+            items=[MarketCandleResponse.model_validate(candle) for candle in candles],
+        )
+
+    @staticmethod
+    def _instrument_response(instrument: MarketInstrument) -> MarketInstrumentResponse:
+        return MarketInstrumentResponse(
+            id=instrument.id,
+            asset_id=instrument.asset_id,
+            asset_slug=instrument.asset.slug,
+            asset_name=instrument.asset.name,
+            symbol=instrument.asset.symbol,
+            provider=instrument.provider,
+            provider_instrument_id=instrument.provider_instrument_id,
+            instrument_type=instrument.instrument_type,
+            base_currency=instrument.base_currency,
+            quote_currency=instrument.quote_currency,
+            venue=instrument.venue,
+            status=instrument.status,
         )
 
     async def ingest_quote(
@@ -293,7 +390,11 @@ class MarketDataService:
     async def _require_instrument(self, instrument_id: UUID) -> MarketInstrument:
         instrument = await self.repository.get_instrument(instrument_id)
         if instrument is None:
-            raise RuntimeError("Persisted quote references a missing market instrument")
+            raise AppError(
+                code="market_instrument_not_found",
+                message=f"Market instrument '{instrument_id}' was not found",
+                status_code=404,
+            )
         return instrument
 
     @staticmethod

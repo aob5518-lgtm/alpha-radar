@@ -101,6 +101,9 @@ test("analyst route rehydrates canonical context and injects platform levels", a
     "utf8",
   );
   assert.match(source, /getTechnicalMarketContext/);
+  assert.match(source, /market_instrument_id/);
+  assert.match(source, /getMarketInstrument\(instrumentId\)/);
+  assert.match(source, /getTechnicalMarketContext\(instrument\.id/);
   assert.match(source, /getRecentEventsForAsset/);
   assert.match(source, /result\.key_resistance = market\.snapshot/);
   assert.match(source, /result\.key_support = market\.snapshot/);
@@ -112,7 +115,7 @@ test("analyst route rehydrates canonical context and injects platform levels", a
   assert.match(source, /finally/);
 });
 
-test("live chart updates an open candle without changing closed-candle engine input", async () => {
+test("live chart uses instrument-specific provider Klines without changing closed-candle engine input", async () => {
   const chart = await readFile(
     new URL("../src/components/structural-market-chart.tsx", import.meta.url),
     "utf8",
@@ -122,8 +125,9 @@ test("live chart updates an open candle without changing closed-candle engine in
     "utf8",
   );
   assert.match(chart, /new WebSocket/);
-  assert.match(chart, /updateLivePartialCandle/);
-  assert.match(chart, /LIVE \/ PARTIAL/);
+  assert.match(chart, /market-instruments/);
+  assert.match(chart, /candle\.is_closed/);
+  assert.match(chart, /candleSeries\.update/);
   assert.match(engine, /filter\(\(candle\) => candle\.is_closed\)/);
 });
 

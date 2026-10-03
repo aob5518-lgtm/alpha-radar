@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alpha_radar.assets.models import Asset
 from alpha_radar.assets.repository import AssetRepository
 from alpha_radar.assets.service import AssetService
+from alpha_radar.config import get_settings
 from alpha_radar.db.session import async_session_factory
 from alpha_radar.market_data.constants import MarketInterval
 from alpha_radar.market_data.models import InstrumentType, MarketInstrument
@@ -28,6 +29,7 @@ class InstrumentSeed:
     base_currency: str
     quote_currency: str
     venue: str | None
+    instrument_type: InstrumentType = InstrumentType.SPOT
 
     @property
     def id(self) -> UUID:
@@ -42,6 +44,30 @@ INSTRUMENTS = (
     InstrumentSeed("ethereum", "coinbase", "ETH-USD", "ETH", "USD", "Coinbase Exchange"),
     InstrumentSeed("solana", "coinbase", "SOL-USD", "SOL", "USD", "Coinbase Exchange"),
     InstrumentSeed("bitcoin", "mock", "BTC-USD-SAMPLE", "BTC", "USD", "Deterministic Test"),
+    InstrumentSeed("bitcoin", "bybit", "BTCUSDT", "BTC", "USDT", "Bybit", InstrumentType.PERPETUAL),
+    InstrumentSeed(
+        "ethereum", "bybit", "ETHUSDT", "ETH", "USDT", "Bybit", InstrumentType.PERPETUAL
+    ),
+    InstrumentSeed("solana", "bybit", "SOLUSDT", "SOL", "USDT", "Bybit", InstrumentType.PERPETUAL),
+    InstrumentSeed("bnb", "bybit", "BNBUSDT", "BNB", "USDT", "Bybit", InstrumentType.PERPETUAL),
+    InstrumentSeed("xrp", "bybit", "XRPUSDT", "XRP", "USDT", "Bybit", InstrumentType.PERPETUAL),
+    InstrumentSeed(
+        "dogecoin", "bybit", "DOGEUSDT", "DOGE", "USDT", "Bybit", InstrumentType.PERPETUAL
+    ),
+    InstrumentSeed("cardano", "bybit", "ADAUSDT", "ADA", "USDT", "Bybit", InstrumentType.PERPETUAL),
+    InstrumentSeed("sui", "bybit", "SUIUSDT", "SUI", "USDT", "Bybit", InstrumentType.PERPETUAL),
+    InstrumentSeed(
+        "chainlink", "bybit", "LINKUSDT", "LINK", "USDT", "Bybit", InstrumentType.PERPETUAL
+    ),
+    InstrumentSeed(
+        "avalanche", "bybit", "AVAXUSDT", "AVAX", "USDT", "Bybit", InstrumentType.PERPETUAL
+    ),
+    InstrumentSeed(
+        "litecoin", "bybit", "LTCUSDT", "LTC", "USDT", "Bybit", InstrumentType.PERPETUAL
+    ),
+    InstrumentSeed(
+        "bitcoin-cash", "bybit", "BCHUSDT", "BCH", "USDT", "Bybit", InstrumentType.PERPETUAL
+    ),
 )
 
 
@@ -77,7 +103,7 @@ async def seed_market_instruments(session: AsyncSession) -> int:
                 asset_id=asset.id,
                 provider=seed.provider,
                 provider_instrument_id=seed.provider_instrument_id,
-                instrument_type=InstrumentType.SPOT,
+                instrument_type=seed.instrument_type,
                 base_currency=seed.base_currency,
                 quote_currency=seed.quote_currency,
                 venue=seed.venue,
@@ -118,7 +144,10 @@ async def seed_sample_market_data(session: AsyncSession) -> tuple[int, int]:
 async def main() -> None:
     async with async_session_factory() as session:
         instruments = await seed_market_instruments(session)
-        quotes, candles = await seed_sample_market_data(session)
+        if get_settings().app_env == "production":
+            quotes, candles = 0, 0
+        else:
+            quotes, candles = await seed_sample_market_data(session)
     print(
         f"Market-data seed complete: {instruments} instruments created, "
         f"{quotes} quote persisted, {candles} candles upserted."
