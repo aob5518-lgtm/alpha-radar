@@ -1,4 +1,12 @@
-export const marketIntervals = ["1m", "5m", "15m", "1h", "4h", "1d", "1w"] as const;
+export const marketIntervals = [
+  "1m",
+  "5m",
+  "15m",
+  "1h",
+  "4h",
+  "1d",
+  "1w",
+] as const;
 export type MarketInterval = (typeof marketIntervals)[number];
 export type MarketFreshness = "fresh" | "stale";
 

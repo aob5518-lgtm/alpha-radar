@@ -4,6 +4,7 @@ import { Activity, ArrowRight, DatabaseZap } from "lucide-react";
 import Link from "next/link";
 
 import { StructuralMarketChart } from "@/components/structural-market-chart";
+import { ChartAssetSelector } from "@/components/chart-asset-selector";
 import { getAssets } from "@/lib/api/assets";
 import { formatDateTime, formatMarketPrice } from "@/lib/i18n/format";
 import { getTranslations } from "@/lib/i18n/server";
@@ -66,40 +67,16 @@ export default async function ChartPage({
 
   return (
     <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-7">
-      <header className="flex flex-col gap-4 border-b pb-5 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p className="section-label">{messages.chart.eyebrow}</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">
-            {messages.chart.title}
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm text-[var(--muted)]">
-            {messages.chart.description}
-          </p>
-        </div>
+      <header className="flex flex-col gap-4 border-b pb-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="flex flex-wrap items-end gap-3">
-          <form className="flex items-end gap-2" action="/chart">
-            <label className="text-xs text-[var(--muted)]">
-              {messages.chart.asset}
-              <select
-                name="asset"
-                defaultValue={asset?.id}
-                className="field-select mt-1 min-w-36"
-              >
-                {assets.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.symbol} · {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <input type="hidden" name="interval" value={interval} />
-            <button
-              className="h-10 rounded-md border px-3 text-xs font-semibold"
-              type="submit"
-            >
-              {messages.assets.apply}
-            </button>
-          </form>
+          {asset && (
+            <ChartAssetSelector
+              assets={assets}
+              selected={asset}
+              interval={interval}
+              label={messages.chart.assetPair}
+            />
+          )}
           {asset && (
             <Link
               href={analystHref(asset.id, interval)}
@@ -112,9 +89,12 @@ export default async function ChartPage({
       </header>
 
       <nav
-        className="mt-4 flex flex-wrap gap-1"
+        className="mt-4 flex flex-wrap items-center gap-1"
         aria-label={messages.chart.timeframe}
       >
+        <span className="mr-2 text-[10px] font-semibold tracking-wider text-[var(--muted)] uppercase">
+          {messages.chart.timeframe}
+        </span>
         {marketIntervals.map((value) => (
           <Link
             key={value}
@@ -129,6 +109,9 @@ export default async function ChartPage({
           </Link>
         ))}
       </nav>
+      <p className="mt-2 text-[10px] text-[var(--muted)]">
+        {messages.chart.closedOnly}
+      </p>
 
       <section className="mt-4 grid gap-px border bg-[var(--border)] sm:grid-cols-2 xl:grid-cols-5">
         <Metric
@@ -164,8 +147,8 @@ export default async function ChartPage({
           }
         />
         <Metric
-          label={messages.chart.closedCandles}
-          value={String(snapshot?.closedCandles.length ?? 0)}
+          label={messages.chart.trend}
+          value={messages.chart[snapshot?.trend.direction ?? "unavailable"]}
         />
       </section>
 
@@ -186,11 +169,9 @@ export default async function ChartPage({
               candles={history.items}
               levels={levels}
               currentPrice={currentPrice || null}
+              assetId={asset!.id}
+              interval={interval}
             />
-            <div className="flex flex-wrap justify-between gap-2 border-t px-4 py-3 text-xs text-[var(--muted)]">
-              <span>{messages.chart.closedOnly}</span>
-              <span>{messages.chart.algorithm}</span>
-            </div>
           </div>
           <aside className="space-y-4">
             <section className="border p-4">

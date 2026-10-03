@@ -17,6 +17,7 @@ from alpha_radar.market_data.providers import (
     ProviderCandle,
     ProviderQuote,
 )
+from alpha_radar.market_data.providers.base import ProviderTick, StreamingMarketDataProvider
 from alpha_radar.market_data.quality import timestamp_quality_flags
 
 
@@ -39,6 +40,20 @@ def test_core_3_market_intervals_are_centralized() -> None:
         "1d",
         "1w",
     ]
+
+
+def test_coinbase_exposes_normalized_streaming_capability() -> None:
+    provider = CoinbaseMarketDataProvider(base_url="https://example.test")
+    assert isinstance(provider, StreamingMarketDataProvider)
+    tick = ProviderTick(
+        provider="coinbase",
+        provider_instrument_id="BTC-USD",
+        price=Decimal("60000.12"),
+        observed_at=datetime(2026, 10, 2, 12, 30, tzinfo=UTC),
+        provider_timestamp=datetime(2026, 10, 2, 12, 30, tzinfo=UTC),
+        open_24h=Decimal("59000"),
+    )
+    assert tick.price == Decimal("60000.12")
 
 
 @pytest.mark.asyncio

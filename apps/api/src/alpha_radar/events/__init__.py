@@ -1,0 +1,1 @@
+"""Canonical financial events domain."""

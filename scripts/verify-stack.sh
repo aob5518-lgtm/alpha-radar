@@ -181,6 +181,37 @@ fi
 
 printf 'Market instrument and candle idempotency verification passed.\n'
 
+EVENT_COUNTS_BEFORE="$(docker compose exec -T postgres psql -U "${POSTGRES_USER}" \
+  -d "${POSTGRES_DB}" -tAc "SELECT (SELECT count(*) FROM events), (SELECT count(*) FROM event_assets), (SELECT count(*) FROM event_source_references);")"
+EVENT_SEED_OUTPUT="$(docker compose run --rm api python -m alpha_radar.events.seed)"
+EVENT_COUNTS_AFTER="$(docker compose exec -T postgres psql -U "${POSTGRES_USER}" \
+  -d "${POSTGRES_DB}" -tAc "SELECT (SELECT count(*) FROM events), (SELECT count(*) FROM event_assets), (SELECT count(*) FROM event_source_references);")"
+if [ "${EVENT_COUNTS_BEFORE}" != "14|42|14" ] || [ "${EVENT_COUNTS_AFTER}" != "14|42|14" ]; then
+  printf 'Event seed is not idempotent: %s -> %s\n' "${EVENT_COUNTS_BEFORE}" "${EVENT_COUNTS_AFTER}" >&2
+  exit 1
+fi
+EVENT_LIST_JSON="$(curl --fail --silent "${API_URL}/api/v1/events?importance=critical&importance=high")"
+export API_URL
+export EVENT_LIST_JSON
+python - <<'PY'
+import json
+import os
+from urllib.request import urlopen
+
+events = json.loads(os.environ["EVENT_LIST_JSON"])
+if events["pagination"]["total_items"] != 14:
+    raise SystemExit(f"expected fourteen official scheduled events: {events}")
+event = events["items"][0]
+if not event["sources"] or not event["affected_assets"]:
+    raise SystemExit(f"event is missing provenance or affected assets: {event}")
+if event["scheduled_timezone"] != "America/New_York":
+    raise SystemExit(f"event lost official timezone semantics: {event}")
+detail = json.load(urlopen(os.environ["API_URL"] + "/api/v1/events/" + event["id"], timeout=10))
+if detail["id"] != event["id"]:
+    raise SystemExit("event detail mismatch")
+print("Canonical Event list/detail and seed idempotency verification passed.")
+PY
+
 docker compose exec -T postgres psql -U "${POSTGRES_USER}" \
   -d "${POSTGRES_DB}" \
   -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('sources', 'source_documents', 'source_document_versions') ORDER BY table_name;"
@@ -190,8 +221,8 @@ SECOND_SOURCE_SEED="$(docker compose run --rm api python -m alpha_radar.sources.
 printf '%s\n%s\n' "${FIRST_SOURCE_SEED}" "${SECOND_SOURCE_SEED}"
 SOURCE_COUNT="$(docker compose exec -T postgres psql -U "${POSTGRES_USER}" \
   -d "${POSTGRES_DB}" -tAc "SELECT count(*) FROM sources;")"
-if [ "${SOURCE_COUNT}" != "2" ]; then
-  printf 'Expected two idempotently seeded official sources, got %s\n' "${SOURCE_COUNT}" >&2
+if [ "${SOURCE_COUNT}" != "4" ]; then
+  printf 'Expected four idempotently seeded official sources, got %s\n' "${SOURCE_COUNT}" >&2
   exit 1
 fi
 
@@ -213,8 +244,8 @@ if documents["pagination"]["total_items"] != 1:
 document = documents["items"][0]
 if document["current_version"]["version_number"] != 2:
     raise SystemExit(f"expected current revision 2: {document}")
-if len({item["slug"] for item in sources["items"]}) != 3:
-    raise SystemExit(f"expected unique official + integration sources: {sources}")
+if len({item["slug"] for item in sources["items"]}) != 5:
+    raise SystemExit(f"expected unique official + BLS + integration sources: {sources}")
 detail = json.load(urlopen(os.environ["API_URL"] + "/api/v1/documents/" + document["id"], timeout=10))
 if detail["id"] != document["id"] or "metadata" in detail:
     raise SystemExit(f"unexpected source detail contract: {detail}")

@@ -2,6 +2,7 @@
 
 import type { StructuralLevel } from "@alpha-radar/types/core-3";
 import type { MarketCandle } from "@alpha-radar/types/market-data";
+import type { MarketInterval } from "@alpha-radar/types/market-data";
 import {
   CandlestickSeries,
   ColorType,
@@ -10,20 +11,33 @@ import {
   createChart,
   type UTCTimestamp,
 } from "lightweight-charts";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import {
+  updateLivePartialCandle,
+  type LivePartialCandle,
+} from "@/lib/market/live-candle";
 
 interface Props {
   candles: MarketCandle[];
   levels: StructuralLevel[];
   currentPrice: number | null;
+  assetId: string;
+  interval: MarketInterval;
 }
 
 export function StructuralMarketChart({
   candles,
   levels,
   currentPrice,
+  assetId,
+  interval,
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
+  const [live, setLive] = useState<{
+    price: number;
+    change: number | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!container.current) return;
@@ -94,16 +108,49 @@ export function StructuralMarketChart({
         title: level.label,
       });
     }
-    if (currentPrice !== null) {
-      candleSeries.createPriceLine({
-        price: currentPrice,
-        color: "#f4f4f5",
-        lineWidth: 1,
-        lineStyle: LineStyle.Solid,
-        axisLabelVisible: true,
-        title: "PRICE",
+    const liveLine =
+      currentPrice !== null
+        ? candleSeries.createPriceLine({
+            price: currentPrice,
+            color: "#f4f4f5",
+            lineWidth: 1,
+            lineStyle: LineStyle.Solid,
+            axisLabelVisible: true,
+            title: "PRICE",
+          })
+        : null;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    const socketUrl = new URL(
+      `/api/v1/assets/${encodeURIComponent(assetId)}/stream`,
+      apiUrl,
+    );
+    socketUrl.protocol = socketUrl.protocol === "https:" ? "wss:" : "ws:";
+    const socket = new WebSocket(socketUrl);
+    let current: LivePartialCandle | null = null;
+    socket.onmessage = (message) => {
+      const tick = JSON.parse(String(message.data)) as {
+        type: string;
+        price?: string;
+        open_24h?: string | null;
+        provider_timestamp?: string;
+      };
+      if (tick.type !== "tick" || !tick.price || !tick.provider_timestamp)
+        return;
+      const price = Number(tick.price);
+      current = updateLivePartialCandle(
+        current,
+        price,
+        Date.parse(tick.provider_timestamp) / 1000,
+        interval,
+      );
+      candleSeries.update({ ...current, time: current.time as UTCTimestamp });
+      liveLine?.applyOptions({ price });
+      const open24 = tick.open_24h ? Number(tick.open_24h) : null;
+      setLive({
+        price,
+        change: open24 && open24 > 0 ? ((price - open24) / open24) * 100 : null,
       });
-    }
+    };
     chart.timeScale().fitContent();
     const observer = new ResizeObserver(([entry]) => {
       if (entry) chart.applyOptions({ width: entry.contentRect.width });
@@ -111,9 +158,30 @@ export function StructuralMarketChart({
     observer.observe(container.current);
     return () => {
       observer.disconnect();
+      socket.close();
       chart.remove();
     };
-  }, [candles, currentPrice, levels]);
+  }, [assetId, candles, currentPrice, interval, levels]);
 
-  return <div ref={container} className="min-h-[500px] w-full" />;
+  return (
+    <div className="relative">
+      <div ref={container} className="min-h-[500px] w-full" />
+      {live && (
+        <div className="absolute top-3 left-3 rounded bg-black/70 px-2 py-1 font-mono text-xs">
+          <span className="mr-2 text-emerald-300">LIVE / PARTIAL</span>
+          {live.price.toLocaleString()}{" "}
+          {live.change !== null && (
+            <span
+              className={
+                live.change >= 0 ? "text-emerald-300" : "text-rose-300"
+              }
+            >
+              {live.change >= 0 ? "+" : ""}
+              {live.change.toFixed(2)}%
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

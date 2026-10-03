@@ -8,6 +8,7 @@
     "./radar": "./src/radar.ts",
     "./market-data": "./src/market-data.ts",
     "./core-3": "./src/core-3.ts",
+    "./events": "./src/events.ts",
     "./strategy": "./src/strategy.ts",
     "./sources": "./src/sources.ts"
   }

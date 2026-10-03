@@ -226,6 +226,20 @@ class MarketDataService:
         candles = await provider.get_candles(self.instrument_ref(instrument), interval, limit=limit)
         return await self.ingest_candles(instrument, candles)
 
+    async def fetch_and_ingest_closed_candles(
+        self,
+        instrument: MarketInstrument,
+        provider: MarketDataProvider,
+        interval: MarketInterval,
+        *,
+        limit: int,
+    ) -> int:
+        """Persist only completed provider candles for bounded periodic maintenance."""
+        candles = await provider.get_candles(self.instrument_ref(instrument), interval, limit=limit)
+        return await self.ingest_candles(
+            instrument, [candle for candle in candles if candle.is_closed]
+        )
+
     @staticmethod
     def instrument_ref(instrument: MarketInstrument) -> MarketInstrumentRef:
         return MarketInstrumentRef(

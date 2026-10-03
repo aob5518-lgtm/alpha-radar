@@ -6,7 +6,9 @@ import {
 } from "./config";
 import { getMessages, type Messages } from "./messages";
 
-export function getClientLocale(cookieString = document.cookie): Locale {
+export function getClientLocale(
+  cookieString = typeof document === "undefined" ? "" : document.cookie,
+): Locale {
   const localeCookie = cookieString
     .split(";")
     .map((cookie) => cookie.trim())

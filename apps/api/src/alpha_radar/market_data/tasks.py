@@ -41,7 +41,7 @@ async def _fetch_quotes() -> int:
         await engine.dispose()
 
 
-async def _fetch_candles() -> int:
+async def _fetch_candles(interval: MarketInterval, limit: int = 3) -> int:
     settings = get_settings()
     if not settings.market_data_ingestion_enabled:
         return 0
@@ -53,8 +53,8 @@ async def _fetch_candles() -> int:
             service = _service(repository)
             count = 0
             for instrument in instruments:
-                count += await service.fetch_and_ingest_candles(
-                    instrument, provider, MarketInterval.ONE_MINUTE, limit=3
+                count += await service.fetch_and_ingest_closed_candles(
+                    instrument, provider, interval, limit=min(max(limit, 1), 10)
                 )
             return count
     finally:
@@ -91,8 +91,8 @@ def fetch_quotes() -> int:
 @app.task(  # pyright: ignore[reportUnknownMemberType, reportUntypedFunctionDecorator]
     name="alpha_radar.market_data.fetch_candles"
 )
-def fetch_candles() -> int:
-    return asyncio.run(_fetch_candles())
+def fetch_candles(interval: str = MarketInterval.ONE_MINUTE.value, limit: int = 3) -> int:
+    return asyncio.run(_fetch_candles(MarketInterval(interval), limit))
 
 
 @app.task(  # pyright: ignore[reportUnknownMemberType, reportUntypedFunctionDecorator]

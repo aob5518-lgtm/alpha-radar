@@ -60,8 +60,15 @@ services:
       MARKET_DATA_FUTURE_TOLERANCE_SECONDS: ${MARKET_DATA_FUTURE_TOLERANCE_SECONDS:-30}
       MARKET_DATA_HTTP_TIMEOUT_SECONDS: ${MARKET_DATA_HTTP_TIMEOUT_SECONDS:-10}
       COINBASE_EXCHANGE_API_URL: ${COINBASE_EXCHANGE_API_URL:-https://api.exchange.coinbase.com}
+      COINBASE_WEBSOCKET_URL: ${COINBASE_WEBSOCKET_URL:-wss://ws-feed.exchange.coinbase.com}
       COINBASE_PUBLIC_REQUESTS_PER_SECOND: ${COINBASE_PUBLIC_REQUESTS_PER_SECOND:-8}
-    command: ["sh", "-c", "alembic upgrade head && uvicorn alpha_radar.main:app --host 0.0.0.0 --port 8000"]
+      MARKET_STREAM_PER_CLIENT_LIMIT: ${MARKET_STREAM_PER_CLIENT_LIMIT:-2}
+      MARKET_STREAM_GLOBAL_LIMIT: ${MARKET_STREAM_GLOBAL_LIMIT:-100}
+      MARKET_STREAM_IDLE_TIMEOUT_SECONDS: ${MARKET_STREAM_IDLE_TIMEOUT_SECONDS:-90}
+      EVENT_SYNC_ENABLED: ${EVENT_SYNC_ENABLED:-false}
+      EVENT_SYNC_INTERVAL_SECONDS: ${EVENT_SYNC_INTERVAL_SECONDS:-900}
+    command:
+      ["sh", "-c", "alembic upgrade head && python -m alpha_radar.assets.seed && python -m alpha_radar.events.seed && uvicorn alpha_radar.main:app --host 0.0.0.0 --port 8000"]
     ports:
       - "8000:8000"
     depends_on:
@@ -103,7 +110,13 @@ services:
       MARKET_DATA_FUTURE_TOLERANCE_SECONDS: ${MARKET_DATA_FUTURE_TOLERANCE_SECONDS:-30}
       MARKET_DATA_HTTP_TIMEOUT_SECONDS: ${MARKET_DATA_HTTP_TIMEOUT_SECONDS:-10}
       COINBASE_EXCHANGE_API_URL: ${COINBASE_EXCHANGE_API_URL:-https://api.exchange.coinbase.com}
+      COINBASE_WEBSOCKET_URL: ${COINBASE_WEBSOCKET_URL:-wss://ws-feed.exchange.coinbase.com}
       COINBASE_PUBLIC_REQUESTS_PER_SECOND: ${COINBASE_PUBLIC_REQUESTS_PER_SECOND:-8}
+      MARKET_STREAM_PER_CLIENT_LIMIT: ${MARKET_STREAM_PER_CLIENT_LIMIT:-2}
+      MARKET_STREAM_GLOBAL_LIMIT: ${MARKET_STREAM_GLOBAL_LIMIT:-100}
+      MARKET_STREAM_IDLE_TIMEOUT_SECONDS: ${MARKET_STREAM_IDLE_TIMEOUT_SECONDS:-90}
+      EVENT_SYNC_ENABLED: ${EVENT_SYNC_ENABLED:-false}
+      EVENT_SYNC_INTERVAL_SECONDS: ${EVENT_SYNC_INTERVAL_SECONDS:-900}
     command:
       ["celery", "--workdir", "/app/apps/worker", "-A", "main.app", "worker", "--beat", "--loglevel=INFO"]
     depends_on:
@@ -122,10 +135,21 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       API_URL: ${API_URL:-http://api:8000}
+      AI_PROVIDER: ${AI_PROVIDER:-disabled}
+      AI_MODEL: "${AI_MODEL:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      AI_RATE_LIMIT_PER_CLIENT: ${AI_RATE_LIMIT_PER_CLIENT:-10}
+      AI_RATE_LIMIT_GLOBAL: ${AI_RATE_LIMIT_GLOBAL:-60}
+      AI_CONCURRENCY_LIMIT_GLOBAL: ${AI_CONCURRENCY_LIMIT_GLOBAL:-3}
+      AI_CONCURRENCY_LEASE_SECONDS: ${AI_CONCURRENCY_LEASE_SECONDS:-120}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:
       api:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: unless-stopped
 

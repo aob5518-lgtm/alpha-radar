@@ -10,6 +10,7 @@ def create_market_data_provider(settings: Settings) -> MarketDataProvider:
     if settings.market_data_provider == "coinbase":
         return CoinbaseMarketDataProvider(
             base_url=settings.coinbase_exchange_api_url,
+            websocket_url=settings.coinbase_websocket_url,
             timeout_seconds=settings.market_data_http_timeout_seconds,
             requests_per_second=settings.coinbase_public_requests_per_second,
         )

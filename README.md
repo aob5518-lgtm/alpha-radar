@@ -38,6 +38,21 @@ Verify the running stack, database extensions, and Redis:
 ./scripts/verify-stack.sh
 ```
 
+For an approved real-provider production deployment, set at minimum:
+
+```dotenv
+APP_ENV=production
+MARKET_DATA_PROVIDER=coinbase
+MARKET_DATA_INGESTION_ENABLED=true
+EVENT_SYNC_ENABLED=true
+SOURCE_CONTACT_IDENTITY=Alpha Radar Operations <monitored@example.com>
+```
+
+Run all required interval backfills once, then execute `python scripts/verify-production.py`.
+Production readiness returns HTTP 503 when mock/disabled market data is configured or any supported
+timeframe lacks current closed history. The report includes provider/ingestion mode, latest history
+timestamps, Event sync status, AI configuration and Redis limiter status, and streaming mode.
+
 Load the deliberate, idempotent development asset seed after the stack is ready:
 
 ```bash
@@ -96,6 +111,7 @@ Seed a host-run backend with:
 
 ```bash
 python -m alpha_radar.assets.seed
+python -m alpha_radar.events.seed
 ```
 
 ## Checks and tests
@@ -152,8 +168,40 @@ not a primary product surface.
 - `GET /api/v1/assets/{identifier}/history` accepts `interval`, `start`, `end`, and bounded `limit`
   parameters and returns candles ordered oldest to newest. Supported intervals are 1m, 5m, 15m,
   1h, 4h, 1d and 1w.
+- `WS /api/v1/assets/{identifier}/stream` emits normalized real-time ticks when the configured
+  provider supports streaming. Coinbase uses its public Exchange ticker channel. The open candle is
+  visual only; technical calculations remain closed-candle-only.
 
-Provider calls run only in Celery ingestion tasks. HTTP requests never call external vendors.
+## Event API
+
+- `GET /api/v1/events` supports pagination, time range, importance, type, status and canonical Asset
+  filters. Critical and High are the default importance set.
+- `GET /api/v1/events/{event_id}` returns the canonical event, affected Assets and official source
+  references.
+- The idempotent `python -m alpha_radar.events.seed` command installs curated official BLS, BEA and
+  Federal Reserve 2026 schedules without inventing actual, forecast, previous or unannounced times.
+- Optional `EVENT_SYNC_ENABLED=true` polling checks only official BLS CPI/PPI/Employment, BEA GDP,
+  and Federal Reserve monetary-policy feeds. Releases and schedule revisions retain source-document
+  provenance. An Event completes only with official release evidence; unsupported actual/previous
+  values remain null and forecast remains null.
+
+## AI Analyst
+
+AI is unavailable by default. To enable the provider-neutral OpenAI adapter, set `AI_PROVIDER=openai`,
+`AI_MODEL`, and server-only `OPENAI_API_KEY`. Never prefix the key with `NEXT_PUBLIC_`. Each request
+rebuilds context from the canonical Asset, latest quote, closed candles, frozen V1.1 technical
+engines, recent validated Events and their source references. Strict structured output records
+provider/model and context timestamps.
+The server route enforces a 16 KiB body bound, the 2,000-character question bound, Redis-backed
+per-client and global request limits, and a global concurrency lease. Defaults are 10 requests per
+client per minute, 60 globally per minute, and 3 concurrent model calls.
+
+The market WebSocket defaults to two connections per client/IP and 100 globally. Redis leases are
+released on disconnect and expire after idle sessions; each browser connection currently owns one
+upstream provider stream, so these caps are intentionally conservative.
+
+REST ingestion calls run in Celery tasks. The read APIs serve persisted data; only the explicit
+WebSocket stream endpoint opens a provider market-data stream when streaming is configured.
 
 ## Repository map
 

@@ -78,8 +78,12 @@ return at most 500 closed target candles per call; 4h and 1w require multiple na
 Four-hour bars use UTC 00/04/08/12/16/20 boundaries. Weekly bars use Monday 00:00 UTC and require
 exactly seven consecutive daily source candles; incomplete or gapped buckets are rejected.
 
-Alpha Radar's default schedules are approximately 45 seconds for quotes and 60 seconds for 1m
-candles. Deep history is intentionally not periodic. An operator can enqueue a bounded interval
+Alpha Radar's default quote schedule is approximately 45 seconds. Closed-candle maintenance uses a
+bounded three-candle overlap for every supported interval: 1m each minute, 5m each five minutes,
+15m each fifteen minutes, 1h hourly, 4h each four hours, 1d daily, and 1w each Monday after the UTC
+boundary. Only provider-confirmed closed candles are persisted by these periodic tasks. Upserts make
+the overlap idempotent, missing provider buckets are not fabricated, and deep history is never
+periodically re-fetched. An operator can enqueue a bounded interval
 backfill (valid limit 1–500) when real ingestion is enabled:
 
 ```bash
@@ -92,6 +96,12 @@ Repeat explicitly for required intervals; at least 300 closed 4h/1d candles and 
 candles are required by the current acceptance contract, while 500 is preferred and supported.
 External ingestion remains opt-in through
 `MARKET_DATA_INGESTION_ENABLED=false` by default.
+
+Production must set `APP_ENV=production`, `MARKET_DATA_PROVIDER=coinbase`, and
+`MARKET_DATA_INGESTION_ENABLED=true` for the currently approved real provider mode. Readiness is
+HTTP 503 until all seven interval histories contain current closed candles; it reports the latest
+close timestamp for each interval. The mock provider remains the safe development/CI default and
+can never produce a market-ready production response.
 
 Celery tasks make provider calls outside the HTTP request path. The API reads PostgreSQL only. The
 existing Redis broker and worker are reused; no new queue, service boundary, or streaming system is
