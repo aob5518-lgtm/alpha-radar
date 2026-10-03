@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta
 from typing import Annotated
 
@@ -16,6 +17,7 @@ from alpha_radar.market_data.providers.base import StreamingMarketDataProvider
 from alpha_radar.market_data.repository import MarketDataRepository
 from alpha_radar.market_data.schemas import MarketHistoryResponse, MarketQuoteResponse
 from alpha_radar.market_data.service import MarketDataService
+from alpha_radar.resource_limits import ConnectionLimiter
 
 router = APIRouter(prefix="/assets", tags=["market-data"])
 logger = structlog.get_logger(__name__)
@@ -61,14 +63,33 @@ async def get_asset_history(
 
 @router.websocket("/{identifier}/stream")
 async def stream_asset_ticks(websocket: WebSocket, identifier: str) -> None:
-    await websocket.accept()
     settings = get_settings()
-    provider = create_market_data_provider(settings)
-    if not isinstance(provider, StreamingMarketDataProvider):
-        await websocket.send_json({"type": "unavailable", "reason": "provider_not_streaming"})
-        await websocket.close(code=1008)
-        return
+    client_id = websocket.client.host if websocket.client else "unknown"
+    limiter = ConnectionLimiter.redis(
+        settings.redis_url,
+        namespace="market-stream",
+        per_client_limit=settings.market_stream_per_client_limit,
+        global_limit=settings.market_stream_global_limit,
+        ttl_seconds=settings.market_stream_idle_timeout_seconds + 15,
+    )
     try:
+        result, lease_token = await limiter.acquire(client_id)
+    except Exception:
+        await limiter.close()
+        await websocket.close(code=1013)
+        return
+    await websocket.accept()
+    if not result.acquired:
+        await websocket.send_json({"type": "limited", "reason": result.reason})
+        await websocket.close(code=1013)
+        await limiter.close()
+        return
+    provider = create_market_data_provider(settings)
+    try:
+        if not isinstance(provider, StreamingMarketDataProvider):
+            await websocket.send_json({"type": "unavailable", "reason": "provider_not_streaming"})
+            await websocket.close(code=1008)
+            return
         async with async_session_factory() as session:
             asset = await AssetService(AssetRepository(session)).resolve_asset(identifier)
             instrument = await MarketDataRepository(session).get_preferred_instrument(asset.id)
@@ -79,10 +100,22 @@ async def stream_asset_ticks(websocket: WebSocket, identifier: str) -> None:
                 await websocket.close(code=1008)
                 return
             reference = MarketDataService.instrument_ref(instrument)
-            async for tick in provider.stream_ticks(reference):
+            iterator = provider.stream_ticks(reference).__aiter__()
+            while True:
+                try:
+                    async with asyncio.timeout(settings.market_stream_idle_timeout_seconds):
+                        tick = await anext(iterator)
+                except TimeoutError:
+                    await websocket.send_json({"type": "idle_timeout"})
+                    await websocket.close(code=1000)
+                    return
+                await limiter.refresh(client_id, lease_token)
                 await websocket.send_json({"type": "tick", **tick.model_dump(mode="json")})
     except WebSocketDisconnect:
         return
     except Exception:
         await logger.aexception("market_stream_failed", asset_identifier=identifier)
         await websocket.close(code=1011)
+    finally:
+        await limiter.release(client_id, lease_token)
+        await limiter.close()

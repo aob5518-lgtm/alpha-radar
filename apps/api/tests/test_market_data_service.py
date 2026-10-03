@@ -13,6 +13,7 @@ from alpha_radar.errors import AppError
 from alpha_radar.market_data.constants import Freshness, MarketInterval
 from alpha_radar.market_data.models import MarketCandle, MarketInstrument
 from alpha_radar.market_data.providers import MockMarketDataProvider
+from alpha_radar.market_data.providers.base import ProviderCandle
 from alpha_radar.market_data.repository import MarketDataRepository
 from alpha_radar.market_data.seed import seed_market_instruments
 from alpha_radar.market_data.service import MarketDataService
@@ -93,6 +94,44 @@ async def test_candle_ingestion_is_idempotent_and_history_is_ordered(
         candle.open_time for candle in candles
     )
     assert all("duplicate" in item.quality_flags for item in history.items)
+
+
+@pytest.mark.asyncio
+async def test_all_timeframe_maintenance_is_bounded_closed_and_idempotent(
+    session: AsyncSession,
+) -> None:
+    service, instrument, now = await configured_service(session)
+    provider = MockMarketDataProvider(clock=lambda: now)
+
+    for interval in MarketInterval:
+        first = await service.fetch_and_ingest_closed_candles(
+            instrument, provider, interval, limit=3
+        )
+        second = await service.fetch_and_ingest_closed_candles(
+            instrument, provider, interval, limit=3
+        )
+        assert first == second == 3
+
+    count = await session.scalar(select(func.count()).select_from(MarketCandle))
+    assert count == len(MarketInterval) * 3
+    assert not list(
+        await session.scalars(select(MarketCandle).where(MarketCandle.is_closed.is_(False)))
+    )
+
+    closed = (
+        await provider.get_candles(
+            service.instrument_ref(instrument), MarketInterval.ONE_MINUTE, end=now, limit=1
+        )
+    )[0]
+
+    class OpenTailProvider(MockMarketDataProvider):
+        async def get_candles(self, *args: object, **kwargs: object) -> list[ProviderCandle]:
+            return [closed, closed.model_copy(update={"open_time": now, "is_closed": False})]
+
+    ingested = await service.fetch_and_ingest_closed_candles(
+        instrument, OpenTailProvider(clock=lambda: now), MarketInterval.ONE_MINUTE, limit=3
+    )
+    assert ingested == 1
 
 
 @pytest.mark.asyncio

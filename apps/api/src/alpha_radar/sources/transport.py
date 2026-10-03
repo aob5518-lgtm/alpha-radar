@@ -91,6 +91,17 @@ class SourceTransport:
         if not (
             url.startswith("https://data.sec.gov/submissions/CIK")
             or url == "https://www.federalreserve.gov/feeds/press_all.xml"
+            or url
+            in {
+                "https://www.bls.gov/feed/empsit.rss",
+                "https://www.bls.gov/feed/cpi.rss",
+                "https://www.bls.gov/feed/ppi.rss",
+                "https://apps.bea.gov/rss/rss.xml",
+                "https://www.federalreserve.gov/feeds/press_monetary.xml",
+                "https://www.bls.gov/schedule/2026/home.htm",
+                "https://www.bea.gov/news/schedule/full",
+                "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+            }
         ):
             raise SourceError("policy_restricted", "Provider URL is not allowlisted")
         await self.gate.acquire()

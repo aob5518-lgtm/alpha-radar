@@ -30,23 +30,31 @@ PostgreSQL, Redis and Celery foundations remain active.
 ## Events
 
 Events uses a compact calendar layout with Today, This Week and Calendar views. Critical and High
-importance are the default; Medium is opt-in and Low is excluded by default. A future canonical
-Event carries distinct scheduled, actual release, detected and updated timestamps. Every displayed
+importance are the default; Medium is opt-in and Low is excluded by default. A canonical Event
+carries distinct scheduled, actual release, detected and updated timestamps. Every displayed
 time has explicit timezone semantics. A date-only schedule renders “time not announced.”
 
 SourceDocument is upstream evidence, not an Event. Canonical `events`, `event_assets`, and
 `event_source_references` tables keep schedules, impacted canonical Asset UUIDs and evidence
 separate. The initial curated universe uses official BLS, BEA and Federal Reserve calendars for CPI,
-PPI, the Employment Situation, GDP and FOMC meetings. Actual, forecast and previous values remain null until an official or
-licensed source supplies them. Date-only events use `scheduled_date` and never synthesize a time.
+PPI, the Employment Situation, GDP and FOMC meetings. An optional official-source synchronization
+task detects releases and schedule revisions for only this universe. It updates actual/previous
+values only when a strict official-source parser can derive them; forecast remains null without a
+licensed consensus source. Date-only events use `scheduled_date` and never synthesize a time, and
+elapsed wall-clock time alone never completes an Event.
 
 ## Chart
 
 Chart supports `1m`, `5m`, `15m`, `1h`, `4h`, `1d` and `1w` from centralized interval definitions.
 It requests up to 1,000 persisted observations and never fills missing candles. Coinbase production
 mode uses the provider adapter's public ticker WebSocket to update the live price and open visual
-candle. The persisted REST/backfill series remains authoritative history. Structural Levels and
+candle. Each new live bucket opens at its first observed tick and remains labeled LIVE / PARTIAL.
+The persisted REST/backfill series remains authoritative history. Structural Levels and
 Trend consume closed candles only; the streamed open candle never enters either engine.
+
+Celery Beat maintains a bounded recent closed-candle window for every supported timeframe after the
+initial backfill. Production readiness fails closed when the market provider is mock, ingestion is
+disabled, or any timeframe is stale.
 
 Structural levels and Trend Regime are deterministic technical context, not AI and not predictions.
 See `TECHNICAL_LEVELS.md`.
@@ -60,7 +68,9 @@ event facts supplied through URL state.
 The provider-neutral runtime is disabled unless `AI_PROVIDER=openai`, `AI_MODEL` and the server-only
 `OPENAI_API_KEY` are configured. The OpenAI adapter uses the Responses API with strict JSON Schema
 output. Vendor handling is isolated under `src/lib/ai`; the UI and grounding pipeline depend only on
-the internal provider interface.
+the internal provider interface. The server route has a 16 KiB request-body limit and a 2,000
+character question limit. Redis enforces per-client and global request limits plus a global
+concurrency lease; limiter failure makes the endpoint unavailable rather than unmetered.
 
 The output contract is structured into Market State, Trend, Key Resistance, Key Support, Important
 Recent Events, Bull Case, Bear Case, Trigger Conditions, Invalidation/Risk and Watch Next. Statements

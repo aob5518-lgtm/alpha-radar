@@ -1,9 +1,19 @@
+from __future__ import annotations
+
+import json
 from dataclasses import dataclass
-from typing import Literal
+from datetime import UTC, datetime
+from typing import Literal, cast
 
 from redis.asyncio import Redis
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncEngine
+
+from alpha_radar.config import Settings
+from alpha_radar.market_data.constants import INTERVAL_DEFINITIONS, MarketInterval
+from alpha_radar.market_data.models import MarketCandle
+
+EVENT_SYNC_STATE_KEY = "alpha-radar:event-sync:status"
 
 
 @dataclass(frozen=True)
@@ -40,3 +50,86 @@ async def get_dependency_status(engine: AsyncEngine, client: Redis) -> Dependenc
 
 def readiness_label(status: DependencyStatus) -> Literal["ok", "not_ready"]:
     return "ok" if status.ready else "not_ready"
+
+
+def operationally_ready(
+    dependency_status: DependencyStatus,
+    market_status: MarketOperationalStatus,
+    settings: Settings,
+) -> bool:
+    return dependency_status.ready and (settings.app_env != "production" or market_status.ready)
+
+
+@dataclass(frozen=True)
+class MarketOperationalStatus:
+    provider: str
+    ingestion_enabled: bool
+    history_latest: dict[str, datetime | None]
+    history_current: bool
+
+    @property
+    def ready(self) -> bool:
+        return self.provider != "mock" and self.ingestion_enabled and self.history_current
+
+
+async def get_market_operational_status(
+    engine: AsyncEngine, settings: Settings, *, now: datetime | None = None
+) -> MarketOperationalStatus:
+    try:
+        async with engine.connect() as connection:
+            raw_rows = (
+                await connection.execute(
+                    select(MarketCandle.interval, func.max(MarketCandle.close_time))
+                    .where(MarketCandle.is_closed.is_(True))
+                    .group_by(MarketCandle.interval)
+                )
+            ).tuples()
+            rows = cast(list[tuple[MarketInterval, datetime | None]], list(raw_rows))
+    except Exception:
+        rows = []
+    latest_by_interval: dict[MarketInterval, datetime] = {
+        interval: _utc(close_time) for interval, close_time in rows if close_time is not None
+    }
+    reference = _utc(now or datetime.now(UTC))
+    history_latest = {
+        interval.value: latest_by_interval.get(interval) for interval in MarketInterval
+    }
+    history_current = all(
+        timestamp is not None
+        and reference - timestamp <= INTERVAL_DEFINITIONS[interval].duration * 2
+        for interval, timestamp in (
+            (interval, latest_by_interval.get(interval)) for interval in MarketInterval
+        )
+    )
+    return MarketOperationalStatus(
+        provider=settings.market_data_provider,
+        ingestion_enabled=settings.market_data_ingestion_enabled,
+        history_latest=history_latest,
+        history_current=history_current,
+    )
+
+
+async def get_event_sync_status(client: Redis, settings: Settings) -> dict[str, object]:
+    try:
+        raw = await client.get(EVENT_SYNC_STATE_KEY)  # pyright: ignore[reportUnknownMemberType]
+    except Exception:
+        return {
+            "enabled": settings.event_sync_enabled,
+            "status": "unavailable",
+            "last_success": None,
+        }
+    if not raw:
+        return {"enabled": settings.event_sync_enabled, "status": "never", "last_success": None}
+    try:
+        payload = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {"enabled": settings.event_sync_enabled, "status": "invalid", "last_success": None}
+    return {
+        "enabled": settings.event_sync_enabled,
+        "status": str(payload.get("status", "unknown")),
+        "last_success": payload.get("last_success"),
+    }
+
+
+def _utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)

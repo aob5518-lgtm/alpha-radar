@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     market_data_future_tolerance_seconds: int = Field(default=30, ge=0)
     coinbase_exchange_api_url: str = "https://api.exchange.coinbase.com"
     coinbase_websocket_url: str = "wss://ws-feed.exchange.coinbase.com"
+    market_stream_per_client_limit: int = Field(default=2, ge=1, le=20)
+    market_stream_global_limit: int = Field(default=100, ge=1, le=5000)
+    market_stream_idle_timeout_seconds: int = Field(default=90, ge=10, le=600)
     coinbase_public_requests_per_second: float = Field(default=8, gt=0, le=10)
     market_data_http_timeout_seconds: float = Field(default=10.0, gt=0)
     source_ingestion_enabled: bool = False
@@ -35,6 +38,8 @@ class Settings(BaseSettings):
     fed_requests_per_second: float = Field(default=1, gt=0, le=2)
     source_minimum_interval_seconds: float = Field(default=1, ge=0.2)
     source_http_timeout_seconds: float = Field(default=15, gt=0, le=60)
+    event_sync_enabled: bool = False
+    event_sync_interval_seconds: int = Field(default=900, ge=300, le=86400)
 
 
 @lru_cache

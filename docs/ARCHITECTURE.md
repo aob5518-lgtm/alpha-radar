@@ -30,13 +30,15 @@ The web product exposes only `/events`, `/chart` and `/analyst` in primary navig
 to Events. Historical demo routes redirect to the closest Core 3 surface; `/radar/sources` remains
 directly reachable as an internal provenance/debug surface but is not primary navigation.
 
-Events currently defines the final calendar presentation boundary and returns an honest empty state
-until canonical Event persistence exists. SourceDocument remains evidence and is never promoted to
-an Event by presentation code. The Chart reads only persisted MarketQuote/MarketCandle APIs. Its
+Events reads canonical persisted records and preserves SourceDocument evidence through explicit
+references. An optional provider-neutral official-source updater is restricted to CPI, PPI,
+Employment Situation, GDP and FOMC lifecycle maintenance; it cannot complete an Event from elapsed
+time alone. The Chart reads only persisted MarketQuote/MarketCandle APIs. Its
 pure TypeScript Structural Level and Trend Regime engines consume closed candles only and do not
 write canonical market data. Analyst receives canonical asset identity and timeframe from Chart,
 then rehydrates price/history from platform APIs and recomputes technical context; URL values never
-become authoritative prices or levels. LLM execution remains disabled.
+become authoritative prices or levels. LLM execution is opt-in and server-only, with Redis-backed
+request and concurrency limits.
 
 The prior Command Center, Discover, Strategy/Opportunity, Cycle, Watchlist, Alerts, Asset Directory,
 Impact Map and Heatmap implementations are archived presentation history, not current product scope.
@@ -63,7 +65,8 @@ observations. HTTP handlers only resolve assets and read PostgreSQL, so external
 availability never enters the request path.
 
 Celery tasks reuse the existing worker and Redis broker. Beat schedules provide conservative quote
-and 1m-candle polling defaults, while external ingestion is disabled unless explicitly configured.
+polling plus bounded closed-candle maintenance for all seven timeframes, while external ingestion is
+disabled unless explicitly configured.
 The deterministic mock provider supports tests and integration verification without network access.
 The Coinbase adapter is an optional development adapter, not a commercial data entitlement.
 
@@ -78,9 +81,13 @@ This remains one modular monolith, not a source microservice. See `SOURCES.md`.
 ## Health semantics
 
 `GET /api/v1/health` is a process liveness endpoint. `GET /api/v1/health/ready` checks PostgreSQL and
-Redis and returns HTTP 503 while either dependency is unavailable. Docker uses liveness after it has
-already sequenced API startup on healthy infrastructure; operators can use readiness for traffic
-gating. The worker is sequenced directly on PostgreSQL and Redis and does not require the HTTP API.
+Redis and returns HTTP 503 while either dependency is unavailable. In production it additionally
+fails closed when market ingestion is disabled, the provider is mock, or any supported timeframe is
+stale. Operational metadata reports provider mode, per-timeframe latest history, Event sync status,
+AI limiter status and streaming configuration without exposing secrets. Docker uses liveness after
+it has already sequenced API startup on healthy infrastructure; operators can use readiness for
+traffic gating. The worker is sequenced directly on PostgreSQL and Redis and does not require the
+HTTP API.
 
 ## Data and migrations
 
@@ -190,6 +197,7 @@ See `STRATEGY_ENGINE.md` for routes, nullable unobserved Outcomes, and scoring/e
 
 ## Deferred decisions
 
-Authentication, production market-data entitlements, equities providers, events, AI integrations,
-task routing, cloud deployment, telemetry vendors, and scaling policies belong to later sprints. No
-Kafka, Kubernetes, WebSocket feed, or independent service is introduced.
+Authentication, production market-data entitlements, equities providers, broad Event extraction,
+task routing, cloud deployment, telemetry vendors, and larger-scale fan-out policies belong to
+later sprints. Current WebSocket streaming uses Redis leases for per-client/global caps and cleanup;
+it deliberately does not introduce Kafka, Kubernetes, a pub/sub platform, or an independent service.

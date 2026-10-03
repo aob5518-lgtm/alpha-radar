@@ -13,6 +13,11 @@ import {
 } from "lightweight-charts";
 import { useEffect, useRef, useState } from "react";
 
+import {
+  updateLivePartialCandle,
+  type LivePartialCandle,
+} from "@/lib/market/live-candle";
+
 interface Props {
   candles: MarketCandle[];
   levels: StructuralLevel[];
@@ -121,14 +126,7 @@ export function StructuralMarketChart({
     );
     socketUrl.protocol = socketUrl.protocol === "https:" ? "wss:" : "ws:";
     const socket = new WebSocket(socketUrl);
-    const finalClosed = closed.at(-1);
-    let current: {
-      time: UTCTimestamp;
-      open: number;
-      high: number;
-      low: number;
-      close: number;
-    } | null = null;
+    let current: LivePartialCandle | null = null;
     socket.onmessage = (message) => {
       const tick = JSON.parse(String(message.data)) as {
         type: string;
@@ -139,28 +137,13 @@ export function StructuralMarketChart({
       if (tick.type !== "tick" || !tick.price || !tick.provider_timestamp)
         return;
       const price = Number(tick.price);
-      const time = bucketStart(
+      current = updateLivePartialCandle(
+        current,
+        price,
         Date.parse(tick.provider_timestamp) / 1000,
         interval,
       );
-      if (!current || current.time !== time) {
-        const open = finalClosed?.close ?? price;
-        current = {
-          time,
-          open,
-          high: Math.max(open, price),
-          low: Math.min(open, price),
-          close: price,
-        };
-      } else {
-        current = {
-          ...current,
-          high: Math.max(current.high, price),
-          low: Math.min(current.low, price),
-          close: price,
-        };
-      }
-      candleSeries.update(current);
+      candleSeries.update({ ...current, time: current.time as UTCTimestamp });
       liveLine?.applyOptions({ price });
       const open24 = tick.open_24h ? Number(tick.open_24h) : null;
       setLive({
@@ -185,7 +168,7 @@ export function StructuralMarketChart({
       <div ref={container} className="min-h-[500px] w-full" />
       {live && (
         <div className="absolute top-3 left-3 rounded bg-black/70 px-2 py-1 font-mono text-xs">
-          <span className="mr-2 text-emerald-300">LIVE</span>
+          <span className="mr-2 text-emerald-300">LIVE / PARTIAL</span>
           {live.price.toLocaleString()}{" "}
           {live.change !== null && (
             <span
@@ -201,27 +184,4 @@ export function StructuralMarketChart({
       )}
     </div>
   );
-}
-
-function bucketStart(
-  epochSeconds: number,
-  interval: MarketInterval,
-): UTCTimestamp {
-  if (interval === "1w") {
-    const value = new Date(epochSeconds * 1000);
-    const day = value.getUTCDay() || 7;
-    value.setUTCDate(value.getUTCDate() - day + 1);
-    value.setUTCHours(0, 0, 0, 0);
-    return Math.floor(value.getTime() / 1000) as UTCTimestamp;
-  }
-  const seconds: Record<Exclude<MarketInterval, "1w">, number> = {
-    "1m": 60,
-    "5m": 300,
-    "15m": 900,
-    "1h": 3600,
-    "4h": 14400,
-    "1d": 86400,
-  };
-  const duration = seconds[interval];
-  return (Math.floor(epochSeconds / duration) * duration) as UTCTimestamp;
 }
