@@ -64,6 +64,13 @@ export default async function ChartPage({
   return (
     <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-7">
       {instrument && (
+        <p className="sr-only">
+          {instrument.provider_instrument_id} {messages.chart.perpetual} ·{" "}
+          {messages.chart.currentPrice} · {instrument.venue ?? "Bybit"} ·{" "}
+          {instrument.quote_currency}
+        </p>
+      )}
+      {instrument && (
         <div>
           <ChartAssetSelector
             instruments={instruments}
