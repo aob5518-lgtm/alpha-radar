@@ -511,4 +511,6 @@ test("Core 3 copy has English and Simplified Chinese parity", async () => {
   }
   assert.equal(english.nav.events, "Events");
   assert.equal(chinese.nav.events, "事件");
+  assert.match(english.events.cryptoEmpty, /verified, relevant crypto events/i);
+  assert.match(chinese.events.cryptoEmpty, /已验证且相关的加密事件/);
 });

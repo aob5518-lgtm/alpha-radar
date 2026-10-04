@@ -109,7 +109,9 @@ export function EventsWorkspace({
         </div>
         {filtered.length === 0 ? (
           <p className="p-8 text-sm text-[var(--muted)]">
-            {messages.events.emptyTitle}
+            {category === "crypto"
+              ? messages.events.cryptoEmpty
+              : messages.events.emptyTitle}
           </p>
         ) : (
           <div className="divide-y">

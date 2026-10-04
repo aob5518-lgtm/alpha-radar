@@ -48,6 +48,7 @@
     "includeMedium": "包含中等",
     "timezone": "主要时间使用浏览器时区；UTC 与官方时区保留在事件详情中。",
     "emptyTitle": "暂无已验证事件",
+    "cryptoEmpty": "仅显示已验证且相关的加密事件；当前视图暂无符合条件的事件。",
     "emptyDescription": "当前时间范围和重要性筛选下没有已验证事件。",
     "sourceBoundary": "官方来源文档会保留用于溯源，但原始文档噪声不会进入此日历。",
     "timeNotAnnounced": "时间尚未公布",

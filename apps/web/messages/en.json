@@ -48,6 +48,7 @@
     "includeMedium": "Include Medium",
     "timezone": "Primary times use your browser timezone; UTC and the official timezone remain in event details.",
     "emptyTitle": "No verified events available",
+    "cryptoEmpty": "Only verified, relevant crypto events are shown. No qualifying events match this view.",
     "emptyDescription": "No validated events match this time range and importance filter.",
     "sourceBoundary": "Official source documents are retained for provenance, but raw document noise is excluded from this calendar.",
     "timeNotAnnounced": "Time not announced",

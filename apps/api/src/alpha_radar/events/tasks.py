@@ -6,7 +6,11 @@ from redis.asyncio import Redis
 
 from alpha_radar.config import get_settings
 from alpha_radar.db.session import async_session_factory, engine
-from alpha_radar.events.crypto import CryptoEventIngestionService, OfficialCryptoFeedAdapter
+from alpha_radar.events.crypto import (
+    CryptoEventIngestionService,
+    OfficialCryptoFeedAdapter,
+    OpenAICryptoEventClassifier,
+)
 from alpha_radar.events.sync import (
     EventSyncService,
     OfficialCalendarAdapter,
@@ -84,7 +88,18 @@ async def _sync_crypto_events() -> int:
     ingested = 0
     try:
         async with async_session_factory() as session:
-            service = CryptoEventIngestionService(session)
+            classifier = (
+                OpenAICryptoEventClassifier(
+                    model=settings.ai_model,
+                    api_key=settings.openai_api_key,
+                    base_url=settings.openai_base_url,
+                ).classify
+                if settings.ai_provider == "openai"
+                and settings.ai_model
+                and settings.openai_api_key
+                else None
+            )
+            service = CryptoEventIngestionService(session, classifier)
             for feed in settings.crypto_event_feeds:
                 candidates = await OfficialCryptoFeedAdapter(transport, feed).fetch()
                 for candidate in candidates:

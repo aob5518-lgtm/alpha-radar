@@ -117,6 +117,10 @@ class Settings(BaseSettings):
         default_factory=_empty_crypto_event_feeds
     )
     crypto_social_provider: Literal["disabled"] = "disabled"
+    ai_provider: Literal["disabled", "openai"] = "disabled"
+    ai_model: str = ""
+    openai_api_key: str = ""
+    openai_base_url: str = "https://api.openai.com/v1"
 
 
 @lru_cache

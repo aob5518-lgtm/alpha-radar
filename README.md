@@ -187,8 +187,31 @@ not a primary product surface.
   values remain null and forecast remains null.
 - Optional `CRYPTO_EVENT_SYNC_ENABLED=true` uses only explicitly configured official HTTPS
   RSS/Atom feeds from `CRYPTO_EVENT_FEEDS`; it reuses SourceDocument provenance and canonical
-  Events. `CRYPTO_SOCIAL_PROVIDER=disabled` is the only supported social setting in this phase, so
-  no social network is scraped and no placeholder posts are generated.
+  Events. Each document passes a conservative relevance gate before Event persistence; generic feed
+  importance is only a ceiling. `CRYPTO_SOCIAL_PROVIDER=disabled` is the only supported social
+  setting in this phase, so no social network is scraped and no placeholder posts are generated.
+
+`CRYPTO_EVENT_FEEDS` is a JSON array. Before production use, manually verify every `base_url` and
+`feed_url` as belonging to the named official organization. Start with one or two feeds. The shape
+below deliberately uses placeholders rather than claiming an unverified URL:
+
+```json
+[
+  {
+    "slug": "<stable-source-slug>",
+    "name": "<official-source-name>",
+    "source_type": "protocol",
+    "base_url": "<manually-verified-official-https-origin>",
+    "feed_url": "<manually-verified-official-https-feed>",
+    "event_type": "project_update",
+    "asset_symbols": ["<CANONICAL_SYMBOL>"],
+    "importance": "high"
+  }
+]
+```
+
+Do not enable a placeholder. Influential social, Musk, or Meme-KOL monitoring requires a legitimate
+social-data provider and is not currently live.
 
 ## AI Analyst
 
