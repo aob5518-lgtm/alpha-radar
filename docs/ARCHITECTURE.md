@@ -33,7 +33,10 @@ directly reachable as an internal provenance/debug surface but is not primary na
 Events reads canonical persisted records and preserves SourceDocument evidence through explicit
 references. An optional provider-neutral official-source updater is restricted to CPI, PPI,
 Employment Situation, GDP and FOMC lifecycle maintenance; it cannot complete an Event from elapsed
-time alone. The Chart reads only persisted MarketQuote/MarketCandle APIs. Its
+time alone. Configured official Crypto RSS/Atom adapters reuse the same SourceDocument → Event path;
+social ingestion is disabled until a legitimate provider adapter is configured and reviewed. The
+Chart reads persisted MarketQuote/MarketCandle APIs and uses one browser-to-API stream that fans in
+Bybit ticker, public-trade, and authoritative Kline updates. Its
 pure TypeScript Structural Level and Trend Regime engines consume closed candles only and do not
 write canonical market data. Analyst receives canonical asset identity and timeframe from Chart,
 then rehydrates price/history from platform APIs and recomputes technical context; URL values never
@@ -65,8 +68,9 @@ observations. HTTP handlers only resolve assets and read PostgreSQL, so external
 availability never enters the request path.
 
 Celery tasks reuse the existing worker and Redis broker. Beat schedules provide conservative quote
-polling plus bounded closed-candle maintenance for all seven timeframes, while external ingestion is
-disabled unless explicitly configured.
+polling plus bounded closed-candle maintenance for all seven timeframes, while explicit initial
+backfill pages backward to interval-specific retention horizons outside request handlers. External
+ingestion is disabled unless explicitly configured.
 The deterministic mock provider supports tests and integration verification without network access.
 The Coinbase adapter remains an optional spot adapter, not a commercial data entitlement. The Core
 3 Chart selects canonical Bybit USDT-linear perpetual MarketInstrument IDs; provider payloads are

@@ -70,6 +70,10 @@ services:
       MARKET_STREAM_IDLE_TIMEOUT_SECONDS: ${MARKET_STREAM_IDLE_TIMEOUT_SECONDS:-90}
       EVENT_SYNC_ENABLED: ${EVENT_SYNC_ENABLED:-false}
       EVENT_SYNC_INTERVAL_SECONDS: ${EVENT_SYNC_INTERVAL_SECONDS:-900}
+      CRYPTO_EVENT_SYNC_ENABLED: ${CRYPTO_EVENT_SYNC_ENABLED:-false}
+      CRYPTO_EVENT_POLL_INTERVAL_SECONDS: ${CRYPTO_EVENT_POLL_INTERVAL_SECONDS:-900}
+      CRYPTO_EVENT_FEEDS: '${CRYPTO_EVENT_FEEDS:-[]}'
+      CRYPTO_SOCIAL_PROVIDER: ${CRYPTO_SOCIAL_PROVIDER:-disabled}
     command:
       ["sh", "-c", "alembic upgrade head && python -m alpha_radar.assets.seed && python -m alpha_radar.market_data.seed && python -m alpha_radar.events.seed && uvicorn alpha_radar.main:app --host 0.0.0.0 --port 8000"]
     ports:
@@ -123,6 +127,10 @@ services:
       MARKET_STREAM_IDLE_TIMEOUT_SECONDS: ${MARKET_STREAM_IDLE_TIMEOUT_SECONDS:-90}
       EVENT_SYNC_ENABLED: ${EVENT_SYNC_ENABLED:-false}
       EVENT_SYNC_INTERVAL_SECONDS: ${EVENT_SYNC_INTERVAL_SECONDS:-900}
+      CRYPTO_EVENT_SYNC_ENABLED: ${CRYPTO_EVENT_SYNC_ENABLED:-false}
+      CRYPTO_EVENT_POLL_INTERVAL_SECONDS: ${CRYPTO_EVENT_POLL_INTERVAL_SECONDS:-900}
+      CRYPTO_EVENT_FEEDS: '${CRYPTO_EVENT_FEEDS:-[]}'
+      CRYPTO_SOCIAL_PROVIDER: ${CRYPTO_SOCIAL_PROVIDER:-disabled}
     command:
       ["celery", "--workdir", "/app/apps/worker", "-A", "main.app", "worker", "--beat", "--loglevel=INFO"]
     depends_on:

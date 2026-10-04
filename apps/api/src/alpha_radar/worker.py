@@ -84,3 +84,9 @@ if settings.event_sync_enabled:
         "task": "alpha_radar.events.sync_official_events",
         "schedule": float(settings.event_sync_interval_seconds),
     }
+
+if settings.crypto_event_sync_enabled and settings.crypto_event_feeds:
+    app.conf.beat_schedule["crypto-event-sync"] = {  # pyright: ignore[reportUnknownMemberType]
+        "task": "alpha_radar.events.sync_crypto_events",
+        "schedule": float(settings.crypto_event_poll_interval_seconds),
+    }

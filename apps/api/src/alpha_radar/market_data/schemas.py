@@ -84,3 +84,5 @@ class MarketHistoryResponse(BaseModel):
     provider: str
     interval: MarketInterval
     items: list[MarketCandleResponse]
+    has_more: bool
+    next_end: datetime | None

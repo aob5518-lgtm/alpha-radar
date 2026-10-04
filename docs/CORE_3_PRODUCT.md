@@ -43,11 +43,22 @@ values only when a strict official-source parser can derive them; forecast remai
 licensed consensus source. Date-only events use `scheduled_date` and never synthesize a time, and
 elapsed wall-clock time alone never completes an Event.
 
+The calendar has `All`, `Macro`, and `Crypto` category filters. Crypto records reuse the same
+SourceDocument → Event pipeline and accept only configured official RSS/Atom hosts in this phase.
+No social site is scraped: influential social remains unavailable until a legitimate configured API
+adapter exists. If later enabled, a post is a SIGNAL, not independent proof of fundamentals. The
+detail surface separates FACT, SIGNAL, ANALYSIS, ACTION, and RISK. Recommended actions are limited
+to watch, research, prepare, wait for confirmation, caution, or avoid; categorical confidence and
+opportunity bands are presentation aids, never invented probabilities. Contract addresses remain
+null unless an official source explicitly supplies and validates one.
+
 ## Chart
 
 Chart supports `1m`, `5m`, `15m`, `1h`, `4h`, `1d` and `1w` from centralized interval definitions.
-It requests up to 1,000 persisted observations and never fills missing candles. Bybit production
-mode uses the provider adapter's public Kline WebSocket to render exchange OHLCV directly. The
+It requests an initial 800 persisted observations and never fills missing candles, rendering the
+latest roughly 200 before lazy-loading older pages as the user pans left. Bybit production mode
+uses one provider WebSocket for ticker, public trade, and Kline topics. Trades update visual partial
+state; the official Kline remains authoritative. The
 exchange `confirm=false` state remains labeled LIVE / PARTIAL and `confirm=true` closes the candle.
 The persisted REST/backfill series remains authoritative history. Structural Levels and
 Trend consume closed candles only; the streamed open candle never enters either engine.

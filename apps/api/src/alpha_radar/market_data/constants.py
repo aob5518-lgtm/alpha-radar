@@ -75,7 +75,18 @@ MAX_HISTORY_LIMIT = 1000
 COINBASE_MAX_CANDLES_PER_REQUEST = 300
 COINBASE_MAX_BACKFILL_TARGET_CANDLES = 500
 BYBIT_MAX_CANDLES_PER_REQUEST = 1000
-BYBIT_MAX_BACKFILL_TARGET_CANDLES = 500
+BYBIT_MAX_BACKFILL_TARGET_CANDLES = 1000
+BYBIT_MAX_BACKFILL_PAGES = 64
+
+BYBIT_HISTORY_RETENTION: dict[MarketInterval, timedelta | None] = {
+    MarketInterval.ONE_MINUTE: timedelta(days=7),
+    MarketInterval.FIVE_MINUTES: timedelta(days=30),
+    MarketInterval.FIFTEEN_MINUTES: timedelta(days=90),
+    MarketInterval.ONE_HOUR: timedelta(days=365),
+    MarketInterval.FOUR_HOURS: timedelta(days=730),
+    MarketInterval.ONE_DAY: None,
+    MarketInterval.ONE_WEEK: None,
+}
 
 
 class QualityFlag(str, enum.Enum):

@@ -123,6 +123,21 @@ async def test_candle_ingestion_is_idempotent_and_history_is_ordered(
     )
     assert all("duplicate" in item.quality_flags for item in history.items)
 
+    latest_page = await service.get_history(
+        "bitcoin", interval=MarketInterval.ONE_HOUR, start=None, end=None, limit=2
+    )
+    assert latest_page.has_more is True
+    assert latest_page.next_end == latest_page.items[0].open_time
+    older_page = await service.get_history(
+        "bitcoin",
+        interval=MarketInterval.ONE_HOUR,
+        start=None,
+        end=latest_page.next_end,
+        limit=2,
+    )
+    assert older_page.has_more is False
+    assert [item.open_time for item in older_page.items] == [history.items[0].open_time]
+
 
 @pytest.mark.asyncio
 async def test_all_timeframe_maintenance_is_bounded_closed_and_idempotent(

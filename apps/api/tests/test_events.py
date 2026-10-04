@@ -2,11 +2,15 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
 import httpx
+import pytest
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alpha_radar.assets.seed import seed_assets
+from alpha_radar.config import CryptoEventFeedSettings
 from alpha_radar.db.session import get_db_session
+from alpha_radar.events.crypto import CryptoEventIngestionService, OfficialCryptoFeedAdapter
 from alpha_radar.events.models import Event, EventAsset, EventSourceReference
 from alpha_radar.events.repository import EventRepository
 from alpha_radar.events.seed import seed_events
@@ -38,6 +42,7 @@ async def test_seed_is_idempotent_and_events_retain_provenance(session: AsyncSes
         start=datetime(2026, 10, 1, tzinfo=UTC),
         end=datetime(2026, 11, 1, tzinfo=UTC),
         importances=["critical", "high"],
+        category=None,
         event_type=None,
         status="scheduled",
         asset_id=None,
@@ -77,6 +82,7 @@ async def test_date_only_event_does_not_invent_a_time(session: AsyncSession) -> 
         start=datetime(2026, 10, 20, tzinfo=UTC),
         end=datetime(2026, 10, 21, tzinfo=UTC),
         importances=["high"],
+        category=None,
         event_type=None,
         status=None,
         asset_id=None,
@@ -221,3 +227,58 @@ def test_official_calendar_fixture_normalizes_schedule_revision() -> None:
     assert updates[0].event_type == "nfp"
     assert updates[0].scheduled_date == datetime(2026, 10, 3).date()
     assert updates[0].scheduled_at == datetime(2026, 10, 3, 12, 30, tzinfo=UTC)
+
+
+async def test_official_crypto_feed_reuses_event_pipeline_and_is_idempotent(
+    session: AsyncSession,
+) -> None:
+    await seed_assets(session)
+    moment = datetime(2026, 10, 3, 12, tzinfo=UTC)
+    feed = CryptoEventFeedSettings(
+        slug="example-protocol",
+        name="Example Protocol",
+        source_type="protocol",
+        base_url="https://example.org",
+        feed_url="https://example.org/releases.xml",
+        event_type="protocol_upgrade",
+        asset_symbols=["BTC"],
+        recommended_action="wait_for_confirmation",
+        opportunity_signal="wait",
+        confidence="high",
+    )
+    candidates = OfficialCryptoFeedAdapter.normalize(
+        feed,
+        b"""<rss><channel><item><title>Protocol upgrade announced</title>
+        <link>https://example.org/releases/upgrade</link><guid>upgrade-1</guid>
+        <pubDate>Sat, 03 Oct 2026 12:00:00 GMT</pubDate></item></channel></rss>""",
+        observed_at=moment,
+        fetched_at=moment,
+    )
+    service = CryptoEventIngestionService(session)
+    assert await service.ingest(candidates[0]) is True
+    assert await service.ingest(candidates[0]) is False
+    event = await session.scalar(select(Event).where(Event.category == "crypto"))
+    assert event is not None
+    detail = await EventService(EventRepository(session)).detail(event.id)
+    assert detail.event_type == "protocol_upgrade"
+    assert detail.recommended_action == "wait_for_confirmation"
+    assert detail.contract_address is None
+    assert detail.sources[0].source_type == "protocol"
+    assert detail.sources[0].source_tier == "primary"
+    assert detail.sources[0].evidence_role == "fact"
+    assert {asset.symbol for asset in detail.affected_assets} == {"BTC"}
+
+
+def test_crypto_event_action_contract_rejects_unsafe_free_text() -> None:
+    with pytest.raises(ValidationError):
+        CryptoEventFeedSettings.model_validate(
+            {
+                "slug": "unsafe-source",
+                "name": "Unsafe",
+                "source_type": "company",
+                "base_url": "https://example.org",
+                "feed_url": "https://example.org/feed.xml",
+                "event_type": "project_update",
+                "recommended_action": "buy_now",
+            }
+        )

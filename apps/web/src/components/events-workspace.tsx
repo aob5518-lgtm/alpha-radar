@@ -10,6 +10,7 @@ import { getMessages } from "@/lib/i18n/messages";
 import { cn } from "@/lib/utils";
 
 type View = "today" | "week" | "calendar";
+type Category = "all" | "macro" | "crypto";
 
 export function EventsWorkspace({
   events,
@@ -20,6 +21,7 @@ export function EventsWorkspace({
 }) {
   const messages = getMessages(locale);
   const [view, setView] = useState<View>("today");
+  const [category, setCategory] = useState<Category>("all");
   const [includeMedium, setIncludeMedium] = useState(false);
   const [selectedId, setSelectedId] = useState(events[0]?.id ?? null);
   const filtered = useMemo(() => {
@@ -30,8 +32,9 @@ export function EventsWorkspace({
       end.getDate() + (view === "today" ? 1 : view === "week" ? 7 : 366),
     );
     return events.filter((event) => {
-      if (!includeMedium && !["critical", "high"].includes(event.importance))
-        return false;
+      if (event.importance === "low") return false;
+      if (!includeMedium && event.importance === "medium") return false;
+      if (category !== "all" && event.category !== category) return false;
       const value = event.scheduled_at
         ? new Date(event.scheduled_at)
         : event.scheduled_date
@@ -39,32 +42,53 @@ export function EventsWorkspace({
           : null;
       return value ? value >= start && value < end : view === "calendar";
     });
-  }, [events, includeMedium, view]);
+  }, [category, events, includeMedium, view]);
   const selected = resolveSelectedEvent(filtered, selectedId);
   const labels = {
     today: messages.events.today,
     week: messages.events.thisWeek,
     calendar: messages.events.calendar,
   };
+  const categoryLabels = {
+    all: messages.events.all,
+    macro: messages.events.macro,
+    crypto: messages.events.crypto,
+  };
 
   return (
     <div className="grid min-h-[calc(100vh-9rem)] lg:grid-cols-[minmax(0,1fr)_22rem]">
       <section className="min-w-0 border-r">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-          <nav className="flex gap-1">
-            {(Object.keys(labels) as View[]).map((item) => (
-              <button
-                key={item}
-                onClick={() => setView(item)}
-                className={cn(
-                  "rounded px-3 py-2 text-xs",
-                  view === item && "bg-white/8 text-white",
-                )}
-              >
-                {labels[item]}
-              </button>
-            ))}
-          </nav>
+          <div className="flex flex-wrap gap-3">
+            <nav className="flex gap-1" aria-label={messages.events.event}>
+              {(Object.keys(categoryLabels) as Category[]).map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setCategory(item)}
+                  className={cn(
+                    "rounded px-3 py-2 text-xs",
+                    category === item && "bg-emerald-400/10 text-emerald-300",
+                  )}
+                >
+                  {categoryLabels[item]}
+                </button>
+              ))}
+            </nav>
+            <nav className="flex gap-1">
+              {(Object.keys(labels) as View[]).map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setView(item)}
+                  className={cn(
+                    "rounded px-3 py-2 text-xs",
+                    view === item && "bg-white/8 text-white",
+                  )}
+                >
+                  {labels[item]}
+                </button>
+              ))}
+            </nav>
+          </div>
           <button
             className="data-pill"
             onClick={() => setIncludeMedium((value) => !value)}
@@ -173,10 +197,41 @@ function EventDetail({
         </p>
       </div>
       <Detail title={messages.analyst.fact} text={presentation.summary} />
+      {presentation.signal && (
+        <Detail title={messages.events.signal} text={presentation.signal} />
+      )}
       <Detail
         title={messages.analyst.analysis}
         text={presentation.whyItMatters}
       />
+      {presentation.action && (
+        <section>
+          <h3 className="section-label">{messages.events.action}</h3>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <span className="data-pill">{presentation.action}</span>
+            {presentation.opportunitySignal && (
+              <span className="data-pill">
+                {messages.events.opportunitySignal}:{" "}
+                {presentation.opportunitySignal}
+              </span>
+            )}
+            {presentation.confidence && (
+              <span className="data-pill">
+                {messages.events.confidence}: {presentation.confidence}
+              </span>
+            )}
+          </div>
+        </section>
+      )}
+      {presentation.risk && (
+        <Detail title={messages.events.risk} text={presentation.risk} />
+      )}
+      {presentation.contractAddress && (
+        <Detail
+          title={messages.events.contractAddress}
+          text={presentation.contractAddress}
+        />
+      )}
       {presentation.bullCase && (
         <Detail
           title={`${messages.analyst.scenario} · ${messages.analyst.bullCase}`}

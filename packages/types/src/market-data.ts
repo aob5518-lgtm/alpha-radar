@@ -84,4 +84,6 @@ export interface MarketHistory {
   provider: string;
   interval: MarketInterval;
   items: MarketCandle[];
+  has_more: boolean;
+  next_end: string | null;
 }

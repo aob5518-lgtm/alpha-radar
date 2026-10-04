@@ -1,8 +1,76 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+CRYPTO_EVENT_TYPES = (
+    "project_update",
+    "protocol_upgrade",
+    "mainnet_launch",
+    "token_launch",
+    "token_unlock",
+    "exchange_listing",
+    "exchange_delisting",
+    "security_incident",
+    "governance",
+    "regulation_crypto",
+    "etf_crypto",
+    "influential_social",
+    "meme_launch",
+    "narrative_signal",
+)
+
+
+class CryptoEventFeedSettings(BaseModel):
+    slug: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,126}[a-z0-9]$")
+    name: str = Field(min_length=1, max_length=255)
+    source_type: Literal["company", "exchange", "protocol", "regulator"]
+    base_url: str
+    feed_url: str
+    event_type: Literal[
+        "project_update",
+        "protocol_upgrade",
+        "mainnet_launch",
+        "token_launch",
+        "token_unlock",
+        "exchange_listing",
+        "exchange_delisting",
+        "security_incident",
+        "governance",
+        "regulation_crypto",
+        "etf_crypto",
+        "meme_launch",
+        "narrative_signal",
+    ]
+    asset_symbols: list[str] = Field(default_factory=list, max_length=20)
+    importance: Literal["critical", "high", "medium", "low"] = "medium"
+    recommended_action: Literal[
+        "watch", "research", "prepare", "wait_for_confirmation", "caution", "avoid"
+    ] = "research"
+    opportunity_signal: Literal["none", "watch", "research", "prepare", "wait", "avoid"] = (
+        "research"
+    )
+    confidence: Literal["low", "medium", "high"] = "medium"
+
+    @field_validator("base_url", "feed_url")
+    @classmethod
+    def https_url(cls, value: str) -> str:
+        if not value.startswith("https://") or any(character in value for character in "\r\n"):
+            raise ValueError("Crypto Event sources require an HTTPS URL")
+        return value.rstrip("/")
+
+    @field_validator("asset_symbols")
+    @classmethod
+    def symbols(cls, value: list[str]) -> list[str]:
+        normalized = [symbol.strip().upper() for symbol in value]
+        if any(not symbol or len(symbol) > 20 for symbol in normalized):
+            raise ValueError("Asset symbols must be non-empty and at most 20 characters")
+        return normalized
+
+
+def _empty_crypto_event_feeds() -> list[CryptoEventFeedSettings]:
+    return []
 
 
 class Settings(BaseSettings):
@@ -43,6 +111,12 @@ class Settings(BaseSettings):
     source_http_timeout_seconds: float = Field(default=15, gt=0, le=60)
     event_sync_enabled: bool = False
     event_sync_interval_seconds: int = Field(default=900, ge=300, le=86400)
+    crypto_event_sync_enabled: bool = False
+    crypto_event_poll_interval_seconds: int = Field(default=900, ge=300, le=86400)
+    crypto_event_feeds: list[CryptoEventFeedSettings] = Field(
+        default_factory=_empty_crypto_event_feeds
+    )
+    crypto_social_provider: Literal["disabled"] = "disabled"
 
 
 @lru_cache

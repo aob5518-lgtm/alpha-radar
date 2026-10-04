@@ -165,17 +165,18 @@ not a primary product surface.
 
 - `GET /api/v1/assets/{identifier}/quote` returns the latest persisted quote with provider,
   currencies, timestamp semantics, quality flags, and backend-computed freshness.
-- `GET /api/v1/assets/{identifier}/history` accepts `interval`, `start`, `end`, and bounded `limit`
-  parameters and returns candles ordered oldest to newest. Supported intervals are 1m, 5m, 15m,
-  1h, 4h, 1d and 1w.
+- `GET /api/v1/assets/{identifier}/history` and the instrument history endpoint accept `interval`,
+  `start`, `end`, and bounded `limit` parameters and return candles ordered oldest to newest.
+  `end` alone pages backward; `has_more` and `next_end` drive lazy history loading. Supported
+  intervals are 1m, 5m, 15m, 1h, 4h, 1d and 1w.
 - `WS /api/v1/assets/{identifier}/stream` emits normalized real-time ticks when the configured
   provider supports streaming. Coinbase uses its public Exchange ticker channel. The open candle is
   visual only; technical calculations remain closed-candle-only.
 
 ## Event API
 
-- `GET /api/v1/events` supports pagination, time range, importance, type, status and canonical Asset
-  filters. Critical and High are the default importance set.
+- `GET /api/v1/events` supports pagination, time range, importance, `macro`/`crypto` category, type,
+  status and canonical Asset filters. Critical and High are the default importance set.
 - `GET /api/v1/events/{event_id}` returns the canonical event, affected Assets and official source
   references.
 - The idempotent `python -m alpha_radar.events.seed` command installs curated official BLS, BEA and
@@ -184,6 +185,10 @@ not a primary product surface.
   and Federal Reserve monetary-policy feeds. Releases and schedule revisions retain source-document
   provenance. An Event completes only with official release evidence; unsupported actual/previous
   values remain null and forecast remains null.
+- Optional `CRYPTO_EVENT_SYNC_ENABLED=true` uses only explicitly configured official HTTPS
+  RSS/Atom feeds from `CRYPTO_EVENT_FEEDS`; it reuses SourceDocument provenance and canonical
+  Events. `CRYPTO_SOCIAL_PROVIDER=disabled` is the only supported social setting in this phase, so
+  no social network is scraped and no placeholder posts are generated.
 
 ## AI Analyst
 

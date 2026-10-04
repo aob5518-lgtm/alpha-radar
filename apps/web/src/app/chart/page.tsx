@@ -1,6 +1,6 @@
 import type { StructuralLevel } from "@alpha-radar/types/core-3";
 import type { MarketInstrument } from "@alpha-radar/types/market-data";
-import { Activity, ArrowRight, DatabaseZap } from "lucide-react";
+import { Activity, DatabaseZap } from "lucide-react";
 import Link from "next/link";
 
 import { StructuralMarketChart } from "@/components/structural-market-chart";
@@ -63,40 +63,8 @@ export default async function ChartPage({
 
   return (
     <main className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-7">
-      <header className="flex flex-col gap-4 border-b pb-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="flex flex-wrap items-baseline gap-3">
-            <h1 className="font-mono text-xl font-semibold">
-              {instrument?.provider_instrument_id ?? "—"}{" "}
-              {messages.chart.perpetual}
-            </h1>
-            <span className="font-mono text-xl">
-              {currentPrice > 0
-                ? formatMarketPrice(currentPrice, locale, "USDT")
-                : "—"}
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            {instrument?.venue ?? "Bybit"} ·{" "}
-            {quote
-              ? messages.market.freshness[quote.freshness]
-              : messages.chart.unavailable}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-end gap-3">
-          {instrument && (
-            <Link
-              href={analystHref(instrument.id, interval)}
-              className="flex h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold text-emerald-300"
-            >
-              {messages.chart.openAnalyst} <ArrowRight className="size-3" />
-            </Link>
-          )}
-        </div>
-      </header>
-
       {instrument && (
-        <div className="mt-4">
+        <div>
           <ChartAssetSelector
             instruments={instruments}
             selected={instrument}
@@ -131,37 +99,6 @@ export default async function ChartPage({
         {messages.chart.closedOnly}
       </p>
 
-      <section className="mt-4 grid gap-px border bg-[var(--border)] sm:grid-cols-2 xl:grid-cols-4">
-        <Metric
-          label={messages.chart.currentPrice}
-          value={
-            currentPrice > 0
-              ? formatMarketPrice(
-                  currentPrice,
-                  locale,
-                  quote?.quote_currency ?? history?.quote_currency ?? "USDT",
-                )
-              : "—"
-          }
-        />
-        <Metric
-          label={messages.chart.provider}
-          value={quote?.provider ?? history?.provider ?? "—"}
-        />
-        <Metric
-          label={messages.chart.freshness}
-          value={
-            quote
-              ? messages.market.freshness[quote.freshness]
-              : messages.chart.unavailable
-          }
-        />
-        <Metric
-          label={messages.chart.trend}
-          value={`${messages.chart[snapshot?.trend.direction ?? "unavailable"]} ${snapshot?.trend.strength ?? 0}`}
-        />
-      </section>
-
       {apiUnavailable ? (
         <EmptyState
           title={messages.chart.apiUnavailable}
@@ -176,14 +113,21 @@ export default async function ChartPage({
         <section className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="overflow-hidden border bg-[var(--panel)]">
             <StructuralMarketChart
-              candles={history.items}
+              history={history}
               levels={levels}
               currentPrice={currentPrice || null}
               instrumentId={instrument!.id}
               interval={interval}
+              instrumentLabel={`${instrument!.provider_instrument_id} ${messages.chart.perpetual}`}
+              providerLabel={instrument!.venue ?? "Bybit"}
+              quoteCurrency={history.quote_currency}
+              analystHref={analystHref(instrument!.id, interval)}
+              openAnalystLabel={messages.chart.openAnalyst}
               liveLabel={messages.chart.live}
+              delayedLabel={messages.chart.delayed}
               partialLabel={messages.chart.partial}
               closedLabel={messages.chart.closed}
+              returnLatestLabel={messages.chart.returnLatest}
             />
           </div>
           <aside className="space-y-4">
@@ -234,17 +178,6 @@ export default async function ChartPage({
         </div>
       )}
     </main>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-[var(--panel)] p-3">
-      <p className="text-[10px] font-semibold tracking-wider text-[var(--muted)] uppercase">
-        {label}
-      </p>
-      <p className="mt-1 truncate font-mono text-sm">{value}</p>
-    </div>
   );
 }
 

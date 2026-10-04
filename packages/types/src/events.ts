@@ -1,4 +1,20 @@
 export type EventImportance = "critical" | "high" | "medium" | "low";
+export type EventCategory = "macro" | "crypto";
+export type EventConfidence = "low" | "medium" | "high";
+export type EventAction =
+  | "watch"
+  | "research"
+  | "prepare"
+  | "wait_for_confirmation"
+  | "caution"
+  | "avoid";
+export type OpportunitySignal =
+  | "none"
+  | "watch"
+  | "research"
+  | "prepare"
+  | "wait"
+  | "avoid";
 export type EventStatus =
   | "rumored"
   | "scheduled"
@@ -19,6 +35,9 @@ export interface EventSource {
   source_id: string;
   source_document_id: string;
   source_name: string;
+  source_type: string;
+  source_tier: string;
+  evidence_role: string;
   title: string;
   canonical_url: string;
   published_at: string | null;
@@ -27,6 +46,7 @@ export interface EventSource {
 export interface CanonicalEvent {
   id: string;
   title: string;
+  category: EventCategory;
   event_type: string;
   status: EventStatus;
   scheduled_date: string | null;
@@ -37,7 +57,13 @@ export interface CanonicalEvent {
   updated_at: string;
   importance: EventImportance;
   summary: string;
+  signal: string | null;
   why_it_matters: string;
+  risk: string | null;
+  recommended_action: EventAction | null;
+  opportunity_signal: OpportunitySignal | null;
+  confidence: EventConfidence | null;
+  contract_address: string | null;
   actual: string | null;
   forecast: string | null;
   previous: string | null;
