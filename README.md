@@ -185,11 +185,34 @@ not a primary product surface.
   and Federal Reserve monetary-policy feeds. Releases and schedule revisions retain source-document
   provenance. An Event completes only with official release evidence; unsupported actual/previous
   values remain null and forecast remains null.
-- Optional `CRYPTO_EVENT_SYNC_ENABLED=true` uses only explicitly configured official HTTPS
-  RSS/Atom feeds from `CRYPTO_EVENT_FEEDS`; it reuses SourceDocument provenance and canonical
-  Events. Each document passes a conservative relevance gate before Event persistence; generic feed
-  importance is only a ceiling. `CRYPTO_SOCIAL_PROVIDER=disabled` is the only supported social
-  setting in this phase, so no social network is scraped and no placeholder posts are generated.
+- Optional `CRYPTO_EVENT_SYNC_ENABLED=true` uses reviewed source keys from
+  `CRYPTO_EVENT_OFFICIAL_SOURCES` and optional explicitly configured official HTTPS RSS/Atom feeds
+  from `CRYPTO_EVENT_FEEDS`. It reuses SourceDocument provenance and canonical Events. Every
+  candidate passes the conservative relevance gate before Event persistence; source-level
+  importance is only a ceiling. The initial reviewed registry contains:
+
+  - `ethereum-foundation-blog`: official RSS at `https://blog.ethereum.org/en/feed.xml`
+  - `solana-news`: official RSS at `https://solana.com/news/rss.xml`
+  - `bybit-announcements`: provider-specific parser for
+    `https://announcements.bybit.com/en/`
+  - `coinbase-blog`: provider-specific parser for `https://www.coinbase.com/blog/landing`
+
+  HTML parsing is not configurable: each parser has a fixed official hostname and article path,
+  and the HTTP client does not follow redirects. All sources use a maximum 14-day initial lookback
+  and bounded recent-item limit. An item without a trustworthy publisher date is not included in a
+  network fetch.
+
+`CRYPTO_EVENT_OFFICIAL_SOURCES` is a JSON list of reviewed keys. Enable only sources that pass a
+manual smoke from the production network. A conservative starting configuration after that check is:
+
+```dotenv
+CRYPTO_EVENT_SYNC_ENABLED=true
+CRYPTO_EVENT_OFFICIAL_SOURCES=["ethereum-foundation-blog","solana-news"]
+```
+
+Bybit and Coinbase remain available as reviewed adapters, but CDN access and HTML contracts must be
+smoke-tested from the deployment host before adding their keys. A failed parser or blocked request
+must be investigated; do not replace it with arbitrary scraping.
 
 `CRYPTO_EVENT_FEEDS` is a JSON array. Before production use, manually verify every `base_url` and
 `feed_url` as belonging to the named official organization. Start with one or two feeds. The shape
@@ -211,7 +234,8 @@ below deliberately uses placeholders rather than claiming an unverified URL:
 ```
 
 Do not enable a placeholder. Influential social, Musk, or Meme-KOL monitoring requires a legitimate
-social-data provider and is not currently live.
+social-data provider and is not currently live. `CRYPTO_SOCIAL_PROVIDER=disabled` is the only
+supported setting, so no social network is scraped and the UI must not imply that it is monitored.
 
 ## AI Analyst
 

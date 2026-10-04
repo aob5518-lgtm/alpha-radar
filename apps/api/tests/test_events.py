@@ -1,6 +1,7 @@
 import json
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import httpx
 import pytest
@@ -12,11 +13,17 @@ from alpha_radar.assets.seed import seed_assets
 from alpha_radar.config import CryptoEventFeedSettings, Settings
 from alpha_radar.db.session import get_db_session
 from alpha_radar.events.crypto import (
+    BybitAnnouncementAdapter,
+    CoinbaseBlogAdapter,
     CryptoEventCandidate,
     CryptoEventClassification,
     CryptoEventIngestionService,
+    EthereumFoundationFeedAdapter,
     OfficialCryptoFeedAdapter,
     OpenAICryptoEventClassifier,
+    SolanaNewsFeedAdapter,
+    deterministic_relevance,
+    official_crypto_source_settings,
 )
 from alpha_radar.events.models import Event, EventAsset, EventSourceReference
 from alpha_radar.events.repository import EventRepository
@@ -29,8 +36,29 @@ from alpha_radar.events.sync import (
     extract_release_values,
 )
 from alpha_radar.main import create_app
+from alpha_radar.sources.errors import SourceError
 from alpha_radar.sources.models import SourceDocument
 from alpha_radar.sources.schemas import FetchedSourceDocument
+from alpha_radar.sources.transport import SourceTransport
+
+FIXTURES = Path(__file__).parent / "fixtures" / "crypto"
+
+
+class NoopGate:
+    async def acquire(self) -> None:
+        return None
+
+    async def defer(self, seconds: float) -> None:
+        del seconds
+        return None
+
+
+def fixture(name: str) -> bytes:
+    return (FIXTURES / name).read_bytes()
+
+
+def source_transport() -> SourceTransport:
+    return SourceTransport(NoopGate(), "Alpha Radar tests test@example.invalid")
 
 
 async def test_seed_is_idempotent_and_events_retain_provenance(session: AsyncSession) -> None:
@@ -427,6 +455,18 @@ def test_crypto_social_provider_remains_disabled() -> None:
         Settings.model_validate({"crypto_social_provider": "x_scraper"})
 
 
+def test_only_reviewed_official_crypto_source_keys_are_configurable() -> None:
+    settings = Settings.model_validate(
+        {"crypto_event_official_sources": ["ethereum-foundation-blog", "solana-news"]}
+    )
+    assert settings.crypto_event_official_sources == [
+        "ethereum-foundation-blog",
+        "solana-news",
+    ]
+    with pytest.raises(ValidationError):
+        Settings.model_validate({"crypto_event_official_sources": ["arbitrary-html-source"]})
+
+
 def test_crypto_event_action_contract_rejects_unsafe_free_text() -> None:
     with pytest.raises(ValidationError):
         CryptoEventFeedSettings.model_validate(
@@ -440,3 +480,130 @@ def test_crypto_event_action_contract_rejects_unsafe_free_text() -> None:
                 "recommended_action": "buy_now",
             }
         )
+
+
+def test_ethereum_official_rss_parses_with_canonical_provenance() -> None:
+    moment = datetime(2026, 10, 5, 12, tzinfo=UTC)
+    source = official_crypto_source_settings()["ethereum-foundation-blog"]
+    candidates = EthereumFoundationFeedAdapter.normalize(
+        source, fixture("ethereum-feed.xml"), observed_at=moment, fetched_at=moment
+    )
+
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate.evidence.canonical_url == (
+        "https://blog.ethereum.org/2026/10/03/protocol-upgrade"
+    )
+    assert candidate.evidence.metadata["categories"] == ["Protocol"]
+    assert candidate.asset_symbols == ["ETH"]
+    assert deterministic_relevance(candidate).event_type == "protocol_upgrade"
+
+
+def test_bybit_provider_parser_accepts_listings_and_delistings_but_rejects_promotions() -> None:
+    moment = datetime(2026, 10, 5, 12, tzinfo=UTC)
+    source = official_crypto_source_settings()["bybit-announcements"]
+    candidates = BybitAnnouncementAdapter(source_transport(), source).normalize(
+        fixture("bybit-announcements.html"), observed_at=moment, fetched_at=moment
+    )
+    classifications = {
+        candidate.evidence.title: deterministic_relevance(candidate) for candidate in candidates
+    }
+
+    listing = next(item for item in candidates if item.evidence.title.startswith("New listing"))
+    delisting = next(item for item in candidates if item.evidence.title.startswith("Delisting"))
+    promotion = next(item for item in candidates if "competition" in item.evidence.title)
+    assert listing.asset_symbols == ["BTC"]
+    assert delisting.asset_symbols == ["ETH"]
+    assert classifications[listing.evidence.title].event_type == "exchange_listing"
+    assert classifications[listing.evidence.title].relevant is True
+    assert classifications[delisting.evidence.title].event_type == "exchange_delisting"
+    assert classifications[delisting.evidence.title].relevant is True
+    assert classifications[promotion.evidence.title].relevant is False
+
+
+def test_solana_rss_accepts_material_network_update_and_rejects_roundup() -> None:
+    moment = datetime(2026, 10, 5, 12, tzinfo=UTC)
+    source = official_crypto_source_settings()["solana-news"]
+    candidates = SolanaNewsFeedAdapter.normalize(
+        source, fixture("solana-feed.xml"), observed_at=moment, fetched_at=moment
+    )
+
+    material, roundup = candidates
+    assert material.asset_symbols == ["SOL"]
+    assert deterministic_relevance(material).event_type == "protocol_upgrade"
+    assert deterministic_relevance(material).relevant is True
+    assert deterministic_relevance(roundup).relevant is False
+
+
+def test_coinbase_parser_accepts_material_regulation_and_rejects_education() -> None:
+    moment = datetime(2026, 10, 5, 12, tzinfo=UTC)
+    source = official_crypto_source_settings()["coinbase-blog"]
+    candidates = CoinbaseBlogAdapter(source_transport(), source).normalize(
+        fixture("coinbase-blog.html"), observed_at=moment, fetched_at=moment
+    )
+
+    material, education = candidates
+    assert deterministic_relevance(material).event_type == "regulation_crypto"
+    assert deterministic_relevance(material).relevant is True
+    assert deterministic_relevance(education).relevant is False
+
+
+def test_official_html_adapters_enforce_provider_hostname() -> None:
+    source = official_crypto_source_settings()["bybit-announcements"].model_copy(
+        update={
+            "base_url": "https://example.org",
+            "feed_url": "https://example.org/announcements",
+        }
+    )
+    with pytest.raises(SourceError, match="official"):
+        BybitAnnouncementAdapter(source_transport(), source)
+
+
+async def test_crypto_official_source_fetch_is_bounded_to_fourteen_days() -> None:
+    now = datetime.now(UTC)
+    recent = (now - timedelta(days=2)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    old = (now - timedelta(days=30)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    payload = f"""<rss><channel>
+      <item><title>Protocol upgrade recent</title>
+        <link>https://blog.ethereum.org/recent</link><pubDate>{recent}</pubDate></item>
+      <item><title>Protocol upgrade old</title>
+        <link>https://blog.ethereum.org/old</link><pubDate>{old}</pubDate></item>
+    </channel></rss>""".encode()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload, request=request)
+
+    transport = SourceTransport(
+        NoopGate(),
+        "Alpha Radar tests test@example.invalid",
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+    try:
+        candidates = await EthereumFoundationFeedAdapter(
+            transport, official_crypto_source_settings()["ethereum-foundation-blog"]
+        ).fetch()
+    finally:
+        assert transport.client is not None
+        await transport.client.aclose()
+    assert [candidate.evidence.title for candidate in candidates] == ["Protocol upgrade recent"]
+
+
+async def test_bybit_listing_maps_canonical_asset_and_preserves_official_url(
+    session: AsyncSession,
+) -> None:
+    await seed_assets(session)
+    moment = datetime(2026, 10, 5, 12, tzinfo=UTC)
+    source = official_crypto_source_settings()["bybit-announcements"]
+    listing = BybitAnnouncementAdapter(source_transport(), source).normalize(
+        fixture("bybit-announcements.html"), observed_at=moment, fetched_at=moment
+    )[0]
+
+    assert await CryptoEventIngestionService(session).ingest(listing) is True
+    event = await session.scalar(select(Event).where(Event.category == "crypto"))
+    assert event is not None
+    detail = await EventService(EventRepository(session)).detail(event.id)
+    assert {asset.symbol for asset in detail.affected_assets} == {"BTC"}
+    assert detail.sources[0].canonical_url == (
+        "https://announcements.bybit.com/en/article/new-listing-btcusdt-perpetual--abc"
+    )
+    assert detail.contract_address is None

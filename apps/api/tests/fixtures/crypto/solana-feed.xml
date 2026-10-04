@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Solana News</title>
+    <item>
+      <title>Validator client release prepares a network upgrade</title>
+      <link>https://solana.com/news/validator-client-release</link>
+      <guid>solana-validator-release</guid>
+      <pubDate>Fri, 02 Oct 2026 15:00:00 GMT</pubDate>
+      <description>A material validator and mainnet technical release.</description>
+      <category>Upgrades</category>
+    </item>
+    <item>
+      <title>Solana ecosystem weekly roundup and community guide</title>
+      <link>https://solana.com/news/weekly-roundup</link>
+      <guid>solana-weekly-roundup</guid>
+      <pubDate>Thu, 01 Oct 2026 15:00:00 GMT</pubDate>
+      <description>A recap of community links.</description>
+      <category>Community</category>
+    </item>
+  </channel>
+</rss>

@@ -3,6 +3,7 @@ from collections.abc import Awaitable
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from typing import Protocol, cast
+from urllib.parse import urlsplit
 
 import httpx
 from redis.asyncio import Redis
@@ -87,8 +88,20 @@ class SourceTransport:
         self.timeout = timeout
         self.client = client
 
-    async def get(self, url: str) -> tuple[httpx.Response, datetime, datetime]:
-        if not (
+    async def get(
+        self, url: str, *, allowed_hosts: frozenset[str] | None = None
+    ) -> tuple[httpx.Response, datetime, datetime]:
+        target = urlsplit(url)
+        explicitly_allowed = (
+            allowed_hosts is not None
+            and target.scheme == "https"
+            and target.hostname is not None
+            and target.hostname.lower() in allowed_hosts
+            and target.port in {None, 443}
+            and target.username is None
+            and target.password is None
+        )
+        if not explicitly_allowed and not (
             url.startswith("https://data.sec.gov/submissions/CIK")
             or url == "https://www.federalreserve.gov/feeds/press_all.xml"
             or url
@@ -136,6 +149,9 @@ class SourceTransport:
             raise SourceError("document_not_found", "Provider document not found")
         if response.status_code != 200:
             raise SourceError("invalid_payload", f"Unexpected provider HTTP {response.status_code}")
+        response_host = response.url.host.lower()
+        if allowed_hosts is not None and response_host not in allowed_hosts:
+            raise SourceError("policy_restricted", "Provider response left its allowlisted host")
         if len(response.content) > 5_000_000:
             raise SourceError("invalid_payload", "Provider response exceeds size bound")
         return response, observed, datetime.now(UTC)

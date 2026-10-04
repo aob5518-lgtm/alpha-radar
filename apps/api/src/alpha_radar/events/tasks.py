@@ -9,7 +9,9 @@ from alpha_radar.db.session import async_session_factory, engine
 from alpha_radar.events.crypto import (
     CryptoEventIngestionService,
     OfficialCryptoFeedAdapter,
+    OfficialCryptoSourceAdapter,
     OpenAICryptoEventClassifier,
+    official_crypto_source_adapters,
 )
 from alpha_radar.events.sync import (
     EventSyncService,
@@ -69,7 +71,7 @@ async def _sync_crypto_events() -> int:
     settings = get_settings()
     if not settings.crypto_event_sync_enabled:
         return 0
-    if not settings.crypto_event_feeds:
+    if not settings.crypto_event_feeds and not settings.crypto_event_official_sources:
         return 0
     identity = settings.source_contact_identity.strip()
     if "@" not in identity or any(character in identity for character in "\r\n"):
@@ -100,8 +102,14 @@ async def _sync_crypto_events() -> int:
                 else None
             )
             service = CryptoEventIngestionService(session, classifier)
-            for feed in settings.crypto_event_feeds:
-                candidates = await OfficialCryptoFeedAdapter(transport, feed).fetch()
+            adapters: list[OfficialCryptoSourceAdapter] = [
+                OfficialCryptoFeedAdapter(transport, feed) for feed in settings.crypto_event_feeds
+            ]
+            adapters.extend(
+                official_crypto_source_adapters(transport, settings.crypto_event_official_sources)
+            )
+            for adapter in adapters:
+                candidates = await adapter.fetch()
                 for candidate in candidates:
                     ingested += int(await service.ingest(candidate))
         return ingested

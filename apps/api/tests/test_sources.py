@@ -210,6 +210,23 @@ async def test_rate_limit_and_failure_policy(status: int, kind: str) -> None:
     assert retry_delay("1") == 300
 
 
+async def test_official_source_transport_does_not_follow_cross_domain_redirects() -> None:
+    gate = Gate()
+
+    def respond(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(302, headers={"Location": "https://untrusted.example/feed.xml"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        transport = SourceTransport(gate, "Test organization test@example.invalid", client=client)
+        with pytest.raises(SourceError) as error:
+            await transport.get(
+                "https://blog.ethereum.org/en/feed.xml",
+                allowed_hosts=frozenset({"blog.ethereum.org"}),
+            )
+    assert error.value.kind == "invalid_payload"
+    assert gate.calls == 1
+
+
 async def test_mock_and_disabled_real_adapters() -> None:
     mock = MockSourceAdapter()
     assert await mock.fetch_document("mock-document-1") == (await mock.fetch_recent())[0]
