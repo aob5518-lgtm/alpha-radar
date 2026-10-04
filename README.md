@@ -214,6 +214,16 @@ Bybit and Coinbase remain available as reviewed adapters, but CDN access and HTM
 smoke-tested from the deployment host before adding their keys. A failed parser or blocked request
 must be investigated; do not replace it with arbitrary scraping.
 
+Reviewed public Crypto sources use the truthful `AlphaRadar/0.1` User-Agent and do not require an
+SEC/Federal Reserve-style email identity. When `SOURCE_CONTACT_IDENTITY` contains a valid monitored
+contact, it is appended; empty or invalid values are never replaced with fake contact data. The
+stricter monitored-contact requirement remains unchanged for SEC/Federal Reserve polling.
+
+Each Crypto source is an independent execution boundary. A timeout, HTTP policy response, parser
+failure, or candidate ingestion failure is logged with source slug, error type, and UTC timestamp,
+then the remaining sources continue. `/api/v1/health/ready` exposes the last run as `healthy`,
+`degraded`, or `failed`, together with attempted/succeeded/failed source slugs and Event count.
+
 `CRYPTO_EVENT_FEEDS` is a JSON array. Before production use, manually verify every `base_url` and
 `feed_url` as belonging to the named official organization. Start with one or two feeds. The shape
 below deliberately uses placeholders rather than claiming an unverified URL:

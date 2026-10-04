@@ -29,6 +29,7 @@ def main() -> None:
         "market_history_latest": operations.get("market", {}).get("history_latest"),
         "market_history_current": operations.get("market", {}).get("history_current"),
         "event_sync": operations.get("event_sync"),
+        "crypto_event_sync": operations.get("crypto_event_sync"),
         "ai_configured": ai.get("ai_configured") if ai_status == 200 else False,
         "ai_rate_limiter": ai.get("rate_limiter")
         if ai_status == 200

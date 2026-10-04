@@ -106,6 +106,13 @@ one selected source has passed a live read-only smoke from the deployment networ
 Coinbase may impose CDN controls, so parser availability in code is not proof of production network
 access.
 
+The SEC and Federal Reserve paths retain their mandatory monitored organization/contact identity.
+Reviewed public Crypto sources instead use `AlphaRadar/0.1`; a valid configured contact identity is
+appended when present, and no synthetic email is used. Crypto adapters execute independently so one
+source failure cannot stop the remaining sources or roll back earlier committed Events. Redis keeps
+the last-run operational result with attempted, successful, and failed source slugs plus ingested
+Event count. Mixed outcomes are `degraded`; zero successful sources with failures is `failed`.
+
 Official references:
 
 - <https://www.sec.gov/search-filings/edgar-application-programming-interfaces>

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alpha_radar.config import get_settings
 from alpha_radar.db.session import engine
+from alpha_radar.events.operations import CryptoSyncOperations, get_crypto_sync_operations
 from alpha_radar.health import (
     get_dependency_status,
     get_event_sync_status,
@@ -45,6 +46,7 @@ class OperationalMetadata(BaseModel):
     app_env: str
     market: MarketOperations
     event_sync: EventSyncOperations
+    crypto_event_sync: CryptoSyncOperations
     ai_configured: Literal["reported_by_web"] = "reported_by_web"
     ai_rate_limiter: Literal["redis"] = "redis"
     streaming_enabled: bool
@@ -80,6 +82,9 @@ async def readiness(
         dependency_status = await get_dependency_status(database_engine, redis_client)
         market = await get_market_operational_status(database_engine, settings)
         event_sync = await get_event_sync_status(redis_client, settings)
+        crypto_event_sync = await get_crypto_sync_operations(
+            redis_client, enabled=settings.crypto_event_sync_enabled
+        )
     finally:
         await redis_client.aclose()
     production_market_ready = settings.app_env != "production" or market.ready
@@ -102,6 +107,7 @@ async def readiness(
                 history_latest=market.history_latest,
             ),
             event_sync=EventSyncOperations.model_validate(event_sync),
+            crypto_event_sync=crypto_event_sync,
             streaming_enabled=settings.market_data_provider in {"coinbase", "bybit"},
         ),
     )

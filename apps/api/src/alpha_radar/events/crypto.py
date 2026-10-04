@@ -311,6 +311,9 @@ class CryptoEventCandidate(BaseModel):
 
 
 class OfficialCryptoSourceAdapter(Protocol):
+    @property
+    def source_slug(self) -> str: ...
+
     async def fetch(self, limit: int | None = None) -> list[CryptoEventCandidate]: ...
 
 
@@ -321,6 +324,10 @@ class OfficialCryptoFeedAdapter:
         self.transport = transport
         self.feed = feed
         _require_official_url(feed.base_url, feed.feed_url)
+
+    @property
+    def source_slug(self) -> str:
+        return self.feed.slug
 
     async def fetch(self, limit: int | None = None) -> list[CryptoEventCandidate]:
         limit = limit or self.feed.recent_item_limit
@@ -519,6 +526,10 @@ class OfficialCryptoHtmlAdapter:
         if _hostname(source.base_url) != self.official_host:
             raise SourceError("policy_restricted", "HTML adapter source host is not official")
         _require_official_url(source.base_url, source.feed_url)
+
+    @property
+    def source_slug(self) -> str:
+        return self.source.slug
 
     async def fetch(self, limit: int | None = None) -> list[CryptoEventCandidate]:
         limit = limit or self.source.recent_item_limit
