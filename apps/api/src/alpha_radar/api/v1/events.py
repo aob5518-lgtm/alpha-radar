@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alpha_radar.db.session import get_db_session
 from alpha_radar.events.repository import EventRepository
 from alpha_radar.events.schemas import (
+    EventCategory,
     EventImportance,
     EventListResponse,
     EventResponse,
@@ -30,6 +31,7 @@ async def list_events(
     start: AwareDatetime | None = None,
     end: AwareDatetime | None = None,
     importance: Annotated[list[EventImportance] | None, Query()] = None,
+    category: EventCategory | None = None,
     event_type: Annotated[str | None, Query(max_length=64)] = None,
     status: EventStatus | None = None,
     asset_id: UUID | None = None,
@@ -40,6 +42,7 @@ async def list_events(
         start=start,
         end=end,
         importances=list(importance or ["critical", "high"]),
+        category=category,
         event_type=event_type,
         status=status,
         asset_id=asset_id,

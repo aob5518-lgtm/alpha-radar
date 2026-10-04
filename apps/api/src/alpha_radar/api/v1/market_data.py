@@ -16,7 +16,8 @@ from alpha_radar.market_data.constants import MAX_HISTORY_LIMIT, MarketInterval
 from alpha_radar.market_data.factory import create_market_data_provider
 from alpha_radar.market_data.models import InstrumentType
 from alpha_radar.market_data.providers.base import (
-    StreamingCandleMarketDataProvider,
+    ProviderCandleUpdate,
+    StreamingInstrumentMarketDataProvider,
     StreamingMarketDataProvider,
 )
 from alpha_radar.market_data.repository import MarketDataRepository
@@ -142,7 +143,7 @@ async def stream_instrument_candles(
         return
     provider = create_market_data_provider(settings)
     try:
-        if not isinstance(provider, StreamingCandleMarketDataProvider):
+        if not isinstance(provider, StreamingInstrumentMarketDataProvider):
             await websocket.send_json({"type": "unavailable", "reason": "provider_not_streaming"})
             await websocket.close(code=1008)
             return
@@ -155,22 +156,27 @@ async def stream_instrument_candles(
                 await websocket.close(code=1008)
                 return
             reference = MarketDataService.instrument_ref(instrument)
-            iterator = provider.stream_candles(reference, interval).__aiter__()
+            iterator = provider.stream_market(reference, interval).__aiter__()
             while True:
                 try:
                     async with asyncio.timeout(settings.market_stream_idle_timeout_seconds):
-                        candle = await anext(iterator)
+                        update = await anext(iterator)
                 except TimeoutError:
                     await websocket.send_json({"type": "idle_timeout"})
                     await websocket.close(code=1000)
                     return
                 await limiter.refresh(client_id, lease_token)
-                await websocket.send_json({"type": "candle", **candle.model_dump(mode="json")})
+                payload = (
+                    {"type": "candle", **update.candle.model_dump(mode="json")}
+                    if isinstance(update, ProviderCandleUpdate)
+                    else update.model_dump(mode="json")
+                )
+                await websocket.send_json(payload)
     except WebSocketDisconnect:
         return
     except Exception:
         await logger.aexception(
-            "market_candle_stream_failed",
+            "market_instrument_stream_failed",
             market_instrument_id=str(instrument_id),
             interval=interval.value,
         )

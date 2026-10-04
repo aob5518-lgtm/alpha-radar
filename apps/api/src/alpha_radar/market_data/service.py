@@ -103,9 +103,9 @@ class MarketDataService:
             interval=interval,
             start=start,
             end=end,
-            limit=limit,
+            limit=limit + 1,
         )
-        return self._history_response(instrument, interval, candles)
+        return self._history_response(instrument, interval, candles, limit)
 
     def _quote_response(
         self,
@@ -165,26 +165,19 @@ class MarketDataService:
             interval=interval,
             start=start,
             end=end,
-            limit=limit,
+            limit=limit + 1,
         )
-        return MarketHistoryResponse(
-            asset_id=asset.id,
-            symbol=asset.symbol,
-            market_instrument_id=instrument.id,
-            provider_instrument_id=instrument.provider_instrument_id,
-            base_currency=instrument.base_currency,
-            quote_currency=instrument.quote_currency,
-            provider=instrument.provider,
-            interval=interval,
-            items=[MarketCandleResponse.model_validate(candle) for candle in candles],
-        )
+        return self._history_response(instrument, interval, candles, limit)
 
     @staticmethod
     def _history_response(
         instrument: MarketInstrument,
         interval: MarketInterval,
         candles: list[MarketCandle],
+        limit: int,
     ) -> MarketHistoryResponse:
+        has_more = len(candles) > limit
+        page = candles[-limit:]
         return MarketHistoryResponse(
             asset_id=instrument.asset_id,
             symbol=instrument.asset.symbol,
@@ -194,7 +187,9 @@ class MarketDataService:
             quote_currency=instrument.quote_currency,
             provider=instrument.provider,
             interval=interval,
-            items=[MarketCandleResponse.model_validate(candle) for candle in candles],
+            items=[MarketCandleResponse.model_validate(candle) for candle in page],
+            has_more=has_more,
+            next_end=page[0].open_time if has_more and page else None,
         )
 
     @staticmethod
@@ -263,25 +258,40 @@ class MarketDataService:
     async def ingest_candles(
         self, instrument: MarketInstrument, provider_candles: list[ProviderCandle]
     ) -> int:
-        ingested = 0
-        for candle in provider_candles:
+        if not provider_candles:
+            return 0
+        unique = {
+            (candle.provider, candle.interval, candle.open_time): candle
+            for candle in provider_candles
+        }
+        candles = list(unique.values())
+        for candle in candles:
             self._validate_provenance(instrument, candle.provider, candle.provider_instrument_id)
-            duplicate = await self.repository.candle_exists(
-                provider=candle.provider,
-                market_instrument_id=instrument.id,
-                interval=candle.interval,
-                open_time=candle.open_time,
-            )
+        provider = candles[0].provider
+        interval = candles[0].interval
+        if any(c.provider != provider or c.interval != interval for c in candles):
+            raise ValueError("Candle batches must share provider and interval")
+        existing_values = await self.repository.existing_candle_times(
+            provider=provider,
+            market_instrument_id=instrument.id,
+            interval=interval,
+            open_times=[candle.open_time for candle in candles],
+        )
+        existing = {self._as_utc(value) for value in existing_values}
+        now = datetime.now(UTC)
+        rows: list[dict[str, object]] = []
+        for candle in candles:
+            duplicate = self._as_utc(candle.open_time) in existing
             flags = [QualityFlag.DUPLICATE.value] if duplicate else []
             flags.extend(
                 timestamp_quality_flags(
                     provider_timestamp=candle.provider_timestamp,
-                    observed_at=datetime.now(UTC),
+                    observed_at=now,
                     future_tolerance=self.future_tolerance,
                     stale_after=INTERVAL_DEFINITIONS[candle.interval].max_query_range,
                 )
             )
-            await self.repository.upsert_candle(
+            rows.append(
                 {
                     "provider": candle.provider,
                     "market_instrument_id": instrument.id,
@@ -297,14 +307,14 @@ class MarketDataService:
                     "quote_volume": candle.quote_volume,
                     "is_closed": candle.is_closed,
                     "provider_timestamp": candle.provider_timestamp,
-                    "ingested_at": datetime.now(UTC),
+                    "ingested_at": now,
                     "quality_flags": flags,
                     "metadata": candle.metadata,
                 }
             )
-            ingested += 1
+        await self.repository.upsert_candles(rows)
         await self.repository.commit()
-        return ingested
+        return len(candles)
 
     async def fetch_and_ingest_quote(
         self, instrument: MarketInstrument, provider: MarketDataProvider
@@ -367,10 +377,10 @@ class MarketDataService:
     def _validate_history_range(
         *, interval: MarketInterval, start: datetime | None, end: datetime | None
     ) -> None:
-        if (start is None) != (end is None):
+        if start is not None and end is None:
             raise AppError(
                 code="incomplete_history_range",
-                message="History start and end must be provided together",
+                message="History end is required when start is provided",
                 status_code=422,
             )
         if start is not None and end is not None:

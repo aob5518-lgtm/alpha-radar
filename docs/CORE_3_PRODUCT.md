@@ -43,11 +43,39 @@ values only when a strict official-source parser can derive them; forecast remai
 licensed consensus source. Date-only events use `scheduled_date` and never synthesize a time, and
 elapsed wall-clock time alone never completes an Event.
 
+The calendar has `All`, `Macro`, and `Crypto` category filters. Crypto records reuse the same
+SourceDocument → Event pipeline and accept only configured official RSS/Atom hosts in this phase.
+An official document is not automatically a user-facing Event. A short deterministic gate accepts
+only explicit material concepts such as mainnet/token launches, listings/delistings, protocol
+upgrades/hard forks, security incidents, material governance/regulatory/ETF actions, confirmed
+distributions, and explicitly major integrations, partnerships, acquisitions, or product launches.
+Recaps, AMAs, meetups, podcasts, tutorials, documentation updates, minor maintenance releases,
+community events, and uncertain items remain SourceDocuments but do not become Events. Feed-level
+importance is an upper bound, not a per-document conclusion.
+
+When the server-side OpenAI provider is configured, a strict structured-output classifier may
+further reject or downgrade a deterministically relevant candidate. Its schema permits only the
+existing event types, importance bands, safe research actions, confidence bands, and a short reason.
+Provider failure falls back to the deterministic classification; an unconfigured AI provider is a
+fully supported mode. The classifier concerns information relevance only and cannot express price
+targets, return predictions, position sizing, leverage, or trade orders.
+
+No social site is scraped: influential social remains unavailable until a legitimate configured API
+adapter exists. If later enabled, a post is a SIGNAL, not independent proof of fundamentals. The
+detail surface separates FACT, SIGNAL, ANALYSIS, ACTION, and RISK. Recommended actions are limited
+to watch, research, prepare, wait for confirmation, caution, or avoid; categorical confidence and
+opportunity bands are presentation aids, never invented probabilities. Contract addresses remain
+null unless an official source explicitly supplies and validates one.
+When the Crypto filter has no qualifying records, the UI states that only verified, relevant Crypto
+Events are shown; it does not fill the calendar with samples or opportunities.
+
 ## Chart
 
 Chart supports `1m`, `5m`, `15m`, `1h`, `4h`, `1d` and `1w` from centralized interval definitions.
-It requests up to 1,000 persisted observations and never fills missing candles. Bybit production
-mode uses the provider adapter's public Kline WebSocket to render exchange OHLCV directly. The
+It requests an initial 800 persisted observations and never fills missing candles, rendering the
+latest roughly 200 before lazy-loading older pages as the user pans left. Bybit production mode
+uses one provider WebSocket for ticker, public trade, and Kline topics. Trades update visual partial
+state; the official Kline remains authoritative. The
 exchange `confirm=false` state remains labeled LIVE / PARTIAL and `confirm=true` closes the candle.
 The persisted REST/backfill series remains authoritative history. Structural Levels and
 Trend consume closed candles only; the streamed open candle never enters either engine.

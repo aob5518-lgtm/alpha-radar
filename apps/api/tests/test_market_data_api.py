@@ -59,6 +59,8 @@ async def test_quote_and_history_api_read_persisted_market_data(session: AsyncSe
     assert history.status_code == 200
     assert len(history.json()["items"]) == 2
     assert history.json()["items"][0]["open_time"] < history.json()["items"][1]["open_time"]
+    assert history.json()["has_more"] is False
+    assert history.json()["next_end"] is None
     assert invalid_limit.status_code == 422
 
 

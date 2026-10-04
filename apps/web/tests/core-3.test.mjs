@@ -438,6 +438,54 @@ test("empty Event filters clear stale selected detail", () => {
   assert.equal(resolveSelectedEvent([], "stale-event"), null);
 });
 
+test("Crypto Event presentation labels official facts and social signals conservatively", () => {
+  const base = {
+    id: "crypto-1",
+    title: "Protocol upgrade announced",
+    category: "crypto",
+    event_type: "protocol_upgrade",
+    status: "completed",
+    importance: "high",
+    summary: "FACT: Official source published an upgrade.",
+    signal: "SIGNAL: Attention may change.",
+    why_it_matters: "ANALYSIS: Market structure must confirm impact.",
+    risk: "RISK: Adoption and price are not guaranteed.",
+    recommended_action: "wait_for_confirmation",
+    opportunity_signal: "wait",
+    confidence: "medium",
+    contract_address: null,
+    bull_case: null,
+    bear_case: null,
+    watch_next: [],
+    affected_assets: [],
+    sources: [
+      {
+        source_document_id: "doc",
+        source_name: "Official Protocol",
+        source_type: "protocol",
+        evidence_role: "fact",
+      },
+    ],
+  };
+  const official = presentEvent(base, "zh-CN");
+  const social = presentEvent(
+    {
+      ...base,
+      event_type: "influential_social",
+      sources: [
+        { ...base.sources[0], source_type: "social", evidence_role: "signal" },
+      ],
+    },
+    "zh-CN",
+  );
+  assert.match(official.title, /协议升级/);
+  assert.equal(official.action, "等待确认");
+  assert.equal(official.opportunitySignal, "等待");
+  assert.match(social.summary, /帖子本身/);
+  assert.match(social.risk, /不得据此推断代币发行或价格上涨/);
+  assert.equal(social.contractAddress, null);
+});
+
 test("Chart quick switches preserve timeframe and use instrument URLs", async () => {
   const source = await readFile(
     new URL("../src/components/chart-asset-selector.tsx", import.meta.url),
@@ -463,4 +511,6 @@ test("Core 3 copy has English and Simplified Chinese parity", async () => {
   }
   assert.equal(english.nav.events, "Events");
   assert.equal(chinese.nav.events, "事件");
+  assert.match(english.events.cryptoEmpty, /verified, relevant crypto events/i);
+  assert.match(chinese.events.cryptoEmpty, /已验证且相关的加密事件/);
 });

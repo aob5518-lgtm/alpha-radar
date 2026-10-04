@@ -17,9 +17,9 @@ export async function getTechnicalMarketContext(
     await Promise.all([
       getMarketInstrument(instrumentId).catch(() => null),
       getInstrumentQuote(instrumentId).catch(() => null),
-      getInstrumentHistory(instrumentId, interval, 1000).catch(() => null),
+      getInstrumentHistory(instrumentId, interval, 800).catch(() => null),
       higherInterval
-        ? getInstrumentHistory(instrumentId, higherInterval, 1000).catch(
+        ? getInstrumentHistory(instrumentId, higherInterval, 800).catch(
             () => null,
           )
         : Promise.resolve(null),

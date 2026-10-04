@@ -20,7 +20,13 @@ from alpha_radar.market_data.providers import (
     ProviderCandle,
     ProviderQuote,
 )
-from alpha_radar.market_data.providers.base import ProviderTick, StreamingMarketDataProvider
+from alpha_radar.market_data.providers.base import (
+    ProviderCandleUpdate,
+    ProviderPriceUpdate,
+    ProviderTick,
+    ProviderTradeUpdate,
+    StreamingMarketDataProvider,
+)
 from alpha_radar.market_data.quality import timestamp_quality_flags
 
 
@@ -179,6 +185,103 @@ def test_bybit_websocket_kline_preserves_exchange_confirm_semantics() -> None:
     assert partial.close == Decimal("16677")
     assert partial.volume == Decimal("2.081")
     assert partial.close_time == datetime(2022, 12, 29, 14, 45, tzinfo=UTC)
+
+
+def test_bybit_normalizes_ticker_trade_and_authoritative_kline_updates() -> None:
+    ticker = BybitMarketDataProvider.normalize_stream_message(
+        {
+            "topic": "tickers.BTCUSDT",
+            "ts": 1672324988882,
+            "data": {"symbol": "BTCUSDT", "lastPrice": "16677", "price24hPcnt": "0.01"},
+        },
+        instrument=perpetual_ref(),
+        interval=MarketInterval.FIVE_MINUTES,
+    )[0]
+    trade = BybitMarketDataProvider.normalize_stream_message(
+        {
+            "topic": "publicTrade.BTCUSDT",
+            "ts": 1672324988882,
+            "data": [
+                {
+                    "T": 1672324988882,
+                    "s": "BTCUSDT",
+                    "S": "Buy",
+                    "v": "0.2",
+                    "p": "16678",
+                    "i": "trade-1",
+                }
+            ],
+        },
+        instrument=perpetual_ref(),
+        interval=MarketInterval.FIVE_MINUTES,
+    )[0]
+    candle = BybitMarketDataProvider.normalize_stream_message(
+        {
+            "topic": "kline.5.BTCUSDT",
+            "data": [
+                {
+                    "start": 1672324800000,
+                    "end": 1672325099999,
+                    "interval": "5",
+                    "open": "16649.5",
+                    "close": "16677",
+                    "high": "16677",
+                    "low": "16608",
+                    "volume": "2.081",
+                    "turnover": "34666",
+                    "confirm": True,
+                    "timestamp": 1672324988882,
+                }
+            ],
+        },
+        instrument=perpetual_ref(),
+        interval=MarketInterval.FIVE_MINUTES,
+    )[0]
+    assert isinstance(ticker, ProviderPriceUpdate)
+    assert isinstance(trade, ProviderTradeUpdate)
+    assert isinstance(candle, ProviderCandleUpdate)
+    assert candle.candle.is_closed is True
+    assert trade.trade_id == "trade-1"
+
+
+@pytest.mark.asyncio
+async def test_bybit_backward_pagination_advances_before_earliest_candle() -> None:
+    requests: list[httpx.Request] = []
+    now = datetime(2026, 10, 3, 12, tzinfo=UTC)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        end = int(request.url.params["end"])
+        rows = [
+            [str(end - index * 60_000), "100", "101", "99", "100", "1", "100"]
+            for index in range(1000)
+        ]
+        return httpx.Response(
+            200,
+            json={
+                "retCode": 0,
+                "retMsg": "OK",
+                "time": end,
+                "result": {"symbol": "BTCUSDT", "list": rows},
+            },
+        )
+
+    provider = BybitMarketDataProvider(
+        base_url="https://api.bybit.com",
+        transport=httpx.MockTransport(handler),
+        clock=lambda: now,
+        requests_per_second=100000,
+    )
+    pages = [
+        page
+        async for page in provider.iter_candle_pages(
+            perpetual_ref(), MarketInterval.ONE_MINUTE, end=now, horizon=None, max_pages=2
+        )
+    ]
+    assert len(pages) == 2
+    assert len(pages[0]) == len(pages[1]) == 1000
+    assert int(requests[1].url.params["end"]) < int(pages[0][0].open_time.timestamp() * 1000)
+    assert pages[0][0].open_time < pages[0][-1].open_time
 
 
 def test_coinbase_exposes_normalized_streaming_capability() -> None:

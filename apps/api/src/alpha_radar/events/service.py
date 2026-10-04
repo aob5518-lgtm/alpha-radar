@@ -38,11 +38,14 @@ class EventService:
                         source_id=source.id,
                         source_document_id=document.id,
                         source_name=source.name,
+                        source_type=source.source_type,
+                        source_tier=source.source_tier,
+                        evidence_role=reference.evidence_role,
                         title=document.title,
                         canonical_url=document.canonical_url,
                         published_at=document.published_at,
                     )
-                    for document, source in record.sources
+                    for reference, document, source in record.sources
                 ],
             }
         )
@@ -55,6 +58,7 @@ class EventService:
         start: datetime | None,
         end: datetime | None,
         importances: list[str],
+        category: str | None,
         event_type: str | None,
         status: str | None,
         asset_id: UUID | None,
@@ -65,6 +69,7 @@ class EventService:
             start=start,
             end=end,
             importances=importances,
+            category=category,
             event_type=event_type,
             status=status,
             asset_id=asset_id,

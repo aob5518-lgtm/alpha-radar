@@ -37,6 +37,9 @@
     "today": "Today",
     "thisWeek": "This week",
     "calendar": "Calendar",
+    "all": "All",
+    "macro": "Macro",
+    "crypto": "Crypto",
     "time": "Time",
     "event": "Event",
     "status": "Status",
@@ -45,6 +48,7 @@
     "includeMedium": "Include Medium",
     "timezone": "Primary times use your browser timezone; UTC and the official timezone remain in event details.",
     "emptyTitle": "No verified events available",
+    "cryptoEmpty": "Only verified, relevant crypto events are shown. No qualifying events match this view.",
     "emptyDescription": "No validated events match this time range and importance filter.",
     "sourceBoundary": "Official source documents are retained for provenance, but raw document noise is excluded from this calendar.",
     "timeNotAnnounced": "Time not announced",
@@ -53,7 +57,26 @@
     "actual": "Actual",
     "previous": "Previous",
     "affectedAssets": "Affected assets",
-    "sources": "Sources"
+    "sources": "Sources",
+    "signal": "Signal",
+    "action": "Action",
+    "risk": "Risk",
+    "opportunitySignal": "Opportunity signal",
+    "confidence": "Confidence",
+    "contractAddress": "Official contract address",
+    "actions": {
+      "watch": "Watch",
+      "research": "Research",
+      "prepare": "Prepare",
+      "wait_for_confirmation": "Wait for confirmation",
+      "caution": "Use caution",
+      "avoid": "Avoid"
+    },
+    "confidenceBands": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
   },
   "chart": {
     "eyebrow": "Professional Crypto Chart",
@@ -69,6 +92,8 @@
     "freshness": "Freshness",
     "closedCandles": "Closed candles",
     "live": "Live",
+    "delayed": "Delayed",
+    "returnLatest": "Return to latest",
     "partial": "Partial",
     "closed": "Closed",
     "insufficientTitle": "Insufficient closed-candle history",

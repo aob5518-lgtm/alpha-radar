@@ -44,7 +44,9 @@ boundary; canonical persisted and API values remain decimal strings.
 Supported intervals are centrally versionable domain values: `1m`, `5m`, `15m`, `1h`, `4h`, `1d`,
 and `1w`. Their durations,
 API query ranges, and Coinbase granularities are defined in one module. API history is bounded by a
-maximum of 1,000 rows and an interval-specific maximum time range.
+maximum of 1,000 rows and an interval-specific maximum time range. Supplying `end` without `start`
+pages backward from that exclusive timestamp. Responses remain oldest-to-newest and expose
+`has_more` plus `next_end`; clients prepend older pages without replacing the visible range.
 
 Provider DTO validation rejects non-positive prices, negative sizes/volumes, invalid time ranges,
 and inconsistent OHLC bounds. Simple quality flags record timestamp and sequence concerns such as
@@ -84,16 +86,18 @@ bounded three-candle overlap for every supported interval: 1m each minute, 5m ea
 boundary. Only provider-confirmed closed candles are persisted by these periodic tasks. Upserts make
 the overlap idempotent, missing provider buckets are not fabricated, and deep history is never
 periodically re-fetched. An operator can enqueue a bounded interval
-backfill (valid limit 1–500) when real ingestion is enabled:
+backfill (valid safety bound 1–64 pages) when real ingestion is enabled:
 
 ```bash
 docker compose exec worker celery -A alpha_radar.worker call \
   alpha_radar.market_data.backfill_technical_history \
-  --args='["4h", 500]'
+  --args='["4h", 64]'
 ```
 
-Repeat explicitly for required intervals; at least 300 closed 4h/1d candles and 200 closed 1w
-candles are required by the current acceptance contract, while 500 is preferred and supported.
+Each provider page contains at most 1,000 candles. The worker pages backward until the configured
+horizon, provider exhaustion, or page safety limit: 1m 7 days, 5m 30 days, 15m 90 days, 1h 365
+days, 4h 730 days, with 1d and 1w retaining all practical provider history. Writes are bulk,
+idempotent upserts. Missing provider buckets remain missing.
 External ingestion remains opt-in through
 `MARKET_DATA_INGESTION_ENABLED=false` by default.
 
@@ -108,9 +112,15 @@ endpoint with `GET /v5/market/kline?category=linear` and the official
 linear stream. Alpha
 Radar maps `1m`, `5m`, `15m`, `1h`, `4h`, `1d`, and `1w` to native `1`, `5`, `15`, `60`, `240`,
 `D`, and `W` intervals. It does not re-aggregate native intervals or fill missing bars. WebSocket
-subscriptions use `kline.{interval}.{symbol}`. Exchange `confirm=false` candles are visual
+The Chart uses one public Bybit connection and one subscribe operation for
+`kline.{interval}.{symbol}`, `tickers.{symbol}`, and `publicTrade.{symbol}`. Ticker updates drive the
+displayed price, public trades may move the visual partial candle, and the next official Kline
+message reconciles that candle authoritatively. Exchange `confirm=false` candles are visual
 LIVE/PARTIAL state only; `confirm=true` identifies a closed candle. Structural Levels and Trend
-Regime continue to consume persisted, confirmed candles only.
+Regime continue to consume only bounded (up to 800 per timeframe), persisted, confirmed candles.
+The browser initially displays roughly the latest 200 bars, lazy-loads older 200-bar pages near the
+left edge, preserves the logical viewport, and provides “Return to latest”; it does not call a full
+history `fitContent` after prepending.
 
 Production must set `APP_ENV=production`, `MARKET_DATA_PROVIDER=bybit`, and
 `MARKET_DATA_INGESTION_ENABLED=true`. Readiness is HTTP 503 until BTCUSDT, ETHUSDT, and SOLUSDT each

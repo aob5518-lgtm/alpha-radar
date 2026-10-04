@@ -134,9 +134,11 @@ export async function getInstrumentHistory(
   instrumentId: string,
   interval: MarketInterval = "1h",
   limit = 48,
+  end?: string,
 ): Promise<MarketHistory | null> {
   try {
     const params = new URLSearchParams({ interval, limit: String(limit) });
+    if (end) params.set("end", end);
     return await request<MarketHistory>(
       `/api/v1/market-instruments/${encodeURIComponent(instrumentId)}/history?${params.toString()}`,
     );

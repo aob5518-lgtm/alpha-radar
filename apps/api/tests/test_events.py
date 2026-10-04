@@ -1,12 +1,23 @@
+import json
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
 import httpx
+import pytest
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alpha_radar.assets.seed import seed_assets
+from alpha_radar.config import CryptoEventFeedSettings, Settings
 from alpha_radar.db.session import get_db_session
+from alpha_radar.events.crypto import (
+    CryptoEventCandidate,
+    CryptoEventClassification,
+    CryptoEventIngestionService,
+    OfficialCryptoFeedAdapter,
+    OpenAICryptoEventClassifier,
+)
 from alpha_radar.events.models import Event, EventAsset, EventSourceReference
 from alpha_radar.events.repository import EventRepository
 from alpha_radar.events.seed import seed_events
@@ -18,6 +29,7 @@ from alpha_radar.events.sync import (
     extract_release_values,
 )
 from alpha_radar.main import create_app
+from alpha_radar.sources.models import SourceDocument
 from alpha_radar.sources.schemas import FetchedSourceDocument
 
 
@@ -38,6 +50,7 @@ async def test_seed_is_idempotent_and_events_retain_provenance(session: AsyncSes
         start=datetime(2026, 10, 1, tzinfo=UTC),
         end=datetime(2026, 11, 1, tzinfo=UTC),
         importances=["critical", "high"],
+        category=None,
         event_type=None,
         status="scheduled",
         asset_id=None,
@@ -77,6 +90,7 @@ async def test_date_only_event_does_not_invent_a_time(session: AsyncSession) -> 
         start=datetime(2026, 10, 20, tzinfo=UTC),
         end=datetime(2026, 10, 21, tzinfo=UTC),
         importances=["high"],
+        category=None,
         event_type=None,
         status=None,
         asset_id=None,
@@ -221,3 +235,208 @@ def test_official_calendar_fixture_normalizes_schedule_revision() -> None:
     assert updates[0].event_type == "nfp"
     assert updates[0].scheduled_date == datetime(2026, 10, 3).date()
     assert updates[0].scheduled_at == datetime(2026, 10, 3, 12, 30, tzinfo=UTC)
+
+
+async def test_official_crypto_feed_reuses_event_pipeline_and_is_idempotent(
+    session: AsyncSession,
+) -> None:
+    await seed_assets(session)
+    moment = datetime(2026, 10, 3, 12, tzinfo=UTC)
+    feed = CryptoEventFeedSettings(
+        slug="example-protocol",
+        name="Example Protocol",
+        source_type="protocol",
+        base_url="https://example.org",
+        feed_url="https://example.org/releases.xml",
+        event_type="protocol_upgrade",
+        asset_symbols=["BTC"],
+        recommended_action="wait_for_confirmation",
+        opportunity_signal="wait",
+        confidence="high",
+    )
+    candidates = OfficialCryptoFeedAdapter.normalize(
+        feed,
+        b"""<rss><channel><item><title>Protocol upgrade announced</title>
+        <link>https://example.org/releases/upgrade</link><guid>upgrade-1</guid>
+        <pubDate>Sat, 03 Oct 2026 12:00:00 GMT</pubDate></item></channel></rss>""",
+        observed_at=moment,
+        fetched_at=moment,
+    )
+    service = CryptoEventIngestionService(session)
+    assert await service.ingest(candidates[0]) is True
+    assert await service.ingest(candidates[0]) is False
+    event = await session.scalar(select(Event).where(Event.category == "crypto"))
+    assert event is not None
+    detail = await EventService(EventRepository(session)).detail(event.id)
+    assert detail.event_type == "protocol_upgrade"
+    assert detail.recommended_action == "prepare"
+    assert detail.confidence == "medium"
+    assert detail.contract_address is None
+    assert detail.sources[0].source_type == "protocol"
+    assert detail.sources[0].source_tier == "primary"
+    assert detail.sources[0].evidence_role == "fact"
+    assert {asset.symbol for asset in detail.affected_assets} == {"BTC"}
+
+
+async def test_crypto_relevance_gate_rejects_noise_and_downgrades_feed_high(
+    session: AsyncSession,
+) -> None:
+    await seed_assets(session)
+    moment = datetime(2026, 10, 3, 12, tzinfo=UTC)
+    feed = CryptoEventFeedSettings(
+        slug="high-feed",
+        name="High Feed",
+        source_type="company",
+        base_url="https://example.org",
+        feed_url="https://example.org/feed.xml",
+        event_type="project_update",
+        asset_symbols=["BTC"],
+        importance="high",
+        recommended_action="prepare",
+        confidence="high",
+    )
+
+    def candidate(identifier: str, title: str, summary: str = "") -> CryptoEventCandidate:
+        return OfficialCryptoFeedAdapter.normalize(
+            feed,
+            (
+                "<rss><channel><item>"
+                f"<title>{title}</title><link>https://example.org/{identifier}</link>"
+                f"<guid>{identifier}</guid><description>{summary}</description>"
+                "<pubDate>Sat, 03 Oct 2026 12:00:00 GMT</pubDate>"
+                "</item></channel></rss>"
+            ).encode(),
+            observed_at=moment,
+            fetched_at=moment,
+        )[0]
+
+    service = CryptoEventIngestionService(session)
+    assert await service.ingest(candidate("docs", "Documentation update and tutorial")) is False
+    assert await service.ingest(candidate("community", "Community meetup and AMA")) is False
+    assert await service.ingest(candidate("uncertain", "October ecosystem notes")) is False
+    assert (
+        await service.ingest(
+            candidate("partnership", "Major partnership announced", "Official integration")
+        )
+        is True
+    )
+    event = await session.scalar(select(Event).where(Event.external_key.like("%partnership%")))
+    if event is None:
+        event = await session.scalar(select(Event).where(Event.category == "crypto"))
+    assert event is not None
+    assert event.importance == "medium"
+    assert event.recommended_action == "research"
+    assert event.confidence == "medium"
+    assert event.contract_address is None
+    assert await session.scalar(select(func.count()).select_from(Event)) == 1
+    assert await session.scalar(select(func.count()).select_from(SourceDocument)) == 4
+
+
+async def test_optional_ai_can_reject_but_failure_falls_back_to_deterministic(
+    session: AsyncSession,
+) -> None:
+    await seed_assets(session)
+    moment = datetime(2026, 10, 3, 12, tzinfo=UTC)
+    feed = CryptoEventFeedSettings(
+        slug="ai-feed",
+        name="AI Feed",
+        source_type="protocol",
+        base_url="https://example.org",
+        feed_url="https://example.org/feed.xml",
+        event_type="protocol_upgrade",
+        asset_symbols=["BTC"],
+        importance="high",
+    )
+    candidates = OfficialCryptoFeedAdapter.normalize(
+        feed,
+        b"""<rss><channel>
+        <item><title>Protocol upgrade announced</title><link>https://example.org/upgrade</link><guid>upgrade</guid></item>
+        <item><title>Hard fork confirmed</title><link>https://example.org/fork</link><guid>fork</guid></item>
+        </channel></rss>""",
+        observed_at=moment,
+        fetched_at=moment,
+    )
+
+    async def reject(_candidate: CryptoEventCandidate) -> CryptoEventClassification:
+        return CryptoEventClassification.model_validate(
+            {
+                "relevant": False,
+                "event_type": "protocol_upgrade",
+                "importance": "low",
+                "recommended_action": "watch",
+                "confidence": "low",
+                "reason": "Not material enough",
+            }
+        )
+
+    assert await CryptoEventIngestionService(session, reject).ingest(candidates[0]) is False
+
+    async def unavailable(_candidate: CryptoEventCandidate) -> CryptoEventClassification:
+        raise TimeoutError("provider unavailable")
+
+    assert await CryptoEventIngestionService(session, unavailable).ingest(candidates[1]) is True
+    event = await session.scalar(select(Event).where(Event.category == "crypto"))
+    assert event is not None
+    assert event.impact_analysis["classification_source"] == "deterministic_fallback"
+
+
+async def test_openai_classifier_rejects_arbitrary_action_and_importance() -> None:
+    moment = datetime(2026, 10, 3, 12, tzinfo=UTC)
+    feed = CryptoEventFeedSettings(
+        slug="strict-ai",
+        name="Strict AI",
+        source_type="protocol",
+        base_url="https://example.org",
+        feed_url="https://example.org/feed.xml",
+        event_type="protocol_upgrade",
+    )
+    candidate = OfficialCryptoFeedAdapter.normalize(
+        feed,
+        b"<rss><channel><item><title>Protocol upgrade</title><link>https://example.org/u</link></item></channel></rss>",
+        observed_at=moment,
+        fetched_at=moment,
+    )[0]
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        invalid = {
+            "relevant": True,
+            "event_type": "protocol_upgrade",
+            "importance": "urgent",
+            "recommended_action": "buy_now",
+            "confidence": "high",
+            "reason": "Invalid enums",
+        }
+        return httpx.Response(
+            200,
+            json={"output": [{"content": [{"type": "output_text", "text": json.dumps(invalid)}]}]},
+        )
+
+    classifier = OpenAICryptoEventClassifier(
+        model="test-model",
+        api_key="server-only-test-key",
+        base_url="https://api.openai.com/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    with pytest.raises(ValidationError):
+        await classifier.classify(candidate)
+
+
+def test_crypto_social_provider_remains_disabled() -> None:
+    assert Settings().crypto_social_provider == "disabled"
+    with pytest.raises(ValidationError):
+        Settings.model_validate({"crypto_social_provider": "x_scraper"})
+
+
+def test_crypto_event_action_contract_rejects_unsafe_free_text() -> None:
+    with pytest.raises(ValidationError):
+        CryptoEventFeedSettings.model_validate(
+            {
+                "slug": "unsafe-source",
+                "name": "Unsafe",
+                "source_type": "company",
+                "base_url": "https://example.org",
+                "feed_url": "https://example.org/feed.xml",
+                "event_type": "project_update",
+                "recommended_action": "buy_now",
+            }
+        )

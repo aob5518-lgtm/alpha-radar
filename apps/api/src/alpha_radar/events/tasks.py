@@ -6,6 +6,11 @@ from redis.asyncio import Redis
 
 from alpha_radar.config import get_settings
 from alpha_radar.db.session import async_session_factory, engine
+from alpha_radar.events.crypto import (
+    CryptoEventIngestionService,
+    OfficialCryptoFeedAdapter,
+    OpenAICryptoEventClassifier,
+)
 from alpha_radar.events.sync import (
     EventSyncService,
     OfficialCalendarAdapter,
@@ -58,3 +63,54 @@ async def _sync_official_events() -> int:
 )
 def sync_official_events() -> int:
     return asyncio.run(_sync_official_events())
+
+
+async def _sync_crypto_events() -> int:
+    settings = get_settings()
+    if not settings.crypto_event_sync_enabled:
+        return 0
+    if not settings.crypto_event_feeds:
+        return 0
+    identity = settings.source_contact_identity.strip()
+    if "@" not in identity or any(character in identity for character in "\r\n"):
+        raise ValueError("Configure a valid organization/contact identity for Crypto Event sync")
+    gate = RedisRequestGate(
+        settings.redis_url,
+        "crypto-official-events",
+        min(settings.fed_requests_per_second, 1),
+        settings.source_minimum_interval_seconds,
+    )
+    transport = SourceTransport(
+        gate,
+        f"AlphaRadar/0.1 {identity}",
+        settings.source_http_timeout_seconds,
+    )
+    ingested = 0
+    try:
+        async with async_session_factory() as session:
+            classifier = (
+                OpenAICryptoEventClassifier(
+                    model=settings.ai_model,
+                    api_key=settings.openai_api_key,
+                    base_url=settings.openai_base_url,
+                ).classify
+                if settings.ai_provider == "openai"
+                and settings.ai_model
+                and settings.openai_api_key
+                else None
+            )
+            service = CryptoEventIngestionService(session, classifier)
+            for feed in settings.crypto_event_feeds:
+                candidates = await OfficialCryptoFeedAdapter(transport, feed).fetch()
+                for candidate in candidates:
+                    ingested += int(await service.ingest(candidate))
+        return ingested
+    finally:
+        await engine.dispose()
+
+
+@app.task(  # pyright: ignore[reportUnknownMemberType, reportUntypedFunctionDecorator]
+    name="alpha_radar.events.sync_crypto_events"
+)
+def sync_crypto_events() -> int:
+    return asyncio.run(_sync_crypto_events())

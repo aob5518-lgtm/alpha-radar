@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
@@ -19,7 +20,11 @@ from alpha_radar.market_data.constants import (
 from alpha_radar.market_data.providers.base import (
     MarketInstrumentRef,
     ProviderCandle,
+    ProviderCandleUpdate,
+    ProviderPriceUpdate,
     ProviderQuote,
+    ProviderStreamUpdate,
+    ProviderTradeUpdate,
 )
 
 
@@ -55,10 +60,31 @@ class _BybitKlineUpdate(BaseModel):
     timestamp: int
 
 
+class _BybitStreamTicker(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    symbol: str
+    lastPrice: Decimal | None = Field(default=None, gt=0)
+    price24hPcnt: Decimal | None = None
+
+
+class _BybitTrade(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    T: int
+    s: str
+    S: Literal["Buy", "Sell"]
+    v: Decimal = Field(ge=0)
+    p: Decimal = Field(gt=0)
+    i: str
+
+
 BybitKlineRow = tuple[str, str, str, str, str, str, str]
 _ticker_rows = TypeAdapter(list[_BybitTicker])
 _kline_rows = TypeAdapter(list[BybitKlineRow])
 _kline_updates = TypeAdapter(list[_BybitKlineUpdate])
+_stream_ticker = TypeAdapter(_BybitStreamTicker)
+_trade_updates = TypeAdapter(list[_BybitTrade])
 _message = TypeAdapter(dict[str, object])
 
 
@@ -169,21 +195,66 @@ class BybitMarketDataProvider:
             )
         return candles[-bounded_limit:]
 
+    async def iter_candle_pages(
+        self,
+        instrument: MarketInstrumentRef,
+        interval: MarketInterval,
+        *,
+        end: datetime,
+        horizon: datetime | None,
+        max_pages: int,
+    ) -> AsyncIterator[list[ProviderCandle]]:
+        """Page backward without inventing gaps or looping on an inclusive cursor."""
+        cursor = self._as_utc(end)
+        lower_bound = self._as_utc(horizon) if horizon is not None else None
+        for _ in range(max_pages):
+            page = await self.get_candles(
+                instrument,
+                interval,
+                end=cursor,
+                limit=BYBIT_MAX_CANDLES_PER_REQUEST,
+            )
+            if not page:
+                return
+            bounded = [
+                candle for candle in page if lower_bound is None or candle.open_time >= lower_bound
+            ]
+            if bounded:
+                yield bounded
+            earliest = page[0].open_time
+            if len(page) < BYBIT_MAX_CANDLES_PER_REQUEST or (
+                lower_bound is not None and earliest <= lower_bound
+            ):
+                return
+            next_cursor = earliest - timedelta(milliseconds=1)
+            if next_cursor >= cursor:
+                return
+            cursor = next_cursor
+
     async def stream_candles(
         self, instrument: MarketInstrumentRef, interval: MarketInterval
     ) -> AsyncIterator[ProviderCandle]:
-        topic = (
-            f"kline.{INTERVAL_DEFINITIONS[interval].bybit_interval}."
-            f"{instrument.provider_instrument_id}"
-        )
+        async for update in self.stream_market(instrument, interval):
+            if isinstance(update, ProviderCandleUpdate):
+                yield update.candle
+
+    async def stream_market(
+        self, instrument: MarketInstrumentRef, interval: MarketInterval
+    ) -> AsyncIterator[ProviderStreamUpdate]:
+        symbol = instrument.provider_instrument_id
+        topics = [
+            f"kline.{INTERVAL_DEFINITIONS[interval].bybit_interval}.{symbol}",
+            f"tickers.{symbol}",
+            f"publicTrade.{symbol}",
+        ]
         async with connect(self.websocket_url, open_timeout=self.timeout_seconds) as socket:
-            await socket.send(json.dumps({"op": "subscribe", "args": [topic]}))
+            await socket.send(json.dumps({"op": "subscribe", "args": topics}))
             async for raw in socket:
                 payload: object = json.loads(raw)
-                for candle in self.normalize_websocket_message(
+                for update in self.normalize_stream_message(
                     payload, instrument=instrument, interval=interval
                 ):
-                    yield candle
+                    yield update
 
     @classmethod
     def normalize_websocket_message(
@@ -223,6 +294,58 @@ class BybitMarketDataProvider:
                 )
             )
         return result
+
+    @classmethod
+    def normalize_stream_message(
+        cls,
+        payload: object,
+        *,
+        instrument: MarketInstrumentRef,
+        interval: MarketInterval,
+    ) -> list[ProviderStreamUpdate]:
+        if not isinstance(payload, dict):
+            return []
+        message = _message.validate_python(payload)
+        topic = message.get("topic")
+        symbol = instrument.provider_instrument_id
+        if topic == f"tickers.{symbol}":
+            ticker = _stream_ticker.validate_python(message.get("data"))
+            timestamp = message.get("ts")
+            if (
+                ticker.symbol != symbol
+                or ticker.lastPrice is None
+                or not isinstance(timestamp, int)
+            ):
+                return []
+            return [
+                ProviderPriceUpdate(
+                    provider=cls.name,
+                    provider_instrument_id=symbol,
+                    price=ticker.lastPrice,
+                    change_24h=ticker.price24hPcnt,
+                    provider_timestamp=cls._from_milliseconds(timestamp),
+                )
+            ]
+        if topic == f"publicTrade.{symbol}":
+            return [
+                ProviderTradeUpdate(
+                    provider=cls.name,
+                    provider_instrument_id=symbol,
+                    price=trade.p,
+                    size=trade.v,
+                    side=trade.S,
+                    trade_id=trade.i,
+                    provider_timestamp=cls._from_milliseconds(trade.T),
+                )
+                for trade in _trade_updates.validate_python(message.get("data"))
+                if trade.s == symbol
+            ]
+        return [
+            ProviderCandleUpdate(candle=candle)
+            for candle in cls.normalize_websocket_message(
+                message, instrument=instrument, interval=interval
+            )
+        ]
 
     async def _get(self, path: str, *, params: dict[str, str | int]) -> _BybitEnvelope:
         async with self._request_lock:

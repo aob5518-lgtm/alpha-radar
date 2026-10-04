@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
@@ -78,6 +78,40 @@ class ProviderTick(BaseModel):
     volume_24h: Decimal | None = Field(default=None, ge=0)
 
 
+class ProviderPriceUpdate(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    type: Literal["price"] = "price"
+    provider: str
+    provider_instrument_id: str
+    price: Decimal = Field(gt=0)
+    change_24h: Decimal | None = None
+    provider_timestamp: AwareDatetime
+
+
+class ProviderTradeUpdate(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    type: Literal["trade"] = "trade"
+    provider: str
+    provider_instrument_id: str
+    price: Decimal = Field(gt=0)
+    size: Decimal = Field(ge=0)
+    side: Literal["Buy", "Sell"]
+    trade_id: str
+    provider_timestamp: AwareDatetime
+
+
+class ProviderCandleUpdate(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    type: Literal["candle"] = "candle"
+    candle: ProviderCandle
+
+
+ProviderStreamUpdate = ProviderPriceUpdate | ProviderTradeUpdate | ProviderCandleUpdate
+
+
 class MarketDataProvider(Protocol):
     name: str
 
@@ -104,3 +138,23 @@ class StreamingCandleMarketDataProvider(Protocol):
     def stream_candles(
         self, instrument: MarketInstrumentRef, interval: MarketInterval
     ) -> AsyncIterator[ProviderCandle]: ...
+
+
+@runtime_checkable
+class StreamingInstrumentMarketDataProvider(Protocol):
+    def stream_market(
+        self, instrument: MarketInstrumentRef, interval: MarketInterval
+    ) -> AsyncIterator[ProviderStreamUpdate]: ...
+
+
+@runtime_checkable
+class PaginatedHistoricalMarketDataProvider(Protocol):
+    def iter_candle_pages(
+        self,
+        instrument: MarketInstrumentRef,
+        interval: MarketInterval,
+        *,
+        end: datetime,
+        horizon: datetime | None,
+        max_pages: int,
+    ) -> AsyncIterator[list[ProviderCandle]]: ...

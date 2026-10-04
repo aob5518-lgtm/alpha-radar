@@ -5,6 +5,11 @@ import test from "node:test";
 import { analystResponseSchema } from "../src/lib/ai/schema.ts";
 import { AnalystLimiter } from "../src/lib/ai/rate-limit.ts";
 import { updateLivePartialCandle } from "../src/lib/market/live-candle.ts";
+import {
+  latestLogicalRange,
+  mergeOlderCandles,
+  preserveLogicalRange,
+} from "../src/lib/market/chart-history.ts";
 
 test("AI response schema requires every grounded response section", () => {
   assert.equal(analystResponseSchema.type, "object");
@@ -126,6 +131,9 @@ test("live chart uses instrument-specific provider Klines without changing close
   );
   assert.match(chart, /new WebSocket/);
   assert.match(chart, /market-instruments/);
+  assert.match(chart, /type === "trade"/);
+  assert.match(chart, /type === "price"/);
+  assert.match(chart, /loadOlder/);
   assert.match(chart, /candle\.is_closed/);
   assert.match(chart, /candleSeries\.update/);
   assert.match(engine, /filter\(\(candle\) => candle\.is_closed\)/);
@@ -153,6 +161,22 @@ test("live partial candles use the first tick as open across consecutive boundar
   candle = updateLivePartialCandle(candle, 95, 180, "1m");
   assert.equal(candle.open, 95);
   assert.equal(candle.time, 180);
+});
+
+test("older history prepends deterministically without moving the viewport", () => {
+  const make = (time) => ({ open_time: time });
+  const current = [make("2026-10-03T02:00:00Z"), make("2026-10-03T03:00:00Z")];
+  const older = [make("2026-10-03T01:00:00Z"), make("2026-10-03T02:00:00Z")];
+  const merged = mergeOlderCandles(current, older);
+  assert.deepEqual(
+    merged.map((item) => item.open_time),
+    ["2026-10-03T01:00:00Z", "2026-10-03T02:00:00Z", "2026-10-03T03:00:00Z"],
+  );
+  assert.deepEqual(preserveLogicalRange({ from: 4, to: 12 }, 1), {
+    from: 5,
+    to: 13,
+  });
+  assert.deepEqual(latestLogicalRange(800), { from: 600, to: 799 });
 });
 
 test("Core 3 client localization is safe during server rendering", async () => {

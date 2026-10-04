@@ -1,6 +1,7 @@
 import type {
   CanonicalEvent,
   EventImportance,
+  EventCategory,
   EventListResponse,
 } from "@alpha-radar/types/events";
 
@@ -11,6 +12,7 @@ export async function getEvents(query: {
   end?: string;
   importance?: EventImportance[];
   assetId?: string;
+  category?: EventCategory;
   pageSize?: number;
 }): Promise<EventListResponse> {
   const params = new URLSearchParams({
@@ -20,6 +22,7 @@ export async function getEvents(query: {
   if (query.start) params.set("start", query.start);
   if (query.end) params.set("end", query.end);
   if (query.assetId) params.set("asset_id", query.assetId);
+  if (query.category) params.set("category", query.category);
   for (const importance of query.importance ?? ["critical", "high"]) {
     params.append("importance", importance);
   }

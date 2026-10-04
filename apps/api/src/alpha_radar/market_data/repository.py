@@ -69,6 +69,7 @@ class MarketDataRepository:
                 MarketInstrument.provider.asc(),
                 MarketInstrument.provider_instrument_id.asc(),
             )
+            .options(selectinload(MarketInstrument.asset))
             .limit(1)
         )
         return (await self.session.scalars(query)).first()
@@ -88,6 +89,7 @@ class MarketDataRepository:
                 MarketCandle.interval == interval,
             )
             .order_by(MarketCandle.open_time.desc(), MarketInstrument.provider.asc())
+            .options(selectinload(MarketInstrument.asset))
             .limit(1)
         )
         return (await self.session.scalars(query)).first()
@@ -144,6 +146,41 @@ class MarketDataRepository:
             set_=update_values,
         )
         await self.session.execute(statement)
+
+    async def existing_candle_times(
+        self,
+        *,
+        provider: str,
+        market_instrument_id: UUID,
+        interval: MarketInterval,
+        open_times: list[datetime],
+    ) -> set[datetime]:
+        if not open_times:
+            return set()
+        query = select(MarketCandle.open_time).where(
+            MarketCandle.provider == provider,
+            MarketCandle.market_instrument_id == market_instrument_id,
+            MarketCandle.interval == interval,
+            MarketCandle.open_time.in_(open_times),
+        )
+        return set((await self.session.scalars(query)).all())
+
+    async def upsert_candles(self, rows: list[dict[str, Any]]) -> None:
+        if not rows:
+            return
+        dialect_name = self.session.get_bind().dialect.name
+        insert_factory = postgresql_insert if dialect_name == "postgresql" else sqlite_insert
+        table = cast(Table, MarketCandle.__table__)
+        identity = ["provider", "market_instrument_id", "interval", "open_time"]
+        for offset in range(0, len(rows), 200):
+            chunk = rows[offset : offset + 200]
+            statement = insert_factory(table).values(chunk)
+            excluded = statement.excluded
+            statement = statement.on_conflict_do_update(
+                index_elements=identity,
+                set_={key: getattr(excluded, key) for key in chunk[0] if key not in set(identity)},
+            )
+            await self.session.execute(statement)
 
     async def commit(self) -> None:
         await self.session.commit()

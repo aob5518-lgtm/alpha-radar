@@ -37,6 +37,9 @@
     "today": "今天",
     "thisWeek": "本周",
     "calendar": "日历",
+    "all": "全部",
+    "macro": "宏观",
+    "crypto": "加密",
     "time": "时间",
     "event": "事件",
     "status": "状态",
@@ -45,6 +48,7 @@
     "includeMedium": "包含中等",
     "timezone": "主要时间使用浏览器时区；UTC 与官方时区保留在事件详情中。",
     "emptyTitle": "暂无已验证事件",
+    "cryptoEmpty": "仅显示已验证且相关的加密事件；当前视图暂无符合条件的事件。",
     "emptyDescription": "当前时间范围和重要性筛选下没有已验证事件。",
     "sourceBoundary": "官方来源文档会保留用于溯源，但原始文档噪声不会进入此日历。",
     "timeNotAnnounced": "时间尚未公布",
@@ -53,7 +57,26 @@
     "actual": "实际值",
     "previous": "前值",
     "affectedAssets": "受影响资产",
-    "sources": "来源"
+    "sources": "来源",
+    "signal": "信号",
+    "action": "建议动作",
+    "risk": "风险",
+    "opportunitySignal": "机会信号",
+    "confidence": "置信度",
+    "contractAddress": "官方合约地址",
+    "actions": {
+      "watch": "关注",
+      "research": "研究",
+      "prepare": "准备",
+      "wait_for_confirmation": "等待确认",
+      "caution": "谨慎",
+      "avoid": "回避"
+    },
+    "confidenceBands": {
+      "low": "低",
+      "medium": "中",
+      "high": "高"
+    }
   },
   "chart": {
     "eyebrow": "专业加密图表",
@@ -69,6 +92,8 @@
     "freshness": "新鲜度",
     "closedCandles": "已收盘 K 线",
     "live": "实时",
+    "delayed": "延迟",
+    "returnLatest": "回到最新",
     "partial": "未收盘",
     "closed": "已收盘",
     "insufficientTitle": "已收盘 K 线历史不足",

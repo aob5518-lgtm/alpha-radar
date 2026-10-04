@@ -15,7 +15,7 @@ from alpha_radar.sources.models import Source, SourceDocument
 class EventRecord:
     event: Event
     assets: list[Asset]
-    sources: list[tuple[SourceDocument, Source]]
+    sources: list[tuple[EventSourceReference, SourceDocument, Source]]
 
 
 class EventRepository:
@@ -30,6 +30,7 @@ class EventRepository:
         start: datetime | None,
         end: datetime | None,
         importances: list[str],
+        category: str | None,
         event_type: str | None,
         status: str | None,
         asset_id: UUID | None,
@@ -51,6 +52,8 @@ class EventRepository:
             )
         if importances:
             filters.append(Event.importance.in_(importances))
+        if category:
+            filters.append(Event.category == category)
         if event_type:
             filters.append(Event.event_type == event_type)
         if status:
@@ -98,12 +101,12 @@ class EventRepository:
         for event_id, asset in asset_rows:
             assets_by_event[event_id].append(asset)
 
-        sources_by_event: dict[UUID, list[tuple[SourceDocument, Source]]] = {
+        sources_by_event: dict[UUID, list[tuple[EventSourceReference, SourceDocument, Source]]] = {
             event_id: [] for event_id in event_ids
         }
         source_rows = (
             await self.session.execute(
-                select(EventSourceReference.event_id, SourceDocument, Source)
+                select(EventSourceReference, SourceDocument, Source)
                 .join(
                     SourceDocument,
                     SourceDocument.id == EventSourceReference.source_document_id,
@@ -113,8 +116,8 @@ class EventRepository:
                 .order_by(EventSourceReference.event_id, Source.slug)
             )
         ).tuples()
-        for event_id, document, source in source_rows:
-            sources_by_event[event_id].append((document, source))
+        for reference, document, source in source_rows:
+            sources_by_event[reference.event_id].append((reference, document, source))
         return [
             EventRecord(
                 event=event,
