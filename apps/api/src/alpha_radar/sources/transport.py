@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Mapping
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from typing import Protocol, cast
@@ -89,7 +89,11 @@ class SourceTransport:
         self.client = client
 
     async def get(
-        self, url: str, *, allowed_hosts: frozenset[str] | None = None
+        self,
+        url: str,
+        *,
+        allowed_hosts: frozenset[str] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> tuple[httpx.Response, datetime, datetime]:
         target = urlsplit(url)
         explicitly_allowed = (
@@ -119,16 +123,18 @@ class SourceTransport:
             raise SourceError("policy_restricted", "Provider URL is not allowlisted")
         await self.gate.acquire()
         observed = datetime.now(UTC)
+        request_headers = {"User-Agent": self.user_agent, **dict(headers or {})}
+        request_headers["User-Agent"] = self.user_agent
         try:
             if self.client:
                 response = await self.client.get(
-                    url, headers={"User-Agent": self.user_agent}, follow_redirects=False
+                    url, headers=request_headers, follow_redirects=False
                 )
             else:
                 async with httpx.AsyncClient(
                     timeout=self.timeout, follow_redirects=False
                 ) as client:
-                    response = await client.get(url, headers={"User-Agent": self.user_agent})
+                    response = await client.get(url, headers=request_headers)
         except httpx.HTTPError as error:
             await self.gate.defer(60)
             raise SourceError("temporary_source_error", "Provider network failure", 60) from error

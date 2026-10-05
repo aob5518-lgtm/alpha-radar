@@ -85,8 +85,15 @@ if settings.event_sync_enabled:
         "schedule": float(settings.event_sync_interval_seconds),
     }
 
+social_monitoring_configured = bool(
+    settings.crypto_social_provider == "x"
+    and settings.x_bearer_token.strip()
+    and settings.crypto_social_accounts
+)
 if settings.crypto_event_sync_enabled and (
-    settings.crypto_event_feeds or settings.crypto_event_official_sources
+    settings.crypto_event_feeds
+    or settings.crypto_event_official_sources
+    or social_monitoring_configured
 ):
     app.conf.beat_schedule["crypto-event-sync"] = {  # pyright: ignore[reportUnknownMemberType]
         "task": "alpha_radar.events.sync_crypto_events",

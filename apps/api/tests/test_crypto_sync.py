@@ -8,11 +8,17 @@ from redis.asyncio import Redis
 
 from alpha_radar.config import CryptoEventFeedSettings
 from alpha_radar.events.crypto import CryptoEventCandidate
-from alpha_radar.events.operations import CryptoSyncRun, get_crypto_sync_operations
+from alpha_radar.events.operations import (
+    CryptoSyncRun,
+    get_crypto_sync_operations,
+    get_social_sync_operations,
+)
+from alpha_radar.events.social import SocialAccount, social_account_settings
 from alpha_radar.events.tasks import (
     crypto_event_user_agent,
     official_event_user_agent,
     sync_crypto_source_adapters,
+    sync_social_accounts,
 )
 from alpha_radar.sources.schemas import FetchedSourceDocument
 
@@ -81,6 +87,21 @@ class RollbackRecorder:
 
     async def __call__(self) -> None:
         self.calls += 1
+
+
+class FakeSocialProvider:
+    provider_name = "x"
+
+    def __init__(self, failures: set[str] | None = None) -> None:
+        self.failures = failures or set()
+
+    async def fetch_account(
+        self, account: SocialAccount, *, limit: int
+    ) -> list[CryptoEventCandidate]:
+        assert limit == 5
+        if account.key in self.failures:
+            raise TimeoutError("account unavailable")
+        return [candidate(account.key)]
 
 
 class FakeRedis:
@@ -193,3 +214,56 @@ async def test_crypto_sync_operational_status_reports_degraded_run() -> None:
     assert operations.sources_succeeded == ["ethereum-foundation-blog"]
     assert operations.sources_failed == ["solana-news"]
     assert operations.events_ingested == 1
+
+
+async def test_social_account_failure_is_isolated_and_operationally_visible() -> None:
+    definitions = social_account_settings()
+    accounts = [definitions["elon-musk"], definitions["solana"]]
+    service = FakeIngestor()
+    rollback = RollbackRecorder()
+
+    run = await sync_social_accounts(
+        FakeSocialProvider({"elon-musk"}),
+        accounts,
+        service,
+        rollback,
+        limit=5,
+    )
+
+    assert run.status == "degraded"
+    assert run.accounts_attempted == ["elon-musk", "solana"]
+    assert run.accounts_succeeded == ["solana"]
+    assert run.accounts_failed == ["elon-musk"]
+    assert run.posts_inspected == 1
+    assert run.events_created == 1
+    assert service.committed == ["solana"]
+    assert rollback.calls == 1
+
+    operations = await get_social_sync_operations(
+        cast(Redis, FakeRedis(run.model_dump_json())), enabled=True
+    )
+    assert operations.status == "degraded"
+    assert operations.accounts_failed == ["elon-musk"]
+
+
+async def test_social_all_account_success_and_failure_states_are_explicit() -> None:
+    accounts = [social_account_settings()["elon-musk"]]
+    healthy = await sync_social_accounts(
+        FakeSocialProvider(), accounts, FakeIngestor(), RollbackRecorder(), limit=5
+    )
+    failed = await sync_social_accounts(
+        FakeSocialProvider({"elon-musk"}),
+        accounts,
+        FakeIngestor(),
+        RollbackRecorder(),
+        limit=5,
+    )
+
+    assert healthy.status == "healthy"
+    assert healthy.posts_inspected == 1
+    assert healthy.events_created == 1
+    assert failed.status == "failed"
+    assert failed.posts_inspected == 0
+    assert failed.events_created == 0
+    disabled = await get_social_sync_operations(cast(Redis, FakeRedis(None)), enabled=False)
+    assert disabled.status == "disabled"

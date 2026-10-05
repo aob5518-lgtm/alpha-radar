@@ -308,6 +308,7 @@ class CryptoEventCandidate(BaseModel):
     evidence: FetchedSourceDocument
     asset_symbols: list[str] = Field(default_factory=list, max_length=20)
     classification_hint: CryptoEventClassification | None = None
+    channel: Literal["official", "social"] = "official"
 
 
 class OfficialCryptoSourceAdapter(Protocol):
@@ -669,7 +670,7 @@ class CoinbaseBlogAdapter(OfficialCryptoHtmlAdapter):
 
 def official_crypto_source_settings() -> dict[OfficialCryptoSource, CryptoEventFeedSettings]:
     """Small reviewed source registry. Adding a source requires code review and fixture coverage."""
-    return {
+    definitions: dict[OfficialCryptoSource, CryptoEventFeedSettings] = {
         "ethereum-foundation-blog": CryptoEventFeedSettings(
             slug="ethereum-foundation-blog",
             name="Ethereum Foundation Blog",
@@ -709,11 +710,20 @@ def official_crypto_source_settings() -> dict[OfficialCryptoSource, CryptoEventF
             importance="high",
         ),
     }
+    from alpha_radar.events.github_releases import github_release_source_settings
+
+    definitions.update(github_release_source_settings())
+    return definitions
 
 
 def official_crypto_source_adapters(
-    transport: SourceTransport, sources: list[OfficialCryptoSource]
+    transport: SourceTransport,
+    sources: list[OfficialCryptoSource],
+    *,
+    github_token: str = "",
 ) -> list[OfficialCryptoSourceAdapter]:
+    from alpha_radar.events.github_releases import GitHubReleaseAdapter
+
     definitions = official_crypto_source_settings()
     adapters: dict[
         OfficialCryptoSource, type[OfficialCryptoFeedAdapter | OfficialCryptoHtmlAdapter]
@@ -723,7 +733,14 @@ def official_crypto_source_adapters(
         "solana-news": SolanaNewsFeedAdapter,
         "coinbase-blog": CoinbaseBlogAdapter,
     }
-    return [adapters[key](transport, definitions[key]) for key in dict.fromkeys(sources)]
+    result: list[OfficialCryptoSourceAdapter] = []
+    for key in dict.fromkeys(sources):
+        definition = definitions[key]
+        if key.startswith("github-"):
+            result.append(GitHubReleaseAdapter(transport, definition, github_token))
+        else:
+            result.append(adapters[key](transport, definition))
+    return result
 
 
 def _apply_ethereum_policy(candidate: CryptoEventCandidate) -> CryptoEventCandidate:
@@ -914,7 +931,7 @@ class CryptoEventIngestionService:
                     error_type=type(error).__name__,
                 )
                 classification_source = "deterministic_fallback"
-        if classification.event_type == "influential_social":
+        if classification.event_type == "influential_social" and candidate.channel != "social":
             return False
         identity = candidate.evidence.external_id or candidate.evidence.canonical_url
         digest = hashlib.sha256(identity.encode()).hexdigest()[:32]
@@ -932,6 +949,10 @@ class CryptoEventIngestionService:
             scheduled_date = datetime.fromisoformat(raw_published_date).date()
         else:
             scheduled_date = candidate.evidence.observed_at.date()
+        is_social = candidate.channel == "social"
+        account = candidate.evidence.metadata.get("account_username")
+        mentioned = candidate.asset_symbols or candidate.source.asset_symbols
+        mentioned_symbols = ", ".join(mentioned)
         event = Event(
             id=uuid5(NAMESPACE_URL, f"alpha-radar:event:{external_key}"),
             external_key=external_key,
@@ -945,18 +966,30 @@ class CryptoEventIngestionService:
             actual_release_at=None,
             detected_at=candidate.evidence.observed_at,
             importance=classification.importance,
-            summary=f"FACT: Official source published: {candidate.evidence.title}",
+            summary=(
+                f"FACT: Monitored X account @{account} explicitly mentioned {mentioned_symbols}."
+                if is_social and isinstance(account, str) and mentioned_symbols
+                else f"FACT: Official source published: {candidate.evidence.title}"
+            ),
             signal=(
-                "SIGNAL: A configured official source published evidence classified as "
+                "SIGNAL: High-impact social attention may increase in the short term."
+                if is_social
+                else "SIGNAL: A configured official source published evidence classified as "
                 f"{classification.event_type}."
             ),
             why_it_matters=(
-                "ANALYSIS: The announcement may affect attention or expectations, but price "
-                "and market structure must confirm any market impact."
+                "ANALYSIS: Price and volume must confirm whether social attention becomes a "
+                "market move."
+                if is_social
+                else "ANALYSIS: The announcement may affect attention or expectations, but "
+                "price and market structure must confirm any market impact."
             ),
             risk=(
-                "RISK: An official announcement does not guarantee adoption, liquidity, or "
-                "price appreciation."
+                "RISK: A single social post is not sufficient evidence of sustained price "
+                "direction."
+                if is_social
+                else "RISK: An official announcement does not guarantee adoption, liquidity, "
+                "or price appreciation."
             ),
             recommended_action=classification.recommended_action,
             opportunity_signal=_opportunity_signal(classification.recommended_action),
@@ -995,7 +1028,7 @@ class CryptoEventIngestionService:
             EventSourceReference(
                 event_id=event.id,
                 source_document_id=document.id,
-                evidence_role="fact",
+                evidence_role="signal" if is_social else "fact",
             )
         )
         await self.session.commit()
@@ -1007,16 +1040,17 @@ class CryptoEventIngestionService:
             if source.base_url.rstrip("/") != feed.base_url:
                 raise SourceError("invalid_payload", "Configured source base URL changed")
             return source
+        is_social = feed.source_type == "social"
         source = Source(
             id=uuid5(NAMESPACE_URL, f"alpha-radar:source:{feed.slug}"),
             slug=feed.slug,
             name=feed.name,
             source_type=feed.source_type,
-            source_tier="primary",
-            provider="crypto_official_source",
+            source_tier="social" if is_social else "primary",
+            provider="x_api" if is_social else "crypto_official_source",
             base_url=feed.base_url,
             language="en",
-            license_class="metadata_only",
+            license_class=feed.license_class,
             metadata_={"index_url": feed.feed_url, "event_type": feed.event_type},
         )
         self.session.add(source)

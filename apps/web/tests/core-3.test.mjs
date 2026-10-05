@@ -544,6 +544,36 @@ test("All Latest mixes recent Events with near-term Macro schedules", () => {
       category: "macro",
       scheduledAt: "2026-10-13T12:00:00Z",
     }),
+    canonicalEvent("nfp-30-days", {
+      category: "macro",
+      eventType: "nfp",
+      scheduledAt: "2026-11-04T12:00:00Z",
+    }),
+    canonicalEvent("cpi-32-days", {
+      category: "macro",
+      eventType: "cpi",
+      scheduledAt: "2026-11-06T12:00:00Z",
+    }),
+    canonicalEvent("ppi-35-days", {
+      category: "macro",
+      eventType: "ppi",
+      scheduledAt: "2026-11-09T12:00:00Z",
+    }),
+    canonicalEvent("gdp-40-days", {
+      category: "macro",
+      eventType: "gdp",
+      scheduledAt: "2026-11-14T12:00:00Z",
+    }),
+    canonicalEvent("fomc-44-days", {
+      category: "macro",
+      eventType: "fomc",
+      scheduledAt: "2026-11-18T12:00:00Z",
+    }),
+    canonicalEvent("outside-45-days", {
+      category: "macro",
+      eventType: "cpi",
+      scheduledAt: "2026-11-20T12:00:00Z",
+    }),
   ];
   assert.deepEqual(
     filterEvents(events, {
@@ -552,7 +582,16 @@ test("All Latest mixes recent Events with near-term Macro schedules", () => {
       includeMedium: false,
       now,
     }).map((event) => event.id),
-    ["released-macro", "recent-crypto", "upcoming-macro"],
+    [
+      "recent-crypto",
+      "upcoming-macro",
+      "distant-macro",
+      "nfp-30-days",
+      "cpi-32-days",
+      "ppi-35-days",
+      "gdp-40-days",
+      "fomc-44-days",
+    ],
   );
 });
 

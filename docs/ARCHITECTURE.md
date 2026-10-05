@@ -33,9 +33,11 @@ directly reachable as an internal provenance/debug surface but is not primary na
 Events reads canonical persisted records and preserves SourceDocument evidence through explicit
 references. An optional provider-neutral official-source updater is restricted to CPI, PPI,
 Employment Situation, GDP and FOMC lifecycle maintenance; it cannot complete an Event from elapsed
-time alone. Configured official Crypto RSS/Atom adapters reuse the same SourceDocument → Event path;
-social ingestion is disabled until a legitimate provider adapter is configured and reviewed. The
-Chart reads persisted MarketQuote/MarketCandle APIs and uses one browser-to-API stream that fans in
+time alone. Configured official Crypto RSS/Atom and code-owned GitHub Releases adapters reuse the
+same SourceDocument → Event path. Optional social ingestion uses a provider-neutral worker boundary;
+the only implementation is the official X API v2 adapter and it remains effectively disabled
+without a server credential plus reviewed account selection. Social posts are signal evidence, not
+factual confirmation. The Chart reads persisted MarketQuote/MarketCandle APIs and uses one browser-to-API stream that fans in
 Bybit ticker, public-trade, and authoritative Kline updates. Its
 pure TypeScript Structural Level and Trend Regime engines consume closed candles only and do not
 write canonical market data. Analyst receives canonical asset identity and timeframe from Chart,

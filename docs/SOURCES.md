@@ -89,6 +89,13 @@ reviewed source registry is deliberately code-owned rather than an arbitrary HTM
 | Solana Official News | `https://solana.com/news/rss.xml` | RSS | `solana.com` |
 | Bybit Official Announcements | `https://announcements.bybit.com/en/` | Bybit-only HTML | `announcements.bybit.com` |
 | Coinbase Official Blog | `https://www.coinbase.com/blog/landing` | Coinbase-only HTML | `www.coinbase.com` |
+| Bitcoin Core | `bitcoin/bitcoin` | GitHub Releases REST API | `api.github.com`, `github.com` |
+| Anza Agave | `anza-xyz/agave` | GitHub Releases REST API | `api.github.com`, `github.com` |
+| Sui | `MystenLabs/sui` | GitHub Releases REST API | `api.github.com`, `github.com` |
+| Chainlink | `smartcontractkit/chainlink` | GitHub Releases REST API | `api.github.com`, `github.com` |
+| AvalancheGo | `ava-labs/avalanchego` | GitHub Releases REST API | `api.github.com`, `github.com` |
+| Dogecoin | `dogecoin/dogecoin` | GitHub Releases REST API | `api.github.com`, `github.com` |
+| Bitcoin Cash Node | `bitcoin-cash-node/bitcoin-cash-node` | GitHub Releases REST API | `api.github.com`, `github.com` |
 
 RSS item links must remain on the configured official host. HTML adapters accept only their fixed
 article path and hostname. Requests do not follow redirects, so cross-domain redirects fail closed.
@@ -106,6 +113,14 @@ one selected source has passed a live read-only smoke from the deployment networ
 Coinbase may impose CDN controls, so parser availability in code is not proof of production network
 access.
 
+GitHub polling uses only `GET /repos/{owner}/{repo}/releases` for the code-owned repository list.
+Public repositories work without a credential; `GITHUB_TOKEN` is an optional server-only rate-limit
+credential. Repository, release ID, tag, publisher timestamp, canonical release URL, title and a
+bounded excerpt remain in provenance. Deterministic release policy accepts explicit material
+network activations/upgrades, hard forks, consensus/security-critical changes and mandatory node or
+validator releases. Routine patches, documentation/tooling releases and unrelated prereleases do
+not become Events. Additions to the repository list require code review and fixture coverage.
+
 The SEC and Federal Reserve paths retain their mandatory monitored organization/contact identity.
 Reviewed public Crypto sources instead use `AlphaRadar/0.1`; a valid configured contact identity is
 appended when present, and no synthetic email is used. Crypto adapters execute independently so one
@@ -119,6 +134,33 @@ Official references:
 - <https://www.sec.gov/about/developer-resources>
 - <https://www.sec.gov/about/webmaster-frequently-asked-questions>
 - <https://www.federalreserve.gov/feeds/feeds.htm>
+- <https://docs.github.com/en/rest/releases/releases#list-releases>
+
+## Official social signals
+
+Social ingestion is provider-neutral at the worker boundary and disabled by default. The only
+implemented provider is the official X API v2: it resolves each reviewed username through the API,
+then reads a bounded seven-day user timeline with replies and reposts excluded. No browser
+automation, HTML scraping, unofficial client, or invented numeric account ID is used.
+
+The code-owned allowlist contains Elon Musk as tier 1 and official Bitcoin Core, Ethereum, Solana,
+Anza, Sui, Chainlink, Avalanche, Dogecoin, and Bitcoin Cash Node accounts as tier 2. Tier 3 is
+intentionally empty. Monitoring requires `CRYPTO_SOCIAL_PROVIDER=x`, a server-only
+`X_BEARER_TOKEN`, and selected keys in `CRYPTO_SOCIAL_ACCOUNTS`; without all three, it remains
+operationally disabled and does not fail readiness.
+
+Each account is an independent failure boundary. Redis records the last run, attempted,
+succeeded/failed accounts, posts inspected, and Events created. A post must explicitly and
+unambiguously mention a tracked Asset before it can pass the relevance gate; official project
+accounts additionally require a material event concept. Qualifying posts are `SIGNAL` evidence and
+use `watch`/`wait_for_confirmation` semantics, never price targets, leverage, position sizing or
+BUY/SELL orders. X rate-limit responses use the shared cooldown path and are retried only on a later
+scheduled poll.
+
+Official references:
+
+- <https://docs.x.com/x-api/users/lookup/api-reference/get-users-by-username-username>
+- <https://docs.x.com/x-api/posts/user-posts-timeline-by-user-id>
 
 ## API and UI
 
