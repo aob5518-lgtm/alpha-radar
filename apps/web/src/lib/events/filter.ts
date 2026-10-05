@@ -105,16 +105,11 @@ function filterMixedLatest(
       continue;
     }
 
-    const released = macroReleaseTimestamp(event);
-    if (withinPastWindow(released, nowMs, DAY_MS)) {
-      recent.push(event);
-      continue;
-    }
     const scheduled = scheduledTimestamp(event);
     if (
       scheduled !== null &&
       scheduled >= nowMs &&
-      scheduled < nowMs + 7 * DAY_MS
+      scheduled < nowMs + 45 * DAY_MS
     ) {
       upcomingMacro.push(event);
     }
@@ -127,13 +122,6 @@ function filterMixedLatest(
         (scheduledTimestamp(left) ?? 0) - (scheduledTimestamp(right) ?? 0),
     ),
   ];
-}
-
-function macroReleaseTimestamp(event: CanonicalEvent): number | null {
-  return firstValidTimestamp([
-    event.actual_release_at,
-    event.status === "completed" ? event.detected_at : null,
-  ]);
 }
 
 function scheduledTimestamp(event: CanonicalEvent): number | null {

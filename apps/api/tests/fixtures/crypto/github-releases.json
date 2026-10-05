@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1001,
+    "tag_name": "v30.0",
+    "name": "Bitcoin Core v30.0",
+    "body": "Major client release tied to network behavior and a consensus change.",
+    "html_url": "https://github.com/bitcoin/bitcoin/releases/tag/v30.0",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-03T10:00:00Z"
+  },
+  {
+    "id": 1002,
+    "tag_name": "v30.0.1",
+    "name": "Bitcoin Core v30.0.1",
+    "body": "Routine patch with minor internal tooling and documentation-only changes.",
+    "html_url": "https://github.com/bitcoin/bitcoin/releases/tag/v30.0.1",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-04T10:00:00Z"
+  }
+]

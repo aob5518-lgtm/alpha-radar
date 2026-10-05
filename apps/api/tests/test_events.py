@@ -449,7 +449,7 @@ async def test_openai_classifier_rejects_arbitrary_action_and_importance() -> No
         await classifier.classify(candidate)
 
 
-def test_crypto_social_provider_remains_disabled() -> None:
+def test_crypto_social_provider_defaults_disabled_and_rejects_unofficial_adapters() -> None:
     assert Settings().crypto_social_provider == "disabled"
     with pytest.raises(ValidationError):
         Settings.model_validate({"crypto_social_provider": "x_scraper"})

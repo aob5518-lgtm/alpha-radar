@@ -1,0 +1,12 @@
+[
+  {
+    "id": 2001,
+    "tag_name": "mainnet-v1.60.0",
+    "name": "Sui Mainnet Protocol Version 100",
+    "body": "Protocol version activation for the mainnet network upgrade.",
+    "html_url": "https://github.com/MystenLabs/sui/releases/tag/mainnet-v1.60.0",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-03T10:00:00Z"
+  }
+]

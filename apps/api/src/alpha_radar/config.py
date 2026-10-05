@@ -26,13 +26,33 @@ OfficialCryptoSource = Literal[
     "bybit-announcements",
     "solana-news",
     "coinbase-blog",
+    "github-bitcoin-core",
+    "github-anza-agave",
+    "github-sui",
+    "github-chainlink",
+    "github-avalanchego",
+    "github-dogecoin",
+    "github-bitcoin-cash-node",
+]
+
+SocialAccountKey = Literal[
+    "elon-musk",
+    "bitcoin-core",
+    "ethereum",
+    "solana",
+    "anza",
+    "sui",
+    "chainlink",
+    "avalanche",
+    "dogecoin",
+    "bitcoin-cash-node",
 ]
 
 
 class CryptoEventFeedSettings(BaseModel):
     slug: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,126}[a-z0-9]$")
     name: str = Field(min_length=1, max_length=255)
-    source_type: Literal["company", "exchange", "protocol", "regulator"]
+    source_type: Literal["company", "exchange", "protocol", "regulator", "social"]
     base_url: str
     feed_url: str
     event_type: Literal[
@@ -47,6 +67,7 @@ class CryptoEventFeedSettings(BaseModel):
         "governance",
         "regulation_crypto",
         "etf_crypto",
+        "influential_social",
         "meme_launch",
         "narrative_signal",
     ]
@@ -59,6 +80,7 @@ class CryptoEventFeedSettings(BaseModel):
         "research"
     )
     confidence: Literal["low", "medium", "high"] = "medium"
+    license_class: Literal["metadata_only", "public_official"] = "metadata_only"
     lookback_days: int = Field(default=14, ge=1, le=14)
     recent_item_limit: int = Field(default=30, ge=1, le=50)
 
@@ -83,6 +105,10 @@ def _empty_crypto_event_feeds() -> list[CryptoEventFeedSettings]:
 
 
 def _empty_official_crypto_sources() -> list[OfficialCryptoSource]:
+    return []
+
+
+def _empty_social_accounts() -> list[SocialAccountKey]:
     return []
 
 
@@ -132,7 +158,13 @@ class Settings(BaseSettings):
     crypto_event_official_sources: list[OfficialCryptoSource] = Field(
         default_factory=_empty_official_crypto_sources
     )
-    crypto_social_provider: Literal["disabled"] = "disabled"
+    github_token: str = ""
+    crypto_social_provider: Literal["disabled", "x"] = "disabled"
+    x_bearer_token: str = ""
+    crypto_social_accounts: list[SocialAccountKey] = Field(
+        default_factory=_empty_social_accounts, max_length=20
+    )
+    crypto_social_recent_limit: int = Field(default=10, ge=5, le=100)
     ai_provider: Literal["disabled", "openai"] = "disabled"
     ai_model: str = ""
     openai_api_key: str = ""

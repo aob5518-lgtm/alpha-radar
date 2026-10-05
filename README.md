@@ -196,11 +196,21 @@ not a primary product surface.
   - `bybit-announcements`: provider-specific parser for
     `https://announcements.bybit.com/en/`
   - `coinbase-blog`: provider-specific parser for `https://www.coinbase.com/blog/landing`
+  - `github-bitcoin-core`: `bitcoin/bitcoin` Releases API (BTC)
+  - `github-anza-agave`: `anza-xyz/agave` Releases API (SOL)
+  - `github-sui`: `MystenLabs/sui` Releases API (SUI)
+  - `github-chainlink`: `smartcontractkit/chainlink` Releases API (LINK)
+  - `github-avalanchego`: `ava-labs/avalanchego` Releases API (AVAX)
+  - `github-dogecoin`: `dogecoin/dogecoin` Releases API (DOGE)
+  - `github-bitcoin-cash-node`: `bitcoin-cash-node/bitcoin-cash-node` Releases API (BCH)
 
   HTML parsing is not configurable: each parser has a fixed official hostname and article path,
-  and the HTTP client does not follow redirects. All sources use a maximum 14-day initial lookback
-  and bounded recent-item limit. An item without a trustworthy publisher date is not included in a
-  network fetch.
+  and the HTTP client does not follow redirects. GitHub repositories and Releases API paths are
+  likewise code-owned; public repositories need no credential, while optional `GITHUB_TOKEN` is
+  server-only. All sources use a maximum 14-day initial lookback and bounded recent-item limit. An
+  item without a trustworthy publisher date is not included in a network fetch. A GitHub release
+  becomes an Event only when its official notes explicitly describe material network behavior;
+  routine patches, docs/tooling releases and unrelated prereleases are rejected.
 
 `CRYPTO_EVENT_OFFICIAL_SOURCES` is a JSON list of reviewed keys. Enable only sources that pass a
 manual smoke from the production network. A conservative starting configuration after that check is:
@@ -243,9 +253,23 @@ below deliberately uses placeholders rather than claiming an unverified URL:
 ]
 ```
 
-Do not enable a placeholder. Influential social, Musk, or Meme-KOL monitoring requires a legitimate
-social-data provider and is not currently live. `CRYPTO_SOCIAL_PROVIDER=disabled` is the only
-supported setting, so no social network is scraped and the UI must not imply that it is monitored.
+Do not enable a placeholder. Social monitoring defaults to disabled and never scrapes X. The only
+implemented provider is the official X API v2 adapter. It requires all of:
+
+```dotenv
+CRYPTO_SOCIAL_PROVIDER=x
+X_BEARER_TOKEN=<server-only-official-api-credential>
+CRYPTO_SOCIAL_ACCOUNTS=["elon-musk","solana"]
+```
+
+The code-owned allowlist is `elon-musk`, `bitcoin-core`, `ethereum`, `solana`, `anza`, `sui`,
+`chainlink`, `avalanche`, `dogecoin`, and `bitcoin-cash-node`. X user IDs are resolved through the
+official API and are never invented. Each account is isolated so one timeout or rate limit does not
+abort the others. `/api/v1/health/ready` reports the last social run, attempted/succeeded/failed
+accounts, posts inspected, and Events created; disabled or uncredentialed social monitoring does not
+fail readiness. A qualifying post is persisted as a `SIGNAL` with `wait_for_confirmation`, never as
+independent fundamental proof or a trade instruction. It must explicitly match a canonical tracked
+Asset, and contract addresses remain null unless separately validated from an official source.
 
 ## AI Analyst
 

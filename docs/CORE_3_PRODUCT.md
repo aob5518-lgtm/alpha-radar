@@ -32,8 +32,8 @@ PostgreSQL, Redis and Celery foundations remain active.
 Events uses category-appropriate time semantics. Macro retains its compact schedule-oriented Today,
 This Week and Calendar views. Crypto uses Latest, 24H and 7D rolling views so verified material
 events remain visible after publication; Latest is a seven-day window in V1. All defaults to a
-concise Latest mix of recent Crypto events, recently released Macro events and near-term Macro
-schedules. Crypto ordering uses the best canonical timestamp available: actual release, then
+concise Latest mix of recent Crypto events and upcoming Macro schedules through the next 45 days.
+Crypto ordering uses the best canonical timestamp available: actual release, then
 detected time, then scheduled timestamp/date. Critical and High importance are the default; Medium
 is opt-in and Low is excluded by default. A canonical Event carries distinct scheduled, actual
 release, detected and updated timestamps. Every displayed time has explicit timezone semantics. A
@@ -48,11 +48,14 @@ values only when a strict official-source parser can derive them; forecast remai
 licensed consensus source. Date-only events use `scheduled_date` and never synthesize a time, and
 elapsed wall-clock time alone never completes an Event.
 
-The calendar has `All`, `Macro`, and `Crypto` category filters. Crypto records reuse the same
-SourceDocument → Event pipeline and accept reviewed official RSS/Atom sources plus fixed,
-provider-specific Bybit and Coinbase HTML adapters. HTML hosts and article paths are code-owned,
-redirects fail closed, and initial network fetches are bounded to 14 days. An official document is
-not automatically a user-facing Event. A short deterministic gate accepts
+The calendar has `All`, `Macro`, and `Crypto` category filters. `All → Latest` combines recent
+seven-day Crypto records with important Macro releases/schedules through the next 45 days; Critical
+and High are the default, Medium is opt-in and Low stays hidden. Crypto records reuse the same
+SourceDocument → Event pipeline and accept reviewed official RSS/Atom sources, fixed
+provider-specific Bybit/Coinbase HTML adapters, and code-owned GitHub Releases repositories. HTML
+hosts, article paths, repositories and API paths are code-owned, redirects fail closed, and initial
+network fetches are bounded to 14 days. An official document is not automatically a user-facing
+Event. A short deterministic gate accepts
 only explicit material concepts such as mainnet/token launches, listings/delistings, protocol
 upgrades/hard forks, security incidents, material governance/regulatory/ETF actions, confirmed
 distributions, and explicitly major integrations, partnerships, acquisitions, or product launches.
@@ -67,9 +70,11 @@ Provider failure falls back to the deterministic classification; an unconfigured
 fully supported mode. The classifier concerns information relevance only and cannot express price
 targets, return predictions, position sizing, leverage, or trade orders.
 
-No social site is scraped: influential social remains unavailable until a legitimate configured API
-adapter exists. If later enabled, a post is a SIGNAL, not independent proof of fundamentals. The
-detail surface separates FACT, SIGNAL, ANALYSIS, ACTION, and RISK. Recommended actions are limited
+No social site is scraped. Optional X monitoring uses only the official API v2, a server-only bearer
+token, and a code-owned username allowlist whose numeric IDs are resolved at runtime. It is disabled
+by default and must not be presented as live when uncredentialed. A qualifying post must explicitly
+match a canonical tracked Asset and is a SIGNAL, not independent proof of fundamentals. The detail
+surface separates FACT, SIGNAL, ANALYSIS, ACTION, and RISK. Recommended actions are limited
 to watch, research, prepare, wait for confirmation, caution, or avoid; categorical confidence and
 opportunity bands are presentation aids, never invented probabilities. Contract addresses remain
 null unless an official source explicitly supplies and validates one.
