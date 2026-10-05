@@ -23,6 +23,11 @@ import {
 import { calculateTechnicalContext } from "../src/lib/market/technical-context.ts";
 import { formatEventSchedule } from "../src/lib/events/time.ts";
 import {
+  defaultEventView,
+  eventViews,
+  filterEvents,
+} from "../src/lib/events/filter.ts";
+import {
   presentEvent,
   resolveSelectedEvent,
 } from "../src/lib/events/presentation.ts";
@@ -45,6 +50,40 @@ function candle(index, close, options = {}) {
     provider_timestamp: null,
     ingested_at: new Date(Date.UTC(2026, 0, 1, index + 1)).toISOString(),
     quality_flags: [],
+  };
+}
+
+function canonicalEvent(id, options = {}) {
+  return {
+    id,
+    title: options.title ?? id,
+    category: options.category ?? "crypto",
+    event_type: options.eventType ?? "protocol_upgrade",
+    status: options.status ?? "confirmed",
+    scheduled_date: options.scheduledDate ?? null,
+    scheduled_at: options.scheduledAt ?? null,
+    scheduled_timezone: "UTC",
+    actual_release_at: options.actualReleaseAt ?? null,
+    detected_at: options.detectedAt ?? "2026-10-05T12:00:00Z",
+    updated_at: options.detectedAt ?? "2026-10-05T12:00:00Z",
+    importance: options.importance ?? "high",
+    summary: "FACT: Verified Event.",
+    signal: null,
+    why_it_matters: "ANALYSIS: Verified context.",
+    risk: null,
+    recommended_action: null,
+    opportunity_signal: null,
+    confidence: null,
+    contract_address: null,
+    actual: null,
+    forecast: null,
+    previous: null,
+    affected_assets: [],
+    impact_analysis: {},
+    bull_case: null,
+    bear_case: null,
+    watch_next: [],
+    sources: [],
   };
 }
 
@@ -436,6 +475,174 @@ test("zh-CN Events use deterministic Chinese presentation while English is uncha
 
 test("empty Event filters clear stale selected detail", () => {
   assert.equal(resolveSelectedEvent([], "stale-event"), null);
+});
+
+test("recent past Crypto Events appear in Latest and 7D newest first", () => {
+  const now = new Date("2026-10-05T12:00:00Z");
+  const events = [
+    canonicalEvent("older", { detectedAt: "2026-10-02T12:00:00Z" }),
+    canonicalEvent("newer", {
+      actualReleaseAt: "2026-10-05T10:00:00Z",
+      detectedAt: "2026-10-05T11:00:00Z",
+    }),
+  ];
+  for (const view of ["latest", "7d"]) {
+    assert.deepEqual(
+      filterEvents(events, {
+        category: "crypto",
+        view,
+        includeMedium: false,
+        now,
+      }).map((event) => event.id),
+      ["newer", "older"],
+    );
+  }
+});
+
+test("Crypto rolling windows exclude older Events and enforce 24H", () => {
+  const now = new Date("2026-10-05T12:00:00Z");
+  const events = [
+    canonicalEvent("inside-24h", { detectedAt: "2026-10-04T12:01:00Z" }),
+    canonicalEvent("outside-24h", { detectedAt: "2026-10-04T11:59:00Z" }),
+    canonicalEvent("outside-7d", { detectedAt: "2026-09-28T11:59:00Z" }),
+  ];
+  assert.deepEqual(
+    filterEvents(events, {
+      category: "crypto",
+      view: "24h",
+      includeMedium: false,
+      now,
+    }).map((event) => event.id),
+    ["inside-24h"],
+  );
+  assert.deepEqual(
+    filterEvents(events, {
+      category: "crypto",
+      view: "7d",
+      includeMedium: false,
+      now,
+    }).map((event) => event.id),
+    ["inside-24h", "outside-24h"],
+  );
+});
+
+test("All Latest mixes recent Events with near-term Macro schedules", () => {
+  const now = new Date("2026-10-05T12:00:00Z");
+  const events = [
+    canonicalEvent("recent-crypto", { detectedAt: "2026-10-05T10:00:00Z" }),
+    canonicalEvent("old-crypto", { detectedAt: "2026-09-27T12:00:00Z" }),
+    canonicalEvent("released-macro", {
+      category: "macro",
+      status: "completed",
+      actualReleaseAt: "2026-10-05T11:00:00Z",
+    }),
+    canonicalEvent("upcoming-macro", {
+      category: "macro",
+      scheduledAt: "2026-10-06T12:00:00Z",
+    }),
+    canonicalEvent("distant-macro", {
+      category: "macro",
+      scheduledAt: "2026-10-13T12:00:00Z",
+    }),
+  ];
+  assert.deepEqual(
+    filterEvents(events, {
+      category: "all",
+      view: "latest",
+      includeMedium: false,
+      now,
+    }).map((event) => event.id),
+    ["released-macro", "recent-crypto", "upcoming-macro"],
+  );
+});
+
+test("Macro Today, Week and Calendar scheduling behavior is unchanged", () => {
+  const now = new Date(2026, 9, 5, 12);
+  const events = [
+    canonicalEvent("today", {
+      category: "macro",
+      scheduledAt: new Date(2026, 9, 5, 18).toISOString(),
+    }),
+    canonicalEvent("week", {
+      category: "macro",
+      scheduledAt: new Date(2026, 9, 10, 8).toISOString(),
+    }),
+    canonicalEvent("calendar", {
+      category: "macro",
+      scheduledAt: new Date(2026, 10, 10, 8).toISOString(),
+    }),
+    canonicalEvent("unscheduled", { category: "macro" }),
+    canonicalEvent("past", {
+      category: "macro",
+      scheduledAt: new Date(2026, 9, 4, 18).toISOString(),
+    }),
+  ];
+  const ids = (view) =>
+    filterEvents(events, {
+      category: "macro",
+      view,
+      includeMedium: false,
+      now,
+    }).map((event) => event.id);
+  assert.deepEqual(ids("today"), ["today"]);
+  assert.deepEqual(ids("week"), ["today", "week"]);
+  assert.deepEqual(ids("calendar"), [
+    "today",
+    "week",
+    "calendar",
+    "unscheduled",
+  ]);
+});
+
+test("category switches clear stale detail and retain visible selection", () => {
+  const now = new Date("2026-10-05T12:00:00Z");
+  const macro = canonicalEvent("macro", {
+    category: "macro",
+    scheduledAt: "2026-10-05T18:00:00Z",
+  });
+  const crypto = canonicalEvent("crypto", {
+    detectedAt: "2026-10-05T10:00:00Z",
+  });
+  const visible = filterEvents([macro, crypto], {
+    category: "crypto",
+    view: "latest",
+    includeMedium: false,
+    now,
+  });
+  assert.equal(resolveSelectedEvent(visible, macro.id), null);
+  assert.equal(resolveSelectedEvent(visible, crypto.id)?.id, crypto.id);
+});
+
+test("category time views use the required English and zh-CN labels", async () => {
+  const [english, chinese] = await Promise.all([
+    readFile(new URL("../messages/en.json", import.meta.url), "utf8").then(
+      JSON.parse,
+    ),
+    readFile(new URL("../messages/zh-CN.json", import.meta.url), "utf8").then(
+      JSON.parse,
+    ),
+  ]);
+  assert.deepEqual(eventViews.crypto, ["latest", "24h", "7d"]);
+  assert.deepEqual(eventViews.macro, ["today", "week", "calendar"]);
+  assert.equal(defaultEventView("all"), "latest");
+  assert.equal(defaultEventView("crypto"), "latest");
+  assert.equal(defaultEventView("macro"), "today");
+  assert.deepEqual(
+    [
+      chinese.events.latest,
+      chinese.events.last24Hours,
+      chinese.events.last7Days,
+    ],
+    ["最新", "24小时", "7天"],
+  );
+  assert.deepEqual(
+    [
+      english.events.latest,
+      english.events.last24Hours,
+      english.events.last7Days,
+    ],
+    ["Latest", "24H", "7D"],
+  );
 });
 
 test("Crypto Event presentation labels official facts and social signals conservatively", () => {

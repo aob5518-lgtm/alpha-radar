@@ -2,15 +2,19 @@
 
 import type { CanonicalEvent } from "@alpha-radar/types/events";
 import { ExternalLink } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { Locale } from "@/lib/i18n/config";
+import {
+  defaultEventView,
+  eventViews,
+  filterEvents,
+  type EventCategoryFilter,
+  type EventView,
+} from "@/lib/events/filter";
 import { presentEvent, resolveSelectedEvent } from "@/lib/events/presentation";
 import { getMessages } from "@/lib/i18n/messages";
 import { cn } from "@/lib/utils";
-
-type View = "today" | "week" | "calendar";
-type Category = "all" | "macro" | "crypto";
 
 export function EventsWorkspace({
   events,
@@ -20,31 +24,19 @@ export function EventsWorkspace({
   locale: Locale;
 }) {
   const messages = getMessages(locale);
-  const [view, setView] = useState<View>("today");
-  const [category, setCategory] = useState<Category>("all");
+  const [view, setView] = useState<EventView>("latest");
+  const [category, setCategory] = useState<EventCategoryFilter>("all");
   const [includeMedium, setIncludeMedium] = useState(false);
   const [selectedId, setSelectedId] = useState(events[0]?.id ?? null);
-  const filtered = useMemo(() => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(
-      end.getDate() + (view === "today" ? 1 : view === "week" ? 7 : 366),
-    );
-    return events.filter((event) => {
-      if (event.importance === "low") return false;
-      if (!includeMedium && event.importance === "medium") return false;
-      if (category !== "all" && event.category !== category) return false;
-      const value = event.scheduled_at
-        ? new Date(event.scheduled_at)
-        : event.scheduled_date
-          ? new Date(`${event.scheduled_date}T12:00:00`)
-          : null;
-      return value ? value >= start && value < end : view === "calendar";
-    });
-  }, [category, events, includeMedium, view]);
+  const filtered = useMemo(
+    () => filterEvents(events, { category, view, includeMedium }),
+    [category, events, includeMedium, view],
+  );
   const selected = resolveSelectedEvent(filtered, selectedId);
-  const labels = {
+  const labels: Record<EventView, string> = {
+    latest: messages.events.latest,
+    "24h": messages.events.last24Hours,
+    "7d": messages.events.last7Days,
     today: messages.events.today,
     week: messages.events.thisWeek,
     calendar: messages.events.calendar,
@@ -54,6 +46,21 @@ export function EventsWorkspace({
     macro: messages.events.macro,
     crypto: messages.events.crypto,
   };
+  const views = eventViews[category];
+
+  useEffect(() => {
+    if (
+      selectedId !== null &&
+      !filtered.some((event) => event.id === selectedId)
+    ) {
+      setSelectedId(null);
+    }
+  }, [filtered, selectedId]);
+
+  function changeCategory(next: EventCategoryFilter) {
+    setCategory(next);
+    setView(defaultEventView(next));
+  }
 
   return (
     <div className="grid min-h-[calc(100vh-9rem)] lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -61,21 +68,23 @@ export function EventsWorkspace({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
           <div className="flex flex-wrap gap-3">
             <nav className="flex gap-1" aria-label={messages.events.event}>
-              {(Object.keys(categoryLabels) as Category[]).map((item) => (
-                <button
-                  key={item}
-                  onClick={() => setCategory(item)}
-                  className={cn(
-                    "rounded px-3 py-2 text-xs",
-                    category === item && "bg-emerald-400/10 text-emerald-300",
-                  )}
-                >
-                  {categoryLabels[item]}
-                </button>
-              ))}
+              {(Object.keys(categoryLabels) as EventCategoryFilter[]).map(
+                (item) => (
+                  <button
+                    key={item}
+                    onClick={() => changeCategory(item)}
+                    className={cn(
+                      "rounded px-3 py-2 text-xs",
+                      category === item && "bg-emerald-400/10 text-emerald-300",
+                    )}
+                  >
+                    {categoryLabels[item]}
+                  </button>
+                ),
+              )}
             </nav>
             <nav className="flex gap-1">
-              {(Object.keys(labels) as View[]).map((item) => (
+              {views.map((item) => (
                 <button
                   key={item}
                   onClick={() => setView(item)}
