@@ -78,6 +78,41 @@ External polling is disabled by default. To opt in, set `SOURCE_INGESTION_ENABLE
 flag, a monitored `SOURCE_CONTACT_IDENTITY`, and for SEC a JSON `SEC_CIKS` list. Celery performs all
 network access; HTTP request paths read PostgreSQL only.
 
+## Official Crypto Event sources
+
+Crypto source documents follow a separate opt-in path into the existing Event relevance gate. The
+reviewed source registry is deliberately code-owned rather than an arbitrary HTML scraper:
+
+| Source | Verified index/feed | Adapter | Allowed hostname |
+| --- | --- | --- | --- |
+| Ethereum Foundation Blog | `https://blog.ethereum.org/en/feed.xml` | RSS | `blog.ethereum.org` |
+| Solana Official News | `https://solana.com/news/rss.xml` | RSS | `solana.com` |
+| Bybit Official Announcements | `https://announcements.bybit.com/en/` | Bybit-only HTML | `announcements.bybit.com` |
+| Coinbase Official Blog | `https://www.coinbase.com/blog/landing` | Coinbase-only HTML | `www.coinbase.com` |
+
+RSS item links must remain on the configured official host. HTML adapters accept only their fixed
+article path and hostname. Requests do not follow redirects, so cross-domain redirects fail closed.
+Network fetches require a trustworthy publisher date, use at most a 14-day lookback, and apply a
+bounded item limit. Date-only HTML metadata remains date-only; no publication time is fabricated.
+
+SourceDocument retention and Event publication are intentionally separate. A promotion, roundup,
+education article, or uncertain item can remain provenance while producing no Event. Provider hints
+may reject or lower an item, but cannot bypass the common deterministic relevance gate or the
+optional strict AI classifier. Asset links resolve only against canonical Asset records; Event
+ingestion never calculates chart levels.
+
+Use `CRYPTO_EVENT_OFFICIAL_SOURCES` to select reviewed adapters. Keep sync disabled until at least
+one selected source has passed a live read-only smoke from the deployment network. Bybit and
+Coinbase may impose CDN controls, so parser availability in code is not proof of production network
+access.
+
+The SEC and Federal Reserve paths retain their mandatory monitored organization/contact identity.
+Reviewed public Crypto sources instead use `AlphaRadar/0.1`; a valid configured contact identity is
+appended when present, and no synthetic email is used. Crypto adapters execute independently so one
+source failure cannot stop the remaining sources or roll back earlier committed Events. Redis keeps
+the last-run operational result with attempted, successful, and failed source slugs plus ingested
+Event count. Mixed outcomes are `degraded`; zero successful sources with failures is `failed`.
+
 Official references:
 
 - <https://www.sec.gov/search-filings/edgar-application-programming-interfaces>

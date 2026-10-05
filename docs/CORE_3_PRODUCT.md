@@ -44,8 +44,10 @@ licensed consensus source. Date-only events use `scheduled_date` and never synth
 elapsed wall-clock time alone never completes an Event.
 
 The calendar has `All`, `Macro`, and `Crypto` category filters. Crypto records reuse the same
-SourceDocument → Event pipeline and accept only configured official RSS/Atom hosts in this phase.
-An official document is not automatically a user-facing Event. A short deterministic gate accepts
+SourceDocument → Event pipeline and accept reviewed official RSS/Atom sources plus fixed,
+provider-specific Bybit and Coinbase HTML adapters. HTML hosts and article paths are code-owned,
+redirects fail closed, and initial network fetches are bounded to 14 days. An official document is
+not automatically a user-facing Event. A short deterministic gate accepts
 only explicit material concepts such as mainnet/token launches, listings/delistings, protocol
 upgrades/hard forks, security incidents, material governance/regulatory/ETF actions, confirmed
 distributions, and explicitly major integrations, partnerships, acquisitions, or product launches.

@@ -479,6 +479,12 @@ test("Crypto Event presentation labels official facts and social signals conserv
     "zh-CN",
   );
   assert.match(official.title, /协议升级/);
+  assert.equal(official.eventType, "协议升级");
+  assert.doesNotMatch(official.title, /protocol_upgrade/);
+  assert.match(official.summary, /^事实：/);
+  assert.match(official.signal, /^信号：/);
+  assert.match(official.whyItMatters, /^分析：/);
+  assert.match(official.risk, /^风险：/);
   assert.equal(official.action, "等待确认");
   assert.equal(official.opportunitySignal, "等待");
   assert.match(social.summary, /帖子本身/);

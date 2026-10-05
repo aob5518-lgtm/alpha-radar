@@ -21,6 +21,13 @@ CRYPTO_EVENT_TYPES = (
     "narrative_signal",
 )
 
+OfficialCryptoSource = Literal[
+    "ethereum-foundation-blog",
+    "bybit-announcements",
+    "solana-news",
+    "coinbase-blog",
+]
+
 
 class CryptoEventFeedSettings(BaseModel):
     slug: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,126}[a-z0-9]$")
@@ -52,6 +59,8 @@ class CryptoEventFeedSettings(BaseModel):
         "research"
     )
     confidence: Literal["low", "medium", "high"] = "medium"
+    lookback_days: int = Field(default=14, ge=1, le=14)
+    recent_item_limit: int = Field(default=30, ge=1, le=50)
 
     @field_validator("base_url", "feed_url")
     @classmethod
@@ -70,6 +79,10 @@ class CryptoEventFeedSettings(BaseModel):
 
 
 def _empty_crypto_event_feeds() -> list[CryptoEventFeedSettings]:
+    return []
+
+
+def _empty_official_crypto_sources() -> list[OfficialCryptoSource]:
     return []
 
 
@@ -115,6 +128,9 @@ class Settings(BaseSettings):
     crypto_event_poll_interval_seconds: int = Field(default=900, ge=300, le=86400)
     crypto_event_feeds: list[CryptoEventFeedSettings] = Field(
         default_factory=_empty_crypto_event_feeds
+    )
+    crypto_event_official_sources: list[OfficialCryptoSource] = Field(
+        default_factory=_empty_official_crypto_sources
     )
     crypto_social_provider: Literal["disabled"] = "disabled"
     ai_provider: Literal["disabled", "openai"] = "disabled"

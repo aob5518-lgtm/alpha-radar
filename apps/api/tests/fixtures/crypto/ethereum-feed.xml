@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Ethereum Foundation Blog</title>
+    <item>
+      <title>Protocol upgrade mainnet announcement</title>
+      <link>https://blog.ethereum.org/2026/10/03/protocol-upgrade</link>
+      <guid>ethereum-upgrade-2026</guid>
+      <pubDate>Sat, 03 Oct 2026 12:00:00 GMT</pubDate>
+      <description>A validator and client release for the Ethereum mainnet.</description>
+      <category>Protocol</category>
+    </item>
+  </channel>
+</rss>
