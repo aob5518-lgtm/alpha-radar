@@ -29,10 +29,15 @@ PostgreSQL, Redis and Celery foundations remain active.
 
 ## Events
 
-Events uses a compact calendar layout with Today, This Week and Calendar views. Critical and High
-importance are the default; Medium is opt-in and Low is excluded by default. A canonical Event
-carries distinct scheduled, actual release, detected and updated timestamps. Every displayed
-time has explicit timezone semantics. A date-only schedule renders “time not announced.”
+Events uses category-appropriate time semantics. Macro retains its compact schedule-oriented Today,
+This Week and Calendar views. Crypto uses Latest, 24H and 7D rolling views so verified material
+events remain visible after publication; Latest is a seven-day window in V1. All defaults to a
+concise Latest mix of recent Crypto events, recently released Macro events and near-term Macro
+schedules. Crypto ordering uses the best canonical timestamp available: actual release, then
+detected time, then scheduled timestamp/date. Critical and High importance are the default; Medium
+is opt-in and Low is excluded by default. A canonical Event carries distinct scheduled, actual
+release, detected and updated timestamps. Every displayed time has explicit timezone semantics. A
+date-only schedule renders “time not announced.”
 
 SourceDocument is upstream evidence, not an Event. Canonical `events`, `event_assets`, and
 `event_source_references` tables keep schedules, impacted canonical Asset UUIDs and evidence

@@ -32,9 +32,8 @@ export function resolveSelectedEvent(
   filtered: CanonicalEvent[],
   selectedId: string | null,
 ): CanonicalEvent | null {
-  return (
-    filtered.find((event) => event.id === selectedId) ?? filtered[0] ?? null
-  );
+  if (selectedId === null) return null;
+  return filtered.find((event) => event.id === selectedId) ?? null;
 }
 
 const importanceZh: Record<EventImportance, string> = {
