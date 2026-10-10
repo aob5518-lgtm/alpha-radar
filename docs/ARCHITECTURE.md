@@ -40,7 +40,10 @@ without a server credential plus reviewed account selection. Social posts are si
 factual confirmation. The Chart reads persisted MarketQuote/MarketCandle APIs and uses one browser-to-API stream that fans in
 Bybit ticker, public-trade, and authoritative Kline updates. Its
 pure TypeScript Structural Level and Trend Regime engines consume closed candles only and do not
-write canonical market data. Analyst receives canonical asset identity and timeframe from Chart,
+write canonical market data. A colocated pure TypeScript `market-state-v1` engine consumes those
+unchanged outputs and the same bounded closed-candle history to derive phase, next-wait context and
+replay-safe Chart annotations. It has no provider calls, persistence or browser dependency; live
+partial candles remain presentation-only. Analyst receives canonical asset identity and timeframe from Chart,
 then rehydrates price/history from platform APIs and recomputes technical context; URL values never
 become authoritative prices or levels. LLM execution is opt-in and server-only, with Redis-backed
 request and concurrency limits.

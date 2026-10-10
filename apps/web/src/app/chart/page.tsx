@@ -104,6 +104,8 @@ export default async function ChartPage({
       </nav>
       <p className="mt-2 text-[10px] text-[var(--muted)]">
         {messages.chart.closedOnly}
+        {snapshot &&
+          ` · ${snapshot.version} · ${snapshot.trend.version} · ${snapshot.state.algorithm_version}`}
       </p>
 
       {apiUnavailable ? (
@@ -122,6 +124,8 @@ export default async function ChartPage({
             <StructuralMarketChart
               history={history}
               levels={levels}
+              marketState={snapshot!.state}
+              marketStateMarkers={snapshot!.markers}
               currentPrice={currentPrice || null}
               instrumentId={instrument!.id}
               interval={interval}
@@ -135,6 +139,8 @@ export default async function ChartPage({
               partialLabel={messages.chart.partial}
               closedLabel={messages.chart.closed}
               returnLatestLabel={messages.chart.returnLatest}
+              locale={locale}
+              chartMessages={messages.chart}
             />
           </div>
           <aside className="space-y-4">

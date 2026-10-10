@@ -26,13 +26,15 @@ export async function getTechnicalMarketContext(
     ]);
   const lastClosed = history?.items.filter((item) => item.is_closed).at(-1);
   const currentPrice = Number(quote?.price ?? lastClosed?.close ?? 0);
+  const confirmedPrice = Number(lastClosed?.close ?? 0);
   const snapshot =
-    history && currentPrice > 0
+    history && confirmedPrice > 0
       ? calculateTechnicalContext(
           history.items,
-          currentPrice,
+          confirmedPrice,
           interval,
           higherTimeframeHistory?.items,
+          instrumentId,
         )
       : null;
 

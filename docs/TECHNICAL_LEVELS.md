@@ -4,6 +4,8 @@ Version: `structural-levels-v1.1`
 
 Trend version: `trend-regime-v1.1`
 
+Market-state version: `market-state-v1`
+
 ## Input and no-look-ahead rules
 
 The engine accepts normalized OHLCV candles but immediately excludes every candle where
@@ -103,3 +105,51 @@ Future work should run versioned walk-forward evaluation over survivorship-aware
 record level creation time, first touch, rejection/break distance, maximum favorable/adverse move,
 market regime, fees/slippage assumptions and provider data gaps. Parameter changes require a new
 algorithm version; historical results must never be overwritten.
+
+## Market State V1
+
+Market State is a pure TypeScript context layer on top of, not a replacement for, Structural
+Levels V1.1 and Trend Regime V1.1. The existing trend direction is mapped to bullish, neutral or
+bearish exactly as calculated; Market State adds only the current phase, the next condition to wait
+for, an optional reference zone and a conditional entry-window flag. It never predicts the next
+candle and never emits BUY/SELL, size, leverage, target or expected-return output.
+
+The exact V1 phase vocabulary is `slow_decline`, `slow_rise`, `sharp_drop`, `sharp_rise`,
+`bottoming`, `topping`, `reversal_attempt_up`, `reversal_attempt_down`,
+`reversal_confirmed_up`, `reversal_confirmed_down`, `pullback`, `rebound`, `support_confirmed`,
+`resistance_confirmed`, `up_exhaustion` and `down_exhaustion`. Overlap resolves in this documented
+order: level confirmation, reversal confirmation/attempt, stabilization, exhaustion, acceleration,
+controlled retracement, then gradual pressure. This ordering and every threshold below are part of
+`market-state-v1`.
+
+The engine uses a maximum of 800 closed candles. ATR uses the existing 14-period Wilder series. A
+sharp move requires a three-candle net move of at least 1.5 ATR plus recent true-range expansion of
+at least 1.15 times the prior 20-candle ATR baseline. Gradual pressure uses eight candles, at least
+0.8 ATR net movement, at least 60% directionally progressing closes and mean true range no greater
+than 1.15 ATR. Stabilization requires a preceding 1.5 ATR directional move, three-candle confirmation,
+no more than 0.25 ATR additional extreme extension, at least 0.35 ATR movement away from the extreme,
+and either range contraction to 0.9 of the prior range or meaningful rejection wick evidence.
+
+Reversal attempts break a confirmed micro swing by 0.1 ATR after recent stabilization. Confirmation
+requires at least two subsequent closed candles to retain the reclaimed/lost structure within a 0.2
+ATR buffer. Controlled pullback/rebound size is 0.35–1.5 ATR over three candles with no more than
+1.2 ATR range expansion. S1/R1 confirmation reuses the existing zone bounds, allows a 0.1 ATR touch
+buffer and rejects a candidate after a 0.15 ATR material break that is not quickly reclaimed.
+Exhaustion requires a 12-candle extension of at least 3 ATR, deterministic weighted evidence at or
+above 0.65, and actual weakening through fading swing progress, failed breakout, or rejection wick
+without continued acceleration. Missing volume never invalidates a state; V1 does not require volume
+because comparable volume is not guaranteed for every retained candle.
+
+`next_wait` is deterministic. Sharp moves wait for stabilization; stabilization and reversal
+attempts wait for reversal confirmation; confirmed upward/downward reversals wait for a pullback or
+rebound; pullbacks/rebounds wait for support/resistance; exhaustion waits for the corresponding
+controlled retracement. Neutral price near S1/R1 waits for that zone; neutral range-middle price
+waits for a better location. `entry_window_candidate` is true only when bullish support confirmation
+or bearish resistance confirmation matches the Trend direction and price is within 1 ATR of the
+zone. It is a condition, not an order.
+
+Historical annotations replay closed-candle prefixes and only record meaningful confirmed phase
+transitions. The chart selects at most eight recent/strong markers from a bounded 160-candle replay
+window. Every marker retains the exact market-instrument UUID, timeframe, confirmation timestamp,
+reference zone and structured deterministic evidence. Ticker, public-trade and `confirm=false`
+Kline updates remain visual only and cannot change Market State, entry-window state or markers.

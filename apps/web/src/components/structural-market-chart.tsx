@@ -1,6 +1,11 @@
 "use client";
 
-import type { StructuralLevel } from "@alpha-radar/types/core-3";
+import type {
+  MarketState,
+  MarketStateMarker,
+  MarketStateMarkerPhase,
+  StructuralLevel,
+} from "@alpha-radar/types/core-3";
 import type {
   MarketCandle,
   MarketHistory,
@@ -12,6 +17,7 @@ import {
   HistogramSeries,
   LineStyle,
   createChart,
+  createSeriesMarkers,
   type LogicalRange,
   type UTCTimestamp,
 } from "lightweight-charts";
@@ -19,6 +25,7 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import type { Messages } from "@/lib/i18n/messages";
 import {
   latestLogicalRange,
   mergeOlderCandles,
@@ -28,10 +35,17 @@ import {
   type LivePartialCandle,
   updateLivePartialCandle,
 } from "@/lib/market/live-candle";
+import {
+  formatMarketStateEvidence,
+  formatMarketStateWait,
+  marketStateMarkerLabel,
+} from "@/lib/market/market-state-presentation";
 
 interface Props {
   history: MarketHistory;
   levels: StructuralLevel[];
+  marketState: MarketState;
+  marketStateMarkers: MarketStateMarker[];
   currentPrice: number | null;
   instrumentId: string;
   interval: MarketInterval;
@@ -45,6 +59,8 @@ interface Props {
   partialLabel: string;
   closedLabel: string;
   returnLatestLabel: string;
+  locale: "en" | "zh-CN";
+  chartMessages: Messages["chart"];
 }
 
 type StreamMessage =
@@ -79,6 +95,11 @@ export function StructuralMarketChart(props: Props) {
     live: false,
     closed: false,
   });
+  const [markerDetail, setMarkerDetail] = useState<{
+    marker: MarketStateMarker;
+    x: number;
+    y: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!container.current) return;
@@ -88,6 +109,7 @@ export function StructuralMarketChart(props: Props) {
     let loadingOlder = false;
     let lastMessageAt = 0;
     let partial: LivePartialCandle | null = null;
+    let pinnedMarkerId: string | null = null;
     const chart = createChart(container.current, {
       height: 540,
       width: container.current.clientWidth,
@@ -138,6 +160,24 @@ export function StructuralMarketChart(props: Props) {
       );
     };
     renderHistory();
+    const markerById = new Map(
+      props.marketStateMarkers.map((marker) => [marker.id, marker]),
+    );
+    createSeriesMarkers(
+      candleSeries,
+      props.marketStateMarkers.map((marker) => ({
+        id: marker.id,
+        time: Math.floor(
+          Date.parse(marker.candle_open_time) / 1000,
+        ) as UTCTimestamp,
+        position: marker.position,
+        shape: markerShape(marker.phase),
+        color: markerColor(marker.phase),
+        text: marketStateMarkerLabel(marker.phase, props.chartMessages),
+        size: 1,
+      })),
+      { autoScale: true },
+    );
     chart
       .timeScale()
       .setVisibleLogicalRange(latestLogicalRange(allCandles.length));
@@ -195,6 +235,42 @@ export function StructuralMarketChart(props: Props) {
       }
     };
     chart.timeScale().subscribeVisibleLogicalRangeChange(loadOlder);
+    const showMarker = (
+      id: unknown,
+      point: { x: number; y: number } | undefined,
+    ) => {
+      const marker = typeof id === "string" ? markerById.get(id) : undefined;
+      if (marker && point) {
+        const width = container.current?.clientWidth ?? 720;
+        setMarkerDetail({
+          marker,
+          x: Math.max(8, Math.min(point.x + 12, width - 264)),
+          y: point.y,
+        });
+      } else if (!pinnedMarkerId) {
+        setMarkerDetail(null);
+      }
+    };
+    const crosshairHandler: Parameters<
+      typeof chart.subscribeCrosshairMove
+    >[0] = (event) => showMarker(event.hoveredObjectId, event.point);
+    const clickHandler: Parameters<typeof chart.subscribeClick>[0] = (
+      event,
+    ) => {
+      const id =
+        typeof event.hoveredObjectId === "string"
+          ? event.hoveredObjectId
+          : null;
+      if (!id || !markerById.has(id)) {
+        pinnedMarkerId = null;
+        setMarkerDetail(null);
+        return;
+      }
+      pinnedMarkerId = pinnedMarkerId === id ? null : id;
+      showMarker(pinnedMarkerId, event.point);
+    };
+    chart.subscribeCrosshairMove(crosshairHandler);
+    chart.subscribeClick(clickHandler);
     const socketUrl = new URL(
       `/api/v1/market-instruments/${encodeURIComponent(props.instrumentId)}/stream?interval=${props.interval}`,
       apiUrl,
@@ -259,6 +335,8 @@ export function StructuralMarketChart(props: Props) {
     return () => {
       window.clearInterval(staleTimer);
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(loadOlder);
+      chart.unsubscribeCrosshairMove(crosshairHandler);
+      chart.unsubscribeClick(clickHandler);
       returnLatest.current = null;
       observer.disconnect();
       socket.close();
@@ -268,21 +346,65 @@ export function StructuralMarketChart(props: Props) {
 
   return (
     <div className="relative">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-2">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <strong className="font-mono text-sm">{props.instrumentLabel}</strong>
-          <span className="font-mono text-lg">
-            {price?.toLocaleString(undefined, {
-              maximumFractionDigits: price >= 100 ? 2 : 6,
-            }) ?? "—"}{" "}
-            {props.quoteCurrency}
-          </span>
-          <span className="text-[10px] text-[var(--muted)]">
-            {props.providerLabel} ·{" "}
-            {status.live ? props.liveLabel : props.delayedLabel}
-            {status.live &&
-              ` / ${status.closed ? props.closedLabel : props.partialLabel}`}
-          </span>
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b px-3 py-2">
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <strong className="font-mono text-sm">
+              {props.instrumentLabel}
+            </strong>
+            <span className="font-mono text-lg">
+              {price?.toLocaleString(undefined, {
+                maximumFractionDigits: price >= 100 ? 2 : 6,
+              }) ?? "—"}{" "}
+              {props.quoteCurrency}
+            </span>
+            <span className="text-[10px] text-[var(--muted)]">
+              {status.live ? props.liveLabel : props.delayedLabel}
+              {status.live &&
+                ` / ${status.closed ? props.closedLabel : props.partialLabel}`}{" "}
+              · {props.providerLabel}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+            <strong className="text-emerald-300">
+              {
+                props.chartMessages.marketState.directions[
+                  props.marketState.direction
+                ]
+              }{" "}
+              {props.marketState.direction_strength}
+            </strong>
+            <span>
+              {props.chartMessages.marketState.phase}:{" "}
+              {props.chartMessages.marketState.phases[props.marketState.phase]}
+            </span>
+            <span className="text-[var(--muted)]">
+              {props.chartMessages.marketState.nextWait}:{" "}
+              {formatMarketStateWait(props.marketState, props.chartMessages)}
+            </span>
+            {props.marketState.reference_level && (
+              <span className="font-mono text-[var(--muted)]">
+                {props.chartMessages.marketState.keyZone}:{" "}
+                {formatZone(
+                  props.marketState.reference_level.zone_low,
+                  props.marketState.reference_level.zone_high,
+                  props.locale,
+                )}
+              </span>
+            )}
+            <span
+              className={
+                props.marketState.entry_window_candidate
+                  ? "text-emerald-300"
+                  : "text-[var(--muted)]"
+              }
+            >
+              {props.chartMessages.marketState.entryWindow}:{" "}
+              {props.marketState.entry_window_candidate
+                ? props.chartMessages.marketState.established
+                : props.chartMessages.marketState.waiting}
+            </span>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
@@ -301,6 +423,79 @@ export function StructuralMarketChart(props: Props) {
         </div>
       </div>
       <div ref={container} className="min-h-[540px] w-full" />
+      {markerDetail && (
+        <div
+          className="pointer-events-none absolute z-20 w-64 border border-white/15 bg-[#111827]/95 p-3 text-[11px] shadow-xl"
+          style={{
+            left: markerDetail.x,
+            top: Math.max(76, markerDetail.y + 44),
+          }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <strong>
+              {
+                props.chartMessages.marketState.phases[
+                  markerDetail.marker.phase
+                ]
+              }
+            </strong>
+            <span className="text-emerald-300">
+              {props.chartMessages.marketState.confirmed}
+            </span>
+          </div>
+          {markerDetail.marker.reference_level && (
+            <p className="mt-1 font-mono text-[var(--muted)]">
+              {markerDetail.marker.reference_level.level_label}:{" "}
+              {formatZone(
+                markerDetail.marker.reference_level.zone_low,
+                markerDetail.marker.reference_level.zone_high,
+                props.locale,
+              )}
+            </p>
+          )}
+          <p className="mt-2 font-semibold">
+            {props.chartMessages.marketState.evidence}
+          </p>
+          <ul className="mt-1 space-y-1 text-[var(--muted)]">
+            {markerDetail.marker.evidence.map((evidence, index) => (
+              <li key={`${evidence.code}-${index}`}>
+                · {formatMarketStateEvidence(evidence, props.chartMessages)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
+}
+
+function markerShape(phase: MarketStateMarkerPhase) {
+  if (["sharp_drop", "reversal_confirmed_down"].includes(phase))
+    return "arrowDown" as const;
+  if (["sharp_rise", "reversal_confirmed_up"].includes(phase))
+    return "arrowUp" as const;
+  if (["support_confirmed", "resistance_confirmed"].includes(phase))
+    return "square" as const;
+  return "circle" as const;
+}
+
+function markerColor(phase: MarketStateMarkerPhase): string {
+  if (
+    ["sharp_rise", "reversal_confirmed_up", "support_confirmed"].includes(phase)
+  )
+    return "#34d399";
+  if (
+    ["sharp_drop", "reversal_confirmed_down", "resistance_confirmed"].includes(
+      phase,
+    )
+  )
+    return "#fb7185";
+  return "#fbbf24";
+}
+
+function formatZone(low: number, high: number, locale: "en" | "zh-CN"): string {
+  const formatter = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: Math.max(low, high) >= 100 ? 2 : 6,
+  });
+  return `${formatter.format(low)} – ${formatter.format(high)}`;
 }
