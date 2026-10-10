@@ -10,6 +10,7 @@ import {
   calculateMarketState,
   calculateMarketStateMarkers,
 } from "../src/lib/market/market-state.ts";
+import { calculateTechnicalContext } from "../src/lib/market/technical-context.ts";
 import { calculateTechnicalSnapshot } from "../src/lib/market/technical-levels.ts";
 
 function candle(index, close, options = {}) {
@@ -353,6 +354,22 @@ test("partial live candles cannot change confirmed state or create markers", () 
     calculateMarketStateMarkers([...closed, partial], "instrument-1", "1h"),
     calculateMarketStateMarkers(closed, "instrument-1", "1h"),
   );
+  const confirmedContext = calculateTechnicalContext(
+    closed,
+    93,
+    "1h",
+    undefined,
+    "instrument-1",
+  );
+  const liveContext = calculateTechnicalContext(
+    [...closed, partial],
+    500,
+    "1h",
+    undefined,
+    "instrument-1",
+  );
+  assert.deepEqual(liveContext.state, confirmedContext.state);
+  assert.deepEqual(liveContext.markers, confirmedContext.markers);
 });
 
 test("marker replay is deterministic, capped and preserves exact instrument/timeframe", () => {

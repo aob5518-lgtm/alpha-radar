@@ -39,7 +39,7 @@ export function calculateTechnicalContext(
       ? higherTimeframeSnapshot
       : null;
 
-  const snapshot = calculateTechnicalSnapshot(candles, currentPrice, interval, {
+  const options = {
     higherTimeframePrices: availableHigherTimeframe
       ? [
           ...availableHigherTimeframe.resistances,
@@ -50,12 +50,25 @@ export function calculateTechnicalContext(
       availableHigherTimeframe?.trend.direction === "unavailable"
         ? undefined
         : availableHigherTimeframe?.trend.direction,
-  });
+  };
+  const snapshot = calculateTechnicalSnapshot(
+    candles,
+    currentPrice,
+    interval,
+    options,
+  );
+  const confirmedPrice = snapshot.closedCandles.at(-1)?.close ?? currentPrice;
+  const confirmedSnapshot = calculateTechnicalSnapshot(
+    candles,
+    confirmedPrice,
+    interval,
+    options,
+  );
   return {
     ...snapshot,
     ...calculateMarketStateAnalysis(
       candles,
-      snapshot,
+      confirmedSnapshot,
       marketInstrumentId,
       interval,
     ),
