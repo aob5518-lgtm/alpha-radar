@@ -97,7 +97,11 @@ initial backfill. Production readiness fails closed when the market provider is 
 disabled, or any timeframe is stale.
 
 Structural levels and Trend Regime are deterministic technical context, not AI and not predictions.
-See `TECHNICAL_LEVELS.md`.
+Market State V1 layers a compact closed-candle phase and deterministic next-wait condition over those
+approved engines without changing either one. It adds no trading order or prediction. The compact
+Chart header shows direction, phase, next wait, optional Structural Level zone and conditional entry
+window; a maximum of eight replay-safe markers annotate meaningful confirmed transitions. Open
+candles cannot change the confirmed state or markers. See `TECHNICAL_LEVELS.md`.
 
 ## Analyst
 

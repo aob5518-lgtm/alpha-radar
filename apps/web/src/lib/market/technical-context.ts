@@ -5,17 +5,24 @@ import type {
 
 import { higherMarketInterval } from "./intervals.ts";
 import {
+  calculateMarketStateAnalysis,
+  type MarketStateAnalysis,
+} from "./market-state.ts";
+import {
   calculateTechnicalSnapshot,
   TREND_MIN_CANDLES,
   type TechnicalSnapshot,
 } from "./technical-levels.ts";
+
+export type TechnicalContextSnapshot = TechnicalSnapshot & MarketStateAnalysis;
 
 export function calculateTechnicalContext(
   candles: MarketCandle[],
   currentPrice: number,
   interval: MarketInterval,
   higherTimeframeCandles?: MarketCandle[],
-): TechnicalSnapshot {
+  marketInstrumentId = "unknown",
+): TechnicalContextSnapshot {
   let higherTimeframeSnapshot: TechnicalSnapshot | null = null;
   const higherInterval = higherMarketInterval[interval];
 
@@ -32,7 +39,7 @@ export function calculateTechnicalContext(
       ? higherTimeframeSnapshot
       : null;
 
-  return calculateTechnicalSnapshot(candles, currentPrice, interval, {
+  const options = {
     higherTimeframePrices: availableHigherTimeframe
       ? [
           ...availableHigherTimeframe.resistances,
@@ -43,5 +50,27 @@ export function calculateTechnicalContext(
       availableHigherTimeframe?.trend.direction === "unavailable"
         ? undefined
         : availableHigherTimeframe?.trend.direction,
-  });
+  };
+  const snapshot = calculateTechnicalSnapshot(
+    candles,
+    currentPrice,
+    interval,
+    options,
+  );
+  const confirmedPrice = snapshot.closedCandles.at(-1)?.close ?? currentPrice;
+  const confirmedSnapshot = calculateTechnicalSnapshot(
+    candles,
+    confirmedPrice,
+    interval,
+    options,
+  );
+  return {
+    ...snapshot,
+    ...calculateMarketStateAnalysis(
+      candles,
+      confirmedSnapshot,
+      marketInstrumentId,
+      interval,
+    ),
+  };
 }

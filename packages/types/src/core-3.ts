@@ -91,6 +91,114 @@ export interface TrendRegime {
   reason: string;
 }
 
+export const marketPhases = [
+  "slow_decline",
+  "slow_rise",
+  "sharp_drop",
+  "sharp_rise",
+  "bottoming",
+  "topping",
+  "reversal_attempt_up",
+  "reversal_attempt_down",
+  "reversal_confirmed_up",
+  "reversal_confirmed_down",
+  "pullback",
+  "rebound",
+  "support_confirmed",
+  "resistance_confirmed",
+  "up_exhaustion",
+  "down_exhaustion",
+] as const;
+export type MarketPhase = (typeof marketPhases)[number];
+
+export const marketNextWaits = [
+  "wait_support",
+  "wait_resistance",
+  "wait_bottoming",
+  "wait_topping",
+  "wait_reversal_confirmation",
+  "wait_pullback",
+  "wait_rebound",
+  "wait_exhaustion",
+  "wait_breakout_confirmation",
+  "wait_for_better_location",
+] as const;
+export type MarketNextWait = (typeof marketNextWaits)[number];
+
+export type MarketStateDirection = "bullish" | "neutral" | "bearish";
+
+export type MarketStateEvidenceCode =
+  | "net_move_atr"
+  | "range_expansion"
+  | "directional_progress"
+  | "extension_slowed"
+  | "left_extreme"
+  | "swing_break"
+  | "structure_held"
+  | "controlled_retracement"
+  | "level_tested"
+  | "level_reclaimed"
+  | "level_rejected"
+  | "extension_from_ema"
+  | "swing_progress_faded"
+  | "wick_rejection"
+  | "range_location"
+  | "higher_timeframe_alignment";
+
+export interface MarketStateEvidence {
+  code: MarketStateEvidenceCode;
+  direction?: "up" | "down";
+  value?: number;
+  candles?: number;
+  level_label?: StructuralLevel["label"];
+}
+
+export interface MarketStateReferenceLevel {
+  level_label: StructuralLevel["label"];
+  kind: StructuralLevelKind;
+  zone_low: number;
+  zone_high: number;
+}
+
+export interface MarketState {
+  algorithm_version: "market-state-v1";
+  direction: MarketStateDirection;
+  direction_strength: number;
+  phase: MarketPhase;
+  phase_confidence: number;
+  next_wait: MarketNextWait;
+  entry_window_candidate: boolean;
+  reference_level: MarketStateReferenceLevel | null;
+  evidence: MarketStateEvidence[];
+  confirmed_at: string;
+}
+
+export type MarketStateMarkerPhase =
+  | "sharp_drop"
+  | "sharp_rise"
+  | "bottoming"
+  | "topping"
+  | "reversal_confirmed_up"
+  | "reversal_confirmed_down"
+  | "support_confirmed"
+  | "resistance_confirmed"
+  | "up_exhaustion"
+  | "down_exhaustion";
+
+export interface MarketStateMarker {
+  id: string;
+  market_instrument_id: string;
+  timeframe: MarketInterval;
+  phase: MarketStateMarkerPhase;
+  confidence: number;
+  confirmed_at: string;
+  candle_open_time: string;
+  price: number;
+  position: "aboveBar" | "belowBar";
+  reference_level: MarketStateReferenceLevel | null;
+  evidence: MarketStateEvidence[];
+}
+
 export interface AnalystMarketContext {
   asset_id: string;
   symbol: string;

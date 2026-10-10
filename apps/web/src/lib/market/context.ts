@@ -33,6 +33,7 @@ export async function getTechnicalMarketContext(
           currentPrice,
           interval,
           higherTimeframeHistory?.items,
+          instrumentId,
         )
       : null;
 
