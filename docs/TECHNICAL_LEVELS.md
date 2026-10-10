@@ -153,3 +153,41 @@ transitions. The chart selects at most eight recent/strong markers from a bounde
 window. Every marker retains the exact market-instrument UUID, timeframe, confirmation timestamp,
 reference zone and structured deterministic evidence. Ticker, public-trade and `confirm=false`
 Kline updates remain visual only and cannot change Market State, entry-window state or markers.
+
+### Confirmation stability and interaction markers
+
+The raw V1 detector, phase vocabulary and all thresholds remain unchanged. A deterministic
+closed-prefix lifecycle reducer follows classification. Sharp moves and reversal attempts can
+replace an active confirmation immediately, as can a new detected confirmation. Support/resistance
+confirmation is retained during the same valid zone interaction instead of alternating with
+pullback/rebound noise. Other confirmations retain their initial evidence for at least three
+closed-candle steps; ordinary phase exit then requires two consecutive matching raw results.
+Actual invalidation bypasses that hold: support/resistance closes through the existing 0.15 ATR
+failure buffer, bottoming/topping extend beyond their confirmation-window extreme by the existing
+0.25 ATR extension allowance, and confirmed reversals close through their evidenced swing by the
+existing 0.2 ATR hold buffer. Exhaustion loses its short hold when its observed extreme is extended
+by that same allowance. Direction, next-wait and entry conditions are still calculated for the
+current closed candle; retained evidence is not a fresh confirmation or an order.
+
+Confirmation markers are emitted once per phase/interaction, even if a short intervening phase
+temporarily exits the state. Zone identity uses kind and overlapping bounds (with the existing
+0.1 ATR touch allowance for minor boundary drift), not mutable S1/R1 rank or rounded IDs.
+A level episode resets when the close materially leaves its zone by more
+than the existing 0.75 ATR near-zone distance or breaches the failure buffer; a later qualifying
+test/reclaim can then emit a new marker. Non-level episodes reset after price moves more than
+the existing 1.5 ATR material-move distance from confirmation, or stabilization/reversal structure
+is invalidated. Exhaustion noise does not itself rearm markers. Distances use ATR frozen at episode
+confirmation, avoiding rearming through ATR fluctuation alone. No new detector thresholds, wall-clock
+cooldown, browser storage or backend persistence are introduced.
+The raw detector's lingering recent test cannot emit another level marker while price is already
+outside the interaction zone; departure alone is not a new confirmation.
+
+State and markers share one replay, using only each historical prefix's candles and technical
+snapshot. Earlier prefixes within the existing 800-candle calculation bound warm up lifecycle
+state; marker selection remains within the existing 160-candle replay window and maximum eight.
+Identical closed inputs produce identical results, independent of live partial candles.
+
+For neutral direction with only the range-location fallback (or no usable phase evidence), the
+Chart hides the directional slow-rise/slow-decline phase label. Its primary presentation is
+Range / 震荡 with the existing better-location wait, or support/resistance wait when near a zone.
+Strong detected phases remain visible and the underlying V1 phase contract is unchanged.

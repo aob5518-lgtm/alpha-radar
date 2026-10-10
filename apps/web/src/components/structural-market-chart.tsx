@@ -40,6 +40,7 @@ import {
   formatMarketStateWait,
   marketStateMarkerLabel,
 } from "@/lib/market/market-state-presentation";
+import { isNeutralMarketStateFallback } from "@/lib/market/market-state-display";
 
 interface Props {
   history: MarketHistory;
@@ -374,10 +375,16 @@ export function StructuralMarketChart(props: Props) {
               }{" "}
               {props.marketState.direction_strength}
             </strong>
-            <span>
-              {props.chartMessages.marketState.phase}:{" "}
-              {props.chartMessages.marketState.phases[props.marketState.phase]}
-            </span>
+            {!isNeutralMarketStateFallback(props.marketState) && (
+              <span>
+                {props.chartMessages.marketState.phase}:{" "}
+                {
+                  props.chartMessages.marketState.phases[
+                    props.marketState.phase
+                  ]
+                }
+              </span>
+            )}
             <span className="text-[var(--muted)]">
               {props.chartMessages.marketState.nextWait}:{" "}
               {formatMarketStateWait(props.marketState, props.chartMessages)}

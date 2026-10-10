@@ -9,9 +9,15 @@ import {
   MARKET_STATE_VERSION,
   calculateMarketState,
   calculateMarketStateMarkers,
+  advanceMarketPhase,
+  createPhaseReplayCursor,
 } from "../src/lib/market/market-state.ts";
+import { isNeutralMarketStateFallback } from "../src/lib/market/market-state-display.ts";
 import { calculateTechnicalContext } from "../src/lib/market/technical-context.ts";
-import { calculateTechnicalSnapshot } from "../src/lib/market/technical-levels.ts";
+import {
+  calculateTechnicalSnapshot,
+  normalizeClosedCandles,
+} from "../src/lib/market/technical-levels.ts";
 
 function candle(index, close, options = {}) {
   const open = options.open ?? close;
@@ -394,6 +400,7 @@ test("marker replay is deterministic, capped and preserves exact instrument/time
   assert.deepEqual(first, repeated);
   assert.ok(first.length > 0);
   assert.ok(first.length <= MARKET_STATE_CONSTANTS.markerMaximum);
+  assert.equal(MARKET_STATE_CONSTANTS.markerMaximum, 8);
   assert.ok(
     first.every(
       (marker) =>
@@ -451,4 +458,237 @@ test("market-state contract and zh-CN phase labels have exact parity", async () 
     chinese.chart.marketState.phases.reversal_confirmed_up,
     "向上反转确认",
   );
+});
+
+// Replay reducer fixtures isolate lifecycle behavior from the unchanged detector thresholds.
+function phaseResult(phase, referenceLevel = null, evidence = []) {
+  return { phase, confidence: 84, referenceLevel, evidence };
+}
+
+function replayFixture(steps) {
+  const cursor = createPhaseReplayCursor();
+  const source = candlesFromCloses(steady(30));
+  return steps.map(
+    ({
+      phase,
+      close = 100,
+      referenceLevel = null,
+      evidence = [],
+      ...options
+    }) => {
+      source.push(candle(source.length, close, options));
+      return advanceMarketPhase(
+        cursor,
+        phaseResult(phase, referenceLevel, evidence),
+        normalizeClosedCandles(source),
+        1,
+      );
+    },
+  );
+}
+
+test("one S1/R1 episode holds confirmation through adjacent retracement noise and emits one marker", () => {
+  for (const [confirmation, noise, zone, price] of [
+    ["support_confirmed", "pullback", level("support", 99.8, 100.2), 100.3],
+    ["resistance_confirmed", "rebound", level("resistance", 99.8, 100.2), 99.7],
+  ]) {
+    const replay = replayFixture(
+      Array.from({ length: 10 }, (_, index) => ({
+        phase: index % 2 ? noise : confirmation,
+        close: price + (index % 2 ? 0.02 : 0),
+        referenceLevel: index % 2 ? null : zone,
+      })),
+    );
+    assert.ok(replay.every((step) => step.result.phase === confirmation));
+    assert.equal(replay.filter((step) => step.markerEligible).length, 1);
+  }
+});
+
+test("material departure and failed-then-reclaimed level reset marker episodes", () => {
+  const support = level("support", 99.8, 100.2);
+  for (const departed of [102, 99.5]) {
+    const replay = replayFixture([
+      { phase: "support_confirmed", close: 100.3, referenceLevel: support },
+      { phase: "pullback", close: departed },
+      { phase: "support_confirmed", close: 100.3, referenceLevel: support },
+    ]);
+    assert.equal(replay[1].result.phase, "pullback");
+    assert.equal(
+      replay.filter(
+        (step) =>
+          step.result.phase === "support_confirmed" && step.markerEligible,
+      ).length,
+      2,
+    );
+  }
+});
+
+test("level rank changes cannot duplicate a marker but a distinct zone can", () => {
+  const replay = replayFixture([
+    {
+      phase: "support_confirmed",
+      close: 100.3,
+      referenceLevel: level("support", 99.8, 100.2),
+    },
+    {
+      phase: "support_confirmed",
+      close: 100.3,
+      referenceLevel: level("support", 99.9, 100.25, "S2"),
+    },
+    {
+      phase: "support_confirmed",
+      close: 102.3,
+      referenceLevel: level("support", 101.8, 102.2),
+    },
+  ]);
+  assert.deepEqual(
+    replay.map((step) => step.markerEligible),
+    [true, false, true],
+  );
+});
+
+test("departing a zone cannot reemit the detector's lingering confirmation before a new interaction", () => {
+  for (const [phase, zone, departure, returning] of [
+    ["support_confirmed", level("support", 99.8, 100.2), 102, 100.3],
+    ["resistance_confirmed", level("resistance", 99.8, 100.2), 98, 99.7],
+  ]) {
+    const replay = replayFixture([
+      { phase, close: returning, referenceLevel: zone },
+      { phase, close: departure, referenceLevel: zone },
+      { phase, close: departure, referenceLevel: zone },
+      { phase, close: returning, referenceLevel: zone },
+    ]);
+    assert.deepEqual(
+      replay.map((step) => step.markerEligible),
+      [true, false, false, true],
+    );
+  }
+});
+
+test("bottoming/topping survive one small noise candle but actual extreme invalidation exits immediately", () => {
+  for (const [phase, noise, invalidating] of [
+    ["bottoming", "slow_decline", { low: 99 }],
+    ["topping", "slow_rise", { high: 101 }],
+  ]) {
+    const replay = replayFixture([
+      { phase },
+      { phase: noise },
+      { phase },
+      { phase: noise, ...invalidating },
+    ]);
+    assert.deepEqual(
+      replay.map((step) => step.result.phase),
+      [phase, phase, phase, noise],
+    );
+  }
+});
+
+test("confirmation fallback requires minimum hold and two consecutive matching closed results", () => {
+  const replay = replayFixture([
+    { phase: "bottoming" },
+    { phase: "slow_decline" },
+    { phase: "slow_decline" },
+    { phase: "slow_decline" },
+  ]);
+  assert.deepEqual(
+    replay.map((step) => step.result.phase),
+    ["bottoming", "bottoming", "bottoming", "slow_decline"],
+  );
+});
+
+test("confirmed reversals retain small noise but exit immediately when the confirmed swing fails", () => {
+  for (const [phase, noise, direction, broken] of [
+    ["reversal_confirmed_up", "pullback", "up", 99.7],
+    ["reversal_confirmed_down", "rebound", "down", 100.3],
+  ]) {
+    const replay = replayFixture([
+      { phase, evidence: [{ code: "swing_break", direction, value: 100 }] },
+      { phase: noise },
+      { phase: noise, close: broken },
+    ]);
+    assert.deepEqual(
+      replay.map((step) => step.result.phase),
+      [phase, phase, noise],
+    );
+  }
+});
+
+test("exhaustion marker does not repeat after noise or a brief phase exit within the same episode", () => {
+  for (const phase of ["up_exhaustion", "down_exhaustion"]) {
+    const replay = replayFixture([
+      { phase },
+      { phase: "slow_rise" },
+      { phase: "slow_rise" },
+      { phase: "slow_rise" },
+      { phase },
+      { phase },
+      { phase: "slow_rise", close: 102 },
+      { phase, close: 102 },
+    ]);
+    assert.equal(
+      replay
+        .slice(0, 6)
+        .filter((step) => step.result.phase === phase && step.markerEligible)
+        .length,
+      1,
+    );
+    assert.equal(replay[7].markerEligible, true);
+  }
+});
+
+test("sharp moves and reversal attempts bypass confirmation holding immediately", () => {
+  for (const phase of [
+    "sharp_drop",
+    "sharp_rise",
+    "reversal_attempt_up",
+    "reversal_attempt_down",
+  ]) {
+    const replay = replayFixture([{ phase: "bottoming" }, { phase }]);
+    assert.equal(replay[1].result.phase, phase);
+  }
+});
+
+test("neutral fallback hides directional phase copy without changing contract or zone waits", async () => {
+  const messages = JSON.parse(
+    await readFile(new URL("../messages/zh-CN.json", import.meta.url), "utf8"),
+  );
+  const middle = stateFor(candlesFromCloses(Array(40).fill(100)), "neutral");
+  assert.ok(isNeutralMarketStateFallback(middle));
+  assert.ok(["slow_rise", "slow_decline"].includes(middle.phase));
+  assert.equal(messages.chart.marketState.directions[middle.direction], "震荡");
+  assert.equal(
+    `${messages.chart.marketState.nextWait}：${messages.chart.marketState.waits[middle.next_wait]}`,
+    "等待：当前位置不佳，等待更好的位置",
+  );
+  for (const [kind, wait] of [
+    ["support", "wait_support"],
+    ["resistance", "wait_resistance"],
+  ]) {
+    const state = stateFor(candlesFromCloses(Array(40).fill(100)), "neutral", {
+      supports: kind === "support" ? [level(kind, 99.3, 99.5)] : [],
+      resistances: kind === "resistance" ? [level(kind, 100.5, 100.7)] : [],
+    });
+    assert.ok(isNeutralMarketStateFallback(state));
+    assert.equal(state.next_wait, wait);
+  }
+  assert.equal(
+    isNeutralMarketStateFallback({ ...middle, direction: "bullish" }),
+    false,
+  );
+  assert.equal(
+    isNeutralMarketStateFallback({ ...middle, phase: "bottoming" }),
+    false,
+  );
+  const detected = stateFor(
+    candlesFromCloses(
+      Array.from({ length: 40 }, (_, index) => 100 + index * 0.12),
+    ),
+    "neutral",
+  );
+  assert.equal(isNeutralMarketStateFallback(detected), false);
+  const component = await readFile(
+    new URL("../src/components/structural-market-chart.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(component, /!isNeutralMarketStateFallback\(props.marketState\)/);
 });

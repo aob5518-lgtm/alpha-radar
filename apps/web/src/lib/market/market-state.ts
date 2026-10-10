@@ -88,7 +88,7 @@ const MARKER_PRIORITY: Record<MarketStateMarkerPhase, number> = {
   sharp_rise: 2,
 };
 
-interface PhaseResult {
+export interface PhaseResult {
   phase: MarketPhase;
   confidence: number;
   evidence: MarketStateEvidence[];
@@ -124,9 +124,255 @@ export interface MarketStateAnalysis {
   markers: MarketStateMarker[];
 }
 
+// Only confirmation lifecycle rules live here; classification thresholds above are unchanged.
+const CONFIRMATION_PHASES = new Set<MarketPhase>([
+  "bottoming",
+  "topping",
+  "reversal_confirmed_up",
+  "reversal_confirmed_down",
+  "support_confirmed",
+  "resistance_confirmed",
+  "up_exhaustion",
+  "down_exhaustion",
+]);
+const IMMEDIATE_PHASES = new Set<MarketPhase>([
+  "sharp_drop",
+  "sharp_rise",
+  "reversal_attempt_up",
+  "reversal_attempt_down",
+]);
+const CONFIRMATION_HOLD_CANDLES = 3;
+const PHASE_EXIT_CANDLES = 2;
+interface ConfirmationEpisode {
+  result: PhaseResult;
+  sequence: number;
+  price: number;
+  atr: number;
+  low: number;
+  high: number;
+}
+export interface PhaseReplayCursor {
+  active: ConfirmationEpisode | null;
+  episodes: ConfirmationEpisode[];
+  pending: MarketPhase | null;
+  pendingCount: number;
+  previous: MarketPhase | null;
+}
+export function createPhaseReplayCursor(): PhaseReplayCursor {
+  return {
+    active: null,
+    episodes: [],
+    pending: null,
+    pendingCount: 0,
+    previous: null,
+  };
+}
+
+/** Closed-prefix reducer. The cursor is local to one deterministic replay, never persisted. */
+export function advanceMarketPhase(
+  cursor: PhaseReplayCursor,
+  raw: PhaseResult,
+  closed: NumericCandle[],
+  atr: number,
+): { result: PhaseResult; markerEligible: boolean } {
+  const last = closed.at(-1)!;
+  cursor.episodes = cursor.episodes.filter(
+    (episode) => !episodeReset(episode, last),
+  );
+  if (
+    cursor.active &&
+    (episodeReset(cursor.active, last) ||
+      confirmationInvalidated(cursor.active, last))
+  )
+    cursor.active = null;
+  const active = cursor.active;
+  let result = raw;
+  if (active) {
+    if (raw.phase === active.result.phase) {
+      cursor.pending = null;
+      cursor.pendingCount = 0;
+    } else if (
+      !IMMEDIATE_PHASES.has(raw.phase) &&
+      !CONFIRMATION_PHASES.has(raw.phase)
+    ) {
+      cursor.pendingCount =
+        cursor.pending === raw.phase ? cursor.pendingCount + 1 : 1;
+      cursor.pending = raw.phase;
+      const levelConfirmation =
+        active.result.phase === "support_confirmed" ||
+        active.result.phase === "resistance_confirmed";
+      if (
+        levelConfirmation ||
+        closed.length - active.sequence < CONFIRMATION_HOLD_CANDLES ||
+        cursor.pendingCount < PHASE_EXIT_CANDLES
+      )
+        result = active.result;
+    }
+  }
+  if (result.phase !== active?.result.phase) {
+    cursor.active = null;
+    cursor.pending = null;
+    cursor.pendingCount = 0;
+  }
+  let markerEligible = result.phase !== cursor.previous;
+  if (CONFIRMATION_PHASES.has(result.phase)) {
+    const duplicate = cursor.episodes.some((episode) =>
+      sameEpisode(episode, result),
+    );
+    markerEligible = !duplicate;
+    // A recent raw test may linger while price leaves; do not rearm it on departure.
+    const level = result.referenceLevel;
+    const outsideInteraction =
+      level &&
+      (result.phase === "support_confirmed" ||
+        result.phase === "resistance_confirmed") &&
+      Math.max(level.zone_low - last.close, last.close - level.zone_high, 0) >
+        MARKET_STATE_CONSTANTS.levelNearDistanceAtr * (active?.atr ?? atr);
+    if (outsideInteraction) {
+      cursor.active = null;
+      cursor.previous = result.phase;
+      return { result, markerEligible: false };
+    }
+    if (!cursor.active || !sameEpisode(cursor.active, result)) {
+      const recent = closed.slice(
+        -(result.phase === "up_exhaustion" || result.phase === "down_exhaustion"
+          ? MARKET_STATE_CONSTANTS.exhaustionLookback
+          : MARKET_STATE_CONSTANTS.stabilizationLookback),
+      );
+      cursor.active = {
+        result,
+        sequence: closed.length,
+        price: last.close,
+        atr,
+        low: Math.min(...recent.map((candle) => candle.low)),
+        high: Math.max(...recent.map((candle) => candle.high)),
+      };
+      if (!duplicate) cursor.episodes.push(cursor.active);
+    }
+  }
+  cursor.previous = result.phase;
+  return { result, markerEligible };
+}
+
+function sameEpisode(
+  episode: ConfirmationEpisode,
+  right: PhaseResult,
+): boolean {
+  const left = episode.result;
+  if (left.phase !== right.phase) return false;
+  if (
+    left.phase !== "support_confirmed" &&
+    left.phase !== "resistance_confirmed"
+  )
+    return true;
+  const a = left.referenceLevel;
+  const b = right.referenceLevel;
+  const buffer = MARKET_STATE_CONSTANTS.levelTouchBufferAtr * episode.atr;
+  // Zone geometry, not a mutable S1/R1 rank or rounded level ID, identifies an interaction.
+  return (
+    (!a && !b) ||
+    (!!a &&
+      !!b &&
+      a.kind === b.kind &&
+      a.zone_low <= b.zone_high + buffer &&
+      b.zone_low <= a.zone_high + buffer)
+  );
+}
+
+function episodeReset(
+  episode: ConfirmationEpisode,
+  last: NumericCandle,
+): boolean {
+  const level = episode.result.referenceLevel;
+  if (
+    level &&
+    (episode.result.phase === "support_confirmed" ||
+      episode.result.phase === "resistance_confirmed")
+  ) {
+    const distance = Math.max(
+      level.zone_low - last.close,
+      last.close - level.zone_high,
+      0,
+    );
+    return (
+      distance > MARKET_STATE_CONSTANTS.levelNearDistanceAtr * episode.atr ||
+      confirmationInvalidated(episode, last)
+    );
+  }
+  return (
+    Math.abs(last.close - episode.price) >
+      MARKET_STATE_CONSTANTS.sharpNetMoveAtr * episode.atr ||
+    ((episode.result.phase === "bottoming" ||
+      episode.result.phase === "topping" ||
+      episode.result.phase === "reversal_confirmed_up" ||
+      episode.result.phase === "reversal_confirmed_down") &&
+      confirmationInvalidated(episode, last))
+  );
+}
+
+function confirmationInvalidated(
+  episode: ConfirmationEpisode,
+  last: NumericCandle,
+): boolean {
+  const { phase, referenceLevel } = episode.result;
+  if (phase === "support_confirmed" && referenceLevel)
+    return (
+      last.close <
+      referenceLevel.zone_low -
+        MARKET_STATE_CONSTANTS.levelFailureBufferAtr * episode.atr
+    );
+  if (phase === "resistance_confirmed" && referenceLevel)
+    return (
+      last.close >
+      referenceLevel.zone_high +
+        MARKET_STATE_CONSTANTS.levelFailureBufferAtr * episode.atr
+    );
+  if (
+    phase === "reversal_confirmed_up" ||
+    phase === "reversal_confirmed_down"
+  ) {
+    const swing = episode.result.evidence.find(
+      (item) => item.code === "swing_break",
+    )?.value;
+    if (swing !== undefined)
+      return phase === "reversal_confirmed_up"
+        ? last.close <
+            swing - MARKET_STATE_CONSTANTS.reversalHoldBufferAtr * episode.atr
+        : last.close >
+            swing + MARKET_STATE_CONSTANTS.reversalHoldBufferAtr * episode.atr;
+  }
+  if (phase === "bottoming" || phase === "down_exhaustion")
+    return (
+      last.low <
+      episode.low -
+        MARKET_STATE_CONSTANTS.stabilizationMaximumExtensionAtr * episode.atr
+    );
+  if (phase === "topping" || phase === "up_exhaustion")
+    return (
+      last.high >
+      episode.high +
+        MARKET_STATE_CONSTANTS.stabilizationMaximumExtensionAtr * episode.atr
+    );
+  return false;
+}
+
 export function calculateMarketState(
   candles: MarketCandle[],
   snapshot: TechnicalSnapshot,
+): MarketState {
+  return (
+    replayMarketStates(
+      candles,
+      candles.findLast((candle) => candle.is_closed)?.interval ?? "1h",
+      snapshot,
+    ).at(-1)?.state ?? buildMarketState(candles, snapshot)
+  );
+}
+
+function buildMarketState(
+  candles: MarketCandle[],
+  snapshot: TechnicalSnapshot,
+  stablePhase?: PhaseResult,
 ): MarketState {
   const closed = normalizeClosedCandles(candles).slice(
     -MARKET_STATE_CONSTANTS.calculationWindow,
@@ -154,7 +400,8 @@ export function calculateMarketState(
     MARKET_STATE_CONSTANTS.atrPeriod,
   );
   const atr = Math.max(atrSeries.at(-1) ?? 0, Number.EPSILON);
-  const phaseResult = classifyPhase(closed, snapshot, atrSeries, atr);
+  const phaseResult =
+    stablePhase ?? classifyPhase(closed, snapshot, atrSeries, atr);
   const referenceLevel = toReferenceLevel(phaseResult.referenceLevel);
   const entryWindowCandidate = isEntryWindowCandidate(
     direction,
@@ -184,50 +431,88 @@ export function calculateMarketState(
   };
 }
 
+function replayMarketStates(
+  candles: MarketCandle[],
+  timeframe: MarketInterval,
+  finalSnapshot?: TechnicalSnapshot,
+) {
+  const source = candles
+    .filter((candle) => candle.is_closed)
+    .sort((a, b) => Date.parse(a.open_time) - Date.parse(b.open_time))
+    .slice(-MARKET_STATE_CONSTANTS.calculationWindow);
+  const cursor = createPhaseReplayCursor();
+  const results: Array<{
+    state: MarketState;
+    markerEligible: boolean;
+    sequence: number;
+    candle: MarketCandle;
+  }> = [];
+  for (
+    let length = MARKET_STATE_CONSTANTS.minimumStateCandles - 1;
+    length <= source.length;
+    length += 1
+  ) {
+    const prefix = source.slice(0, length);
+    const last = prefix.at(-1)!;
+    const snapshot =
+      length === source.length && finalSnapshot
+        ? finalSnapshot
+        : calculateTechnicalSnapshot(prefix, Number(last.close), timeframe);
+    const closed = normalizeClosedCandles(prefix);
+    if (!closed.length) continue;
+    const atrSeries = calculateAtrSeries(
+      closed,
+      MARKET_STATE_CONSTANTS.atrPeriod,
+    );
+    const atr = Math.max(atrSeries.at(-1) ?? 0, Number.EPSILON);
+    const stable = advanceMarketPhase(
+      cursor,
+      classifyPhase(closed, snapshot, atrSeries, atr),
+      closed,
+      atr,
+    );
+    results.push({
+      state: buildMarketState(prefix, snapshot, stable.result),
+      markerEligible: stable.markerEligible,
+      sequence: length,
+      candle: last,
+    });
+  }
+  return results;
+}
+
 export function calculateMarketStateMarkers(
   candles: MarketCandle[],
   marketInstrumentId: string,
   timeframe: MarketInterval,
 ): MarketStateMarker[] {
-  const closedSource = candles
-    .filter((candle) => candle.is_closed)
-    .sort(
-      (left, right) => Date.parse(left.open_time) - Date.parse(right.open_time),
-    )
-    .slice(-MARKET_STATE_CONSTANTS.calculationWindow);
-  const start = Math.max(
-    MARKET_STATE_CONSTANTS.minimumStateCandles,
-    closedSource.length - MARKET_STATE_CONSTANTS.markerReplayWindow,
+  return selectMarketStateMarkers(
+    replayMarketStates(candles, timeframe),
+    marketInstrumentId,
+    timeframe,
+    candles.filter((candle) => candle.is_closed).length,
+  );
+}
+
+function selectMarketStateMarkers(
+  replay: ReturnType<typeof replayMarketStates>,
+  marketInstrumentId: string,
+  timeframe: MarketInterval,
+  sourceLength: number,
+): MarketStateMarker[] {
+  const total = Math.min(
+    sourceLength,
+    MARKET_STATE_CONSTANTS.calculationWindow,
   );
   const candidates: Array<MarketStateMarker & { sequence: number }> = [];
-  let previousPhase: MarketPhase | null = null;
-
-  if (start > 1) {
-    const priorPrefix = closedSource.slice(0, start - 1);
-    const priorLast = priorPrefix.at(-1);
-    if (priorLast) {
-      const priorSnapshot = calculateTechnicalSnapshot(
-        priorPrefix,
-        Number(priorLast.close),
-        timeframe,
-      );
-      previousPhase = calculateMarketState(priorPrefix, priorSnapshot).phase;
-    }
-  }
-
-  for (let length = start; length <= closedSource.length; length += 1) {
-    const prefix = closedSource.slice(0, length);
-    const last = prefix.at(-1);
-    if (!last) continue;
-    const snapshot = calculateTechnicalSnapshot(
-      prefix,
-      Number(last.close),
-      timeframe,
-    );
-    const state = calculateMarketState(prefix, snapshot);
-    const phaseChanged = state.phase !== previousPhase;
-    previousPhase = state.phase;
-    if (!phaseChanged || !isMarkerPhase(state.phase)) continue;
+  for (const { state, markerEligible, sequence, candle: last } of replay) {
+    if (
+      sequence < MARKET_STATE_CONSTANTS.minimumStateCandles ||
+      sequence < total - MARKET_STATE_CONSTANTS.markerReplayWindow ||
+      !markerEligible ||
+      !isMarkerPhase(state.phase)
+    )
+      continue;
     candidates.push({
       id: `${marketInstrumentId}:${timeframe}:${state.confirmed_at}:${state.phase}`,
       market_instrument_id: marketInstrumentId,
@@ -240,15 +525,13 @@ export function calculateMarketStateMarkers(
       position: markerPosition(state.phase),
       reference_level: state.reference_level,
       evidence: state.evidence,
-      sequence: length,
+      sequence,
     });
   }
-
   return candidates
     .sort(
       (left, right) =>
-        markerRank(right, closedSource.length) -
-          markerRank(left, closedSource.length) ||
+        markerRank(right, total) - markerRank(left, total) ||
         right.sequence - left.sequence,
     )
     .slice(0, MARKET_STATE_CONSTANTS.markerMaximum)
@@ -274,12 +557,14 @@ export function calculateMarketStateAnalysis(
   marketInstrumentId: string,
   timeframe: MarketInterval,
 ): MarketStateAnalysis {
+  const replay = replayMarketStates(candles, timeframe, snapshot);
   return {
-    state: calculateMarketState(candles, snapshot),
-    markers: calculateMarketStateMarkers(
-      candles,
+    state: replay.at(-1)?.state ?? buildMarketState(candles, snapshot),
+    markers: selectMarketStateMarkers(
+      replay,
       marketInstrumentId,
       timeframe,
+      candles.filter((candle) => candle.is_closed).length,
     ),
   };
 }
