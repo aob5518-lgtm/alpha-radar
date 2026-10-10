@@ -191,3 +191,10 @@ For neutral direction with only the range-location fallback (or no usable phase 
 Chart hides the directional slow-rise/slow-decline phase label. Its primary presentation is
 Range / 震荡 with the existing better-location wait, or support/resistance wait when near a zone.
 Strong detected phases remain visible and the underlying V1 phase contract is unchanged.
+
+Chart transient UI state is scoped to the exact market-instrument UUID and timeframe. Identity
+changes clear marker detail/pinning, reset displayed price to the new server price and reset stream
+status until the new stream updates it. The page also keys the client chart by that identity.
+Tooltip rendering independently rejects mismatched marker UUIDs or timeframes, and callbacks from
+disposed streams cannot overwrite new-identity state. None of this changes calculated states,
+markers, levels, trend or replay semantics.

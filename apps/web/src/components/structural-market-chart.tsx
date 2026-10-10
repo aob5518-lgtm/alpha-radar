@@ -101,6 +101,25 @@ export function StructuralMarketChart(props: Props) {
     x: number;
     y: number;
   } | null>(null);
+  const identity = useRef({
+    instrumentId: props.instrumentId,
+    interval: props.interval,
+  });
+
+  useEffect(() => {
+    if (
+      identity.current.instrumentId === props.instrumentId &&
+      identity.current.interval === props.interval
+    )
+      return;
+    identity.current = {
+      instrumentId: props.instrumentId,
+      interval: props.interval,
+    };
+    setMarkerDetail(null);
+    setPrice(props.currentPrice);
+    setStatus({ live: false, closed: false });
+  }, [props.instrumentId, props.interval, props.currentPrice]);
 
   useEffect(() => {
     if (!container.current) return;
@@ -111,6 +130,7 @@ export function StructuralMarketChart(props: Props) {
     let lastMessageAt = 0;
     let partial: LivePartialCandle | null = null;
     let pinnedMarkerId: string | null = null;
+    let disposed = false;
     const chart = createChart(container.current, {
       height: 540,
       width: container.current.clientWidth,
@@ -279,6 +299,7 @@ export function StructuralMarketChart(props: Props) {
     socketUrl.protocol = socketUrl.protocol === "https:" ? "wss:" : "ws:";
     const socket = new WebSocket(socketUrl);
     socket.onmessage = (message) => {
+      if (disposed) return;
       const update = JSON.parse(String(message.data)) as StreamMessage;
       lastMessageAt = Date.now();
       setStatus((value) => ({ ...value, live: true }));
@@ -323,8 +344,12 @@ export function StructuralMarketChart(props: Props) {
       setPrice(partial.close);
       setStatus({ live: true, closed: update.is_closed });
     };
-    socket.onclose = () => setStatus((value) => ({ ...value, live: false }));
-    socket.onerror = () => setStatus((value) => ({ ...value, live: false }));
+    socket.onclose = () => {
+      if (!disposed) setStatus((value) => ({ ...value, live: false }));
+    };
+    socket.onerror = () => {
+      if (!disposed) setStatus((value) => ({ ...value, live: false }));
+    };
     const staleTimer = window.setInterval(() => {
       if (lastMessageAt && Date.now() - lastMessageAt > 10_000)
         setStatus((value) => ({ ...value, live: false }));
@@ -334,6 +359,8 @@ export function StructuralMarketChart(props: Props) {
     });
     observer.observe(container.current);
     return () => {
+      disposed = true;
+      pinnedMarkerId = null;
       window.clearInterval(staleTimer);
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(loadOlder);
       chart.unsubscribeCrosshairMove(crosshairHandler);
@@ -430,48 +457,50 @@ export function StructuralMarketChart(props: Props) {
         </div>
       </div>
       <div ref={container} className="min-h-[540px] w-full" />
-      {markerDetail && (
-        <div
-          className="pointer-events-none absolute z-20 w-64 border border-white/15 bg-[#111827]/95 p-3 text-[11px] shadow-xl"
-          style={{
-            left: markerDetail.x,
-            top: Math.max(76, markerDetail.y + 44),
-          }}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <strong>
-              {
-                props.chartMessages.marketState.phases[
-                  markerDetail.marker.phase
-                ]
-              }
-            </strong>
-            <span className="text-emerald-300">
-              {props.chartMessages.marketState.confirmed}
-            </span>
-          </div>
-          {markerDetail.marker.reference_level && (
-            <p className="mt-1 font-mono text-[var(--muted)]">
-              {markerDetail.marker.reference_level.level_label}:{" "}
-              {formatZone(
-                markerDetail.marker.reference_level.zone_low,
-                markerDetail.marker.reference_level.zone_high,
-                props.locale,
-              )}
+      {markerDetail &&
+        markerDetail.marker.market_instrument_id === props.instrumentId &&
+        markerDetail.marker.timeframe === props.interval && (
+          <div
+            className="pointer-events-none absolute z-20 w-64 border border-white/15 bg-[#111827]/95 p-3 text-[11px] shadow-xl"
+            style={{
+              left: markerDetail.x,
+              top: Math.max(76, markerDetail.y + 44),
+            }}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <strong>
+                {
+                  props.chartMessages.marketState.phases[
+                    markerDetail.marker.phase
+                  ]
+                }
+              </strong>
+              <span className="text-emerald-300">
+                {props.chartMessages.marketState.confirmed}
+              </span>
+            </div>
+            {markerDetail.marker.reference_level && (
+              <p className="mt-1 font-mono text-[var(--muted)]">
+                {markerDetail.marker.reference_level.level_label}:{" "}
+                {formatZone(
+                  markerDetail.marker.reference_level.zone_low,
+                  markerDetail.marker.reference_level.zone_high,
+                  props.locale,
+                )}
+              </p>
+            )}
+            <p className="mt-2 font-semibold">
+              {props.chartMessages.marketState.evidence}
             </p>
-          )}
-          <p className="mt-2 font-semibold">
-            {props.chartMessages.marketState.evidence}
-          </p>
-          <ul className="mt-1 space-y-1 text-[var(--muted)]">
-            {markerDetail.marker.evidence.map((evidence, index) => (
-              <li key={`${evidence.code}-${index}`}>
-                · {formatMarketStateEvidence(evidence, props.chartMessages)}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+            <ul className="mt-1 space-y-1 text-[var(--muted)]">
+              {markerDetail.marker.evidence.map((evidence, index) => (
+                <li key={`${evidence.code}-${index}`}>
+                  · {formatMarketStateEvidence(evidence, props.chartMessages)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
     </div>
   );
 }

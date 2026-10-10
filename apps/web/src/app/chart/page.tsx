@@ -122,6 +122,7 @@ export default async function ChartPage({
         <section className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="overflow-hidden border bg-[var(--panel)]">
             <StructuralMarketChart
+              key={`${instrument!.id}:${interval}`}
               history={history}
               levels={levels}
               marketState={snapshot!.state}
