@@ -198,3 +198,9 @@ status until the new stream updates it. The page also keys the client chart by t
 Tooltip rendering independently rejects mismatched marker UUIDs or timeframes, and callbacks from
 disposed streams cannot overwrite new-identity state. None of this changes calculated states,
 markers, levels, trend or replay semantics.
+
+Confirmed current/higher Klines now refresh a bounded client technical context without page reload;
+current computed timeframe contexts are cached by exact UUID and interval. `trade-setup-v1` derives
+a non-executable directional/watch context and fixed in-zone entry reference using unchanged levels
+and Market State conditions. Partial candles remain visual-only for every confirmed output. See
+`CHART_REALTIME.md` for the exact rules, update/cache architecture and measured diagnostic timings.

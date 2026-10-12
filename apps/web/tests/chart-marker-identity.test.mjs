@@ -10,6 +10,15 @@ import ts from "typescript";
 import * as historyHelpers from "../src/lib/market/chart-history.ts";
 import * as liveHelpers from "../src/lib/market/live-candle.ts";
 import * as displayHelpers from "../src/lib/market/market-state-display.ts";
+import * as contextStore from "../src/lib/market/chart-context-store.ts";
+import * as tradeSetup from "../src/lib/market/trade-setup.ts";
+import * as marketStream from "../src/lib/market/market-stream.ts";
+import {
+  btcId,
+  fixtureNow,
+  fixtureHistory,
+  fixtureClosedUpdate,
+} from "./helpers/chart-fixtures.mjs";
 
 const chartMessages = JSON.parse(
   readFileSync(new URL("../messages/en.json", import.meta.url), "utf8"),
@@ -123,7 +132,14 @@ function harness() {
     HistogramSeries: "volume",
     ColorType: { Solid: "solid" },
     LineStyle: { Dashed: 2, Solid: 0 },
-    createSeriesMarkers() {},
+    createSeriesMarkers(series, markers) {
+      series.markers = markers;
+      return {
+        setMarkers: (next) => {
+          series.markers = next;
+        },
+      };
+    },
     createChart() {
       const series = {
         setData() {},
@@ -131,6 +147,7 @@ function harness() {
         createPriceLine() {
           return { applyOptions() {} };
         },
+        removePriceLine() {},
         priceScale() {
           return { applyOptions() {} };
         },
@@ -141,6 +158,7 @@ function harness() {
         unsubscribeVisibleLogicalRangeChange() {},
       };
       const chart = {
+        series,
         addSeries: () => series,
         timeScale: () => scale,
         applyOptions() {},
@@ -184,6 +202,9 @@ function harness() {
     "@/lib/market/chart-history": historyHelpers,
     "@/lib/market/live-candle": liveHelpers,
     "@/lib/market/market-state-display": displayHelpers,
+    "@/lib/market/chart-context-store": contextStore,
+    "@/lib/market/trade-setup": tradeSetup,
+    "@/lib/market/market-stream": marketStream,
     "@/lib/market/market-state-presentation": {
       formatMarketStateWait: (state) => state.next_wait,
       formatMarketStateEvidence: (evidence) => evidence.code,
@@ -302,6 +323,92 @@ test("same-identity server price updates do not overwrite the live price or clea
   assert.match(next, /level_reclaimed/);
 });
 
+test("actual Chart closed callback refreshes state/markers/overlays without a chart or socket rebuild", async () => {
+  const store = new contextStore.ChartContextStore(
+    async (id, interval) => fixtureHistory(interval, id),
+    () => fixtureNow,
+  );
+  const entry = await store.load(btcId, "15m");
+  const input = {
+    ...props(),
+    history: entry.history,
+    marketState: entry.snapshot.state,
+    marketStateMarkers: entry.snapshot.markers,
+    levels: [...entry.snapshot.supports, ...entry.snapshot.resistances],
+    tradeSetup: entry.setup,
+  };
+  let confirmations = 0;
+  input.onConfirmedCandle = (value) => {
+    confirmations++;
+    store.confirm(btcId, "15m", value);
+    store.context(btcId, "15m");
+  };
+  const h = harness();
+  h.render(input);
+  const socket = h.sockets[0],
+    chart = h.charts[0];
+  const oldTime = input.marketState.confirmed_at;
+  socket.send({ ...fixtureClosedUpdate(input.history), is_closed: false });
+  socket.send({ type: "price", price: "111" });
+  socket.send({
+    type: "trade",
+    price: "112",
+    provider_timestamp: input.history.items.at(-1).close_time,
+  });
+  assert.equal(confirmations, 0);
+  assert.equal(
+    store.context(btcId, "15m").snapshot.state.confirmed_at,
+    oldTime,
+  );
+  const closed = fixtureClosedUpdate(input.history);
+  socket.send(closed);
+  assert.equal(confirmations, 1);
+  const next = store.context(btcId, "15m");
+  const rendered = h.render({
+    ...input,
+    history: next.history,
+    levels: [...next.snapshot.supports, ...next.snapshot.resistances],
+    marketState: next.snapshot.state,
+    marketStateMarkers: next.snapshot.markers,
+    tradeSetup: next.setup,
+  });
+  assert.match(
+    rendered,
+    new RegExp(`data-confirmed-at="${closed.close_time}"`),
+  );
+  assert.equal(h.sockets.length, 1);
+  assert.equal(h.charts.length, 1);
+  assert.equal(h.sockets[0], socket);
+  assert.equal(h.charts[0], chart);
+  assert.deepEqual(
+    chart.series.markers.map((x) => x.id),
+    next.snapshot.markers.map((x) => x.id),
+  );
+});
+
+for (const [name, stale] of [
+  ["UUID", { market_instrument_id: eth, timeframe: "15m" }],
+  ["timeframe", { market_instrument_id: btc, timeframe: "1h" }],
+]) {
+  test(`Chart never renders a stale ${name} Trade Setup reference price`, () => {
+    const h = harness();
+    const input = {
+      ...props(),
+      tradeSetup: {
+        ...stale,
+        direction: "long",
+        status: "candidate",
+        preferred_entry_price: 99999,
+        reference_level: null,
+      },
+    };
+    assert.doesNotMatch(
+      h.render(input),
+      /99,999|Reference entry price|Directional bias/,
+    );
+  });
+}
+
 test("late disposed-stream callbacks cannot overwrite new-identity price or status", () => {
   const h = harness();
   h.render(props());
@@ -346,10 +453,10 @@ test("current-identity hover, hover-out, pin and unpin behavior remains intact",
   assert.doesNotMatch(h.render(input), /level_reclaimed/);
 });
 
-test("Chart page keys the client by exact UUID and timeframe", () => {
+test("Chart workspace keys the client by exact UUID and timeframe", () => {
   const page = readFileSync(
-    new URL("../src/app/chart/page.tsx", import.meta.url),
+    new URL("../src/components/chart-workspace.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(page, /key=\{`\$\{instrument!\.id\}:\$\{interval\}`\}/);
+  assert.match(page, /key=\{`\$\{instrument\.id\}:\$\{interval\}`\}/);
 });

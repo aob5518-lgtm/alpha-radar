@@ -117,6 +117,21 @@
     "bearish": "Bearish",
     "unavailable": "Unavailable",
     "closedOnly": "Confirmed levels use closed candles only. The open candle is excluded.",
+    "contextLoading": "Loading confirmed history…",
+    "contextRefreshFailed": "Confirmed history refresh failed. Cached context may be stale.",
+    "retryContext": "Retry",
+    "tradeSetup": {
+      "direction": "Directional bias",
+      "long": "Long",
+      "short": "Short",
+      "wait": "Wait",
+      "entryZone": "Candidate entry zone",
+      "referencePrice": "Reference entry price",
+      "watchZone": "Watch zone",
+      "candidate": "Candidate",
+      "waiting": "Waiting",
+      "disclaimer": "Closed-candle technical reference only, not an execution signal."
+    },
     "openAnalyst": "Open in AI Analyst",
     "algorithm": "Structural Levels V1.1 · Trend Regime V1.1 · Market State V1",
     "marketState": {

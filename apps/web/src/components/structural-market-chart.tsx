@@ -5,6 +5,7 @@ import type {
   MarketStateMarker,
   MarketStateMarkerPhase,
   StructuralLevel,
+  TradeSetupCandidateV1,
 } from "@alpha-radar/types/core-3";
 import type {
   MarketCandle,
@@ -41,6 +42,12 @@ import {
   marketStateMarkerLabel,
 } from "@/lib/market/market-state-presentation";
 import { isNeutralMarketStateFallback } from "@/lib/market/market-state-display";
+import {
+  projectConfirmedStreamCandle,
+  type StreamCandle,
+} from "@/lib/market/chart-context-store";
+import { tradeSetupMatchesIdentity } from "@/lib/market/trade-setup";
+import { connectChartStream } from "@/lib/market/market-stream";
 
 interface Props {
   history: MarketHistory;
@@ -62,21 +69,17 @@ interface Props {
   returnLatestLabel: string;
   locale: "en" | "zh-CN";
   chartMessages: Messages["chart"];
+  tradeSetup?: TradeSetupCandidateV1;
+  onConfirmedCandle?: (candle: StreamCandle) => void;
+  onObservedPrice?: (price: number) => void;
+  onStreamResume?: () => void;
+  onStreamDisconnected?: () => void;
 }
 
 type StreamMessage =
   | { type: "price"; price: string; provider_timestamp: string }
   | { type: "trade"; price: string; provider_timestamp: string }
-  | {
-      type: "candle";
-      open_time: string;
-      open: string;
-      high: string;
-      low: string;
-      close: string;
-      volume: string | null;
-      is_closed: boolean;
-    };
+  | StreamCandle;
 
 function candleData(candle: MarketCandle) {
   return {
@@ -91,6 +94,13 @@ function candleData(candle: MarketCandle) {
 export function StructuralMarketChart(props: Props) {
   const container = useRef<HTMLDivElement>(null);
   const returnLatest = useRef<(() => void) | null>(null);
+  const latestProps = useRef(props);
+  const updateOverlays = useRef<
+    ((levels: StructuralLevel[], markers: MarketStateMarker[]) => void) | null
+  >(null);
+  useEffect(() => {
+    latestProps.current = props;
+  });
   const [price, setPrice] = useState(props.currentPrice);
   const [status, setStatus] = useState<{ live: boolean; closed: boolean }>({
     live: false,
@@ -123,12 +133,18 @@ export function StructuralMarketChart(props: Props) {
 
   useEffect(() => {
     if (!container.current) return;
+    const props = latestProps.current;
     let allCandles = props.history.items;
     let hasMore = props.history.has_more;
     let nextEnd = props.history.next_end;
     let loadingOlder = false;
     let lastMessageAt = 0;
     let partial: LivePartialCandle | null = null;
+    let latestVisualTime = Math.floor(
+      Date.parse(
+        allCandles.filter((c) => c.is_closed).at(-1)?.open_time ?? "",
+      ) / 1000,
+    );
     let pinnedMarkerId: string | null = null;
     let disposed = false;
     const chart = createChart(container.current, {
@@ -184,9 +200,8 @@ export function StructuralMarketChart(props: Props) {
     const markerById = new Map(
       props.marketStateMarkers.map((marker) => [marker.id, marker]),
     );
-    createSeriesMarkers(
-      candleSeries,
-      props.marketStateMarkers.map((marker) => ({
+    const markerData = (markers: MarketStateMarker[]) =>
+      markers.map((marker) => ({
         id: marker.id,
         time: Math.floor(
           Date.parse(marker.candle_open_time) / 1000,
@@ -194,27 +209,57 @@ export function StructuralMarketChart(props: Props) {
         position: marker.position,
         shape: markerShape(marker.phase),
         color: markerColor(marker.phase),
-        text: marketStateMarkerLabel(marker.phase, props.chartMessages),
+        text: marketStateMarkerLabel(
+          marker.phase,
+          latestProps.current.chartMessages,
+        ),
         size: 1,
-      })),
+      }));
+    const markerApi = createSeriesMarkers(
+      candleSeries,
+      markerData(props.marketStateMarkers),
       { autoScale: true },
     );
     chart
       .timeScale()
       .setVisibleLogicalRange(latestLogicalRange(allCandles.length));
+    const visualBarCount = () => {
+      const closed = allCandles.filter((candle) => candle.is_closed);
+      const last = Math.floor(
+        Date.parse(closed.at(-1)?.open_time ?? "") / 1000,
+      );
+      return (
+        closed.length +
+        (partial && (!Number.isFinite(last) || partial.time > last) ? 1 : 0)
+      );
+    };
     returnLatest.current = () =>
       chart
         .timeScale()
-        .setVisibleLogicalRange(latestLogicalRange(allCandles.length));
-    for (const level of props.levels)
-      candleSeries.createPriceLine({
-        price: level.representative_price,
-        color: level.kind === "resistance" ? "#fb7185" : "#34d399",
-        lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: level.label,
-      });
+        .setVisibleLogicalRange(latestLogicalRange(visualBarCount()));
+    let levelLines: ReturnType<typeof candleSeries.createPriceLine>[] = [];
+    const renderLevels = (levels: StructuralLevel[]) => {
+      for (const line of levelLines) candleSeries.removePriceLine(line);
+      levelLines = levels.map((level) =>
+        candleSeries.createPriceLine({
+          price: level.representative_price,
+          color: level.kind === "resistance" ? "#fb7185" : "#34d399",
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: level.label,
+        }),
+      );
+    };
+    renderLevels(props.levels);
+    updateOverlays.current = (levels, markers) => {
+      renderLevels(levels);
+      markerById.clear();
+      for (const marker of markers) markerById.set(marker.id, marker);
+      markerApi?.setMarkers(markerData(markers));
+      pinnedMarkerId = null;
+      setMarkerDetail(null);
+    };
     const fallbackPrice =
       props.currentPrice ?? Number(allCandles.at(-1)?.close ?? 0);
     const liveLine = candleSeries.createPriceLine({
@@ -237,10 +282,16 @@ export function StructuralMarketChart(props: Props) {
           end: nextEnd,
         });
         const response = await fetch(
-          `${apiUrl}/api/v1/market-instruments/${encodeURIComponent(props.instrumentId)}/history?${params}`,
+          `/api/v1/market-instruments/${encodeURIComponent(props.instrumentId)}/history?${params}`,
         );
         if (!response.ok) return;
         const page = (await response.json()) as MarketHistory;
+        if (
+          disposed ||
+          page.market_instrument_id !== props.instrumentId ||
+          page.interval !== props.interval
+        )
+          return;
         const priorLength = allCandles.length;
         allCandles = mergeOlderCandles(allCandles, page.items);
         hasMore = page.has_more;
@@ -297,59 +348,99 @@ export function StructuralMarketChart(props: Props) {
       apiUrl,
     );
     socketUrl.protocol = socketUrl.protocol === "https:" ? "wss:" : "ws:";
-    const socket = new WebSocket(socketUrl);
-    socket.onmessage = (message) => {
-      if (disposed) return;
-      const update = JSON.parse(String(message.data)) as StreamMessage;
-      lastMessageAt = Date.now();
-      setStatus((value) => ({ ...value, live: true }));
-      if (update.type === "price") {
-        const nextPrice = Number(update.price);
-        liveLine.applyOptions({ price: nextPrice });
-        setPrice(nextPrice);
-        return;
-      }
-      if (update.type === "trade") {
-        const tradePrice = Number(update.price);
-        partial = updateLivePartialCandle(
-          partial,
-          tradePrice,
-          Math.floor(Date.parse(update.provider_timestamp) / 1000),
-          props.interval,
-        );
-        candleSeries.update({ ...partial, time: partial.time as UTCTimestamp });
-        setPrice(tradePrice);
-        setStatus({ live: true, closed: false });
-        return;
-      }
-      if (update.type !== "candle") return;
-      partial = {
-        time: Math.floor(Date.parse(update.open_time) / 1000),
-        open: Number(update.open),
-        high: Number(update.high),
-        low: Number(update.low),
-        close: Number(update.close),
-      };
-      candleSeries.update({ ...partial, time: partial.time as UTCTimestamp });
-      if (update.volume !== null)
-        volumeSeries.update({
-          time: partial.time as UTCTimestamp,
-          value: Number(update.volume),
-          color:
-            partial.close >= partial.open
-              ? "rgba(52,211,153,.28)"
-              : "rgba(251,113,133,.28)",
-        });
-      liveLine.applyOptions({ price: partial.close });
-      setPrice(partial.close);
-      setStatus({ live: true, closed: update.is_closed });
-    };
-    socket.onclose = () => {
-      if (!disposed) setStatus((value) => ({ ...value, live: false }));
-    };
-    socket.onerror = () => {
-      if (!disposed) setStatus((value) => ({ ...value, live: false }));
-    };
+    const stopStream = connectChartStream(
+      socketUrl.toString(),
+      {
+        message: (message) => {
+          if (disposed) return;
+          const update = JSON.parse(String(message.data)) as StreamMessage;
+          if (!["price", "trade", "candle"].includes(update.type)) return;
+          lastMessageAt = Date.now();
+          setStatus((value) => ({ ...value, live: true }));
+          if (update.type === "price") {
+            const nextPrice = Number(update.price);
+            liveLine.applyOptions({ price: nextPrice });
+            setPrice(nextPrice);
+            latestProps.current.onObservedPrice?.(nextPrice);
+            return;
+          }
+          if (update.type === "trade") {
+            const tradePrice = Number(update.price);
+            partial = updateLivePartialCandle(
+              partial,
+              tradePrice,
+              Math.floor(Date.parse(update.provider_timestamp) / 1000),
+              props.interval,
+            );
+            if (partial.time < latestVisualTime) return;
+            latestVisualTime = partial.time;
+            candleSeries.update({
+              ...partial,
+              time: partial.time as UTCTimestamp,
+            });
+            setPrice(tradePrice);
+            latestProps.current.onObservedPrice?.(tradePrice);
+            setStatus({ live: true, closed: false });
+            return;
+          }
+          if (update.type !== "candle") return;
+          const confirmed = update.is_closed
+            ? projectConfirmedStreamCandle(update, props.history)
+            : null;
+          if (update.is_closed && !confirmed) return;
+          const visual = {
+            time: Math.floor(Date.parse(update.open_time) / 1000),
+            open: Number(update.open),
+            high: Number(update.high),
+            low: Number(update.low),
+            close: Number(update.close),
+          };
+          const historical = visual.time < latestVisualTime;
+          candleSeries.update(
+            { ...visual, time: visual.time as UTCTimestamp },
+            historical,
+          );
+          if (update.volume !== null)
+            volumeSeries.update(
+              {
+                time: visual.time as UTCTimestamp,
+                value: Number(update.volume),
+                color:
+                  visual.close >= visual.open
+                    ? "rgba(52,211,153,.28)"
+                    : "rgba(251,113,133,.28)",
+              },
+              historical,
+            );
+          if (!historical) {
+            partial = visual;
+            latestVisualTime = visual.time;
+            liveLine.applyOptions({ price: visual.close });
+            setPrice(visual.close);
+            latestProps.current.onObservedPrice?.(visual.close);
+            setStatus({ live: true, closed: update.is_closed });
+          }
+          if (confirmed) {
+            allCandles = mergeOlderCandles(
+              [confirmed],
+              allCandles.filter(
+                (c) =>
+                  Date.parse(c.open_time) !== Date.parse(confirmed.open_time),
+              ),
+            );
+            latestProps.current.onConfirmedCandle?.(update);
+          }
+        },
+        disconnected: () => {
+          if (!disposed) {
+            setStatus((value) => ({ ...value, live: false }));
+            latestProps.current.onStreamDisconnected?.();
+          }
+        },
+        resumed: () => latestProps.current.onStreamResume?.(),
+      },
+      (url) => new WebSocket(url),
+    );
     const staleTimer = window.setInterval(() => {
       if (lastMessageAt && Date.now() - lastMessageAt > 10_000)
         setStatus((value) => ({ ...value, live: false }));
@@ -366,14 +457,34 @@ export function StructuralMarketChart(props: Props) {
       chart.unsubscribeCrosshairMove(crosshairHandler);
       chart.unsubscribeClick(clickHandler);
       returnLatest.current = null;
+      updateOverlays.current = null;
       observer.disconnect();
-      socket.close();
+      stopStream();
       chart.remove();
     };
-  }, [props]);
+  }, [props.instrumentId, props.interval]);
+
+  useEffect(() => {
+    updateOverlays.current?.(props.levels, props.marketStateMarkers);
+  }, [props.levels, props.marketStateMarkers, props.chartMessages]);
+
+  const setup =
+    props.tradeSetup &&
+    tradeSetupMatchesIdentity(
+      props.tradeSetup,
+      props.instrumentId,
+      props.interval,
+    )
+      ? props.tradeSetup
+      : null;
 
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      data-market-instrument-id={props.instrumentId}
+      data-timeframe={props.interval}
+      data-confirmed-at={props.marketState.confirmed_at}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b px-3 py-2">
         <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-baseline gap-3">
@@ -416,7 +527,7 @@ export function StructuralMarketChart(props: Props) {
               {props.chartMessages.marketState.nextWait}:{" "}
               {formatMarketStateWait(props.marketState, props.chartMessages)}
             </span>
-            {props.marketState.reference_level && (
+            {!setup && props.marketState.reference_level && (
               <span className="font-mono text-[var(--muted)]">
                 {props.chartMessages.marketState.keyZone}:{" "}
                 {formatZone(
@@ -428,17 +539,57 @@ export function StructuralMarketChart(props: Props) {
             )}
             <span
               className={
-                props.marketState.entry_window_candidate
+                (
+                  setup
+                    ? setup.status === "candidate"
+                    : props.marketState.entry_window_candidate
+                )
                   ? "text-emerald-300"
                   : "text-[var(--muted)]"
               }
             >
               {props.chartMessages.marketState.entryWindow}:{" "}
-              {props.marketState.entry_window_candidate
-                ? props.chartMessages.marketState.established
-                : props.chartMessages.marketState.waiting}
+              {setup
+                ? props.chartMessages.tradeSetup[setup.status]
+                : props.marketState.entry_window_candidate
+                  ? props.chartMessages.marketState.established
+                  : props.chartMessages.marketState.waiting}
             </span>
+            {setup && (
+              <>
+                <span>
+                  {props.chartMessages.tradeSetup.direction}:{" "}
+                  {props.chartMessages.tradeSetup[setup.direction]}
+                </span>
+                {setup.reference_level && (
+                  <span className="font-mono text-[var(--muted)]">
+                    {setup.direction === "wait"
+                      ? props.chartMessages.tradeSetup.watchZone
+                      : props.chartMessages.tradeSetup.entryZone}
+                    : {setup.reference_level.level_label}{" "}
+                    {formatZone(
+                      setup.reference_level.zone_low,
+                      setup.reference_level.zone_high,
+                      props.locale,
+                    )}
+                  </span>
+                )}
+                {setup.preferred_entry_price !== null && (
+                  <span className="font-mono text-[var(--muted)]">
+                    {props.chartMessages.tradeSetup.referencePrice}:{" "}
+                    {setup.preferred_entry_price.toLocaleString(props.locale, {
+                      maximumFractionDigits: 6,
+                    })}
+                  </span>
+                )}
+              </>
+            )}
           </div>
+          {setup && (
+            <p className="text-[10px] text-[var(--muted)]">
+              {props.chartMessages.tradeSetup.disclaimer}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <button
