@@ -199,6 +199,28 @@ export interface MarketStateMarker {
   evidence: MarketStateEvidence[];
 }
 
+/** Closed-candle technical context, never an order or execution signal. */
+export interface TradeSetupCandidateV1 {
+  algorithm_version: "trade-setup-v1";
+  market_instrument_id: string;
+  timeframe: MarketInterval;
+  direction: "long" | "short" | "wait";
+  status: "waiting" | "candidate";
+  reference_level: MarketStateReferenceLevel | null;
+  entry_zone_low: number | null;
+  entry_zone_high: number | null;
+  preferred_entry_price: number | null;
+  reason:
+    | "support_confirmed"
+    | "resistance_confirmed"
+    | "wait_confirmation"
+    | "extended"
+    | "invalidated"
+    | "neutral"
+    | "unavailable";
+  confirmed_at: string;
+}
+
 export interface AnalystMarketContext {
   asset_id: string;
   symbol: string;

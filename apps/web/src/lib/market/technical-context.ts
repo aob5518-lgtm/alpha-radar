@@ -13,6 +13,10 @@ import {
   TREND_MIN_CANDLES,
   type TechnicalSnapshot,
 } from "./technical-levels.ts";
+import {
+  createTechnicalTimings,
+  type TechnicalTimings,
+} from "./technical-diagnostics.ts";
 
 export type TechnicalContextSnapshot = TechnicalSnapshot & MarketStateAnalysis;
 
@@ -22,7 +26,10 @@ export function calculateTechnicalContext(
   interval: MarketInterval,
   higherTimeframeCandles?: MarketCandle[],
   marketInstrumentId = "unknown",
+  diagnostics?: (timings: TechnicalTimings) => void,
 ): TechnicalContextSnapshot {
+  const timings = diagnostics ? createTechnicalTimings() : undefined;
+  const started = performance.now();
   let higherTimeframeSnapshot: TechnicalSnapshot | null = null;
   const higherInterval = higherMarketInterval[interval];
 
@@ -31,6 +38,8 @@ export function calculateTechnicalContext(
       higherTimeframeCandles,
       currentPrice,
       higherInterval,
+      {},
+      timings,
     );
   }
   const availableHigherTimeframe =
@@ -56,21 +65,32 @@ export function calculateTechnicalContext(
     currentPrice,
     interval,
     options,
+    timings,
   );
   const confirmedPrice = snapshot.closedCandles.at(-1)?.close ?? currentPrice;
-  const confirmedSnapshot = calculateTechnicalSnapshot(
-    candles,
-    confirmedPrice,
-    interval,
-    options,
-  );
-  return {
+  const confirmedSnapshot =
+    currentPrice === confirmedPrice
+      ? snapshot
+      : calculateTechnicalSnapshot(
+          candles,
+          confirmedPrice,
+          interval,
+          options,
+          timings,
+        );
+  const result = {
     ...snapshot,
     ...calculateMarketStateAnalysis(
       candles,
       confirmedSnapshot,
       marketInstrumentId,
       interval,
+      timings,
     ),
   };
+  if (timings && diagnostics) {
+    timings.total_technical_context_ms = performance.now() - started;
+    diagnostics(timings);
+  }
+  return result;
 }

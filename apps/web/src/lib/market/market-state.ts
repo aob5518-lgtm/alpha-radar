@@ -23,6 +23,10 @@ import {
   type NumericCandle,
   type TechnicalSnapshot,
 } from "./technical-levels.ts";
+import {
+  measureTechnical,
+  type TechnicalTimings,
+} from "./technical-diagnostics.ts";
 
 export const MARKET_STATE_VERSION = "market-state-v1" as const;
 
@@ -435,6 +439,7 @@ function replayMarketStates(
   candles: MarketCandle[],
   timeframe: MarketInterval,
   finalSnapshot?: TechnicalSnapshot,
+  timings?: TechnicalTimings,
 ) {
   const source = candles
     .filter((candle) => candle.is_closed)
@@ -457,7 +462,14 @@ function replayMarketStates(
     const snapshot =
       length === source.length && finalSnapshot
         ? finalSnapshot
-        : calculateTechnicalSnapshot(prefix, Number(last.close), timeframe);
+        : calculateTechnicalSnapshot(
+            prefix,
+            Number(last.close),
+            timeframe,
+            {},
+            timings,
+          );
+    const stateStart = timings ? performance.now() : 0;
     const closed = normalizeClosedCandles(prefix);
     if (!closed.length) continue;
     const atrSeries = calculateAtrSeries(
@@ -477,6 +489,7 @@ function replayMarketStates(
       sequence: length,
       candle: last,
     });
+    if (timings) timings.market_state_ms += performance.now() - stateStart;
   }
   return results;
 }
@@ -556,8 +569,11 @@ export function calculateMarketStateAnalysis(
   snapshot: TechnicalSnapshot,
   marketInstrumentId: string,
   timeframe: MarketInterval,
+  timings?: TechnicalTimings,
 ): MarketStateAnalysis {
-  const replay = replayMarketStates(candles, timeframe, snapshot);
+  const replay = measureTechnical(timings, "marker_replay_ms", () =>
+    replayMarketStates(candles, timeframe, snapshot, timings),
+  );
   return {
     state: replay.at(-1)?.state ?? buildMarketState(candles, snapshot),
     markers: selectMarketStateMarkers(

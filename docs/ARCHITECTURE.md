@@ -37,8 +37,8 @@ time alone. Configured official Crypto RSS/Atom and code-owned GitHub Releases a
 same SourceDocument → Event path. Optional social ingestion uses a provider-neutral worker boundary;
 the only implementation is the official X API v2 adapter and it remains effectively disabled
 without a server credential plus reviewed account selection. Social posts are signal evidence, not
-factual confirmation. The Chart reads persisted MarketQuote/MarketCandle APIs and uses one browser-to-API stream that fans in
-Bybit ticker, public-trade, and authoritative Kline updates. Its
+factual confirmation. The Chart reads persisted MarketQuote/MarketCandle APIs and uses a selected-period browser-to-API stream that fans in
+Bybit ticker, public-trade, and authoritative Kline updates, plus one confirmed-only higher-period stream. Its
 pure TypeScript Structural Level and Trend Regime engines consume closed candles only and do not
 write canonical market data. A colocated pure TypeScript `market-state-v1` engine consumes those
 unchanged outputs and the same bounded closed-candle history to derive phase, next-wait context and
@@ -47,6 +47,13 @@ partial candles remain presentation-only. Analyst receives canonical asset ident
 then rehydrates price/history from platform APIs and recomputes technical context; URL values never
 become authoritative prices or levels. LLM execution is opt-in and server-only, with Redis-backed
 request and concurrency limits.
+
+The Chart client maintains exact UUID/timeframe-bounded confirmed history and computed-context
+caches. Only confirmed current/higher candles refresh its unchanged pure engines and derived
+`trade-setup-v1`; partial updates remain visual-only. Client timeframe URLs avoid full server
+navigation after hydration. A scoped same-origin history transport reads the existing canonical
+DB API, not providers. Neither client observations nor Trade Setup are persisted or executable.
+See `CHART_REALTIME.md` for identity safety, cache/recovery and diagnostics.
 
 The prior Command Center, Discover, Strategy/Opportunity, Cycle, Watchlist, Alerts, Asset Directory,
 Impact Map and Heatmap implementations are archived presentation history, not current product scope.

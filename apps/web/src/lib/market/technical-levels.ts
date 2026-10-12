@@ -10,6 +10,11 @@ import type {
   MarketInterval,
 } from "@alpha-radar/types/market-data";
 
+import {
+  measureTechnical,
+  type TechnicalTimings,
+} from "./technical-diagnostics.ts";
+
 export const TECHNICAL_LEVELS_VERSION = "structural-levels-v1.1";
 export const TREND_REGIME_VERSION = "trend-regime-v1.1";
 export const TREND_MIN_CANDLES = 250;
@@ -633,7 +638,9 @@ export function calculateTechnicalSnapshot(
   currentPrice: number,
   timeframe: MarketInterval,
   options: StructuralLevelOptions = {},
+  timings?: TechnicalTimings,
 ): TechnicalSnapshot {
+  const structuralStart = timings ? performance.now() : 0;
   const closedCandles = normalizeClosedCandles(candles);
   const pivots = detectConfirmedPivots(closedCandles, options);
   const zones = clusterPivots(
@@ -642,13 +649,21 @@ export function calculateTechnicalSnapshot(
     options.clusterAtrMultiplier,
     options.higherTimeframePrices,
   );
+  const supports = selectLevels(zones, currentPrice, timeframe, "support");
+  const resistances = selectLevels(
+    zones,
+    currentPrice,
+    timeframe,
+    "resistance",
+  );
+  if (timings)
+    timings.structural_levels_ms += performance.now() - structuralStart;
   return {
     closedCandles,
-    supports: selectLevels(zones, currentPrice, timeframe, "support"),
-    resistances: selectLevels(zones, currentPrice, timeframe, "resistance"),
-    trend: calculateTrendRegime(
-      closedCandles,
-      options.higherTimeframeDirection,
+    supports,
+    resistances,
+    trend: measureTechnical(timings, "trend_regime_ms", () =>
+      calculateTrendRegime(closedCandles, options.higherTimeframeDirection),
     ),
     version: TECHNICAL_LEVELS_VERSION,
     insufficientData:

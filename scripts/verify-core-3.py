@@ -53,10 +53,23 @@ def bitcoin_instrument_id() -> str:
     ) as response:
         payload = json.load(response)
     return next(
-        item["id"]
-        for item in payload["items"]
-        if item["provider_instrument_id"] == "BTCUSDT"
+        item["id"] for item in payload["items"] if item["provider_instrument_id"] == "BTCUSDT"
     )
+
+
+def verify_history_transport() -> None:
+    """Exercise the browser's same-origin transport against seeded real PostgreSQL."""
+    api = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
+    web = os.environ.get("WEB_URL", "http://localhost:3000").rstrip("/")
+    with urlopen(f"{api}/api/v1/assets/bitcoin/quote", timeout=30) as response:
+        instrument_id = json.load(response)["market_instrument_id"]
+    path = f"/api/v1/market-instruments/{instrument_id}/history?interval=1h&limit=2"
+    with urlopen(web + path, timeout=30) as response:
+        page = json.load(response)
+        if response.status != 200 or page["market_instrument_id"] != instrument_id:
+            raise RuntimeError("Same-origin history transport identity failed")
+        if page["interval"] != "1h" or len(page["items"]) != 2:
+            raise RuntimeError("Same-origin history transport did not preserve filters")
 
 
 def require(page: Page, *values: str) -> None:
@@ -107,9 +120,7 @@ def verify_locale(locale: str, instrument_id: str) -> None:
         "Bybit",
         "USDT",
     )
-    analyst, _ = fetch(
-        f"/analyst?instrument={instrument_id}&interval=1h&from=chart", locale
-    )
+    analyst, _ = fetch(f"/analyst?instrument={instrument_id}&interval=1h&from=chart", locale)
     require(analyst, expected["analyst"], expected["disabled"], "BTCUSDT", "1h")
     for page in (events, chart, analyst):
         if "Demo Data" in page.text or "演示数据" in page.text:
@@ -131,9 +142,7 @@ def verify_redirects() -> None:
     for source, expected in destinations.items():
         _, final_path = fetch(source)
         if final_path != expected:
-            raise RuntimeError(
-                f"{source} redirected to {final_path}, expected {expected}"
-            )
+            raise RuntimeError(f"{source} redirected to {final_path}, expected {expected}")
     _, source_path = fetch("/radar/sources?source=mock-source")
     if source_path != "/radar/sources":
         raise RuntimeError("Internal Source audit route was unexpectedly redirected")
@@ -143,7 +152,6 @@ if __name__ == "__main__":
     instrument_id = bitcoin_instrument_id()
     verify_locale("en", instrument_id)
     verify_locale("zh-CN", instrument_id)
+    verify_history_transport()
     verify_redirects()
-    print(
-        "Core 3 bilingual SSR, persisted Chart, Analyst handoff and legacy redirects passed."
-    )
+    print("Core 3 bilingual SSR, persisted Chart, Analyst handoff and legacy redirects passed.")

@@ -117,6 +117,21 @@
     "bearish": "看跌",
     "unavailable": "不可用",
     "closedOnly": "已确认结构位仅使用收盘 K 线；当前未收盘 K 线会被排除。",
+    "contextLoading": "正在加载已确认历史…",
+    "contextRefreshFailed": "已确认历史刷新失败，缓存上下文可能已过期。",
+    "retryContext": "重试",
+    "tradeSetup": {
+      "direction": "方向",
+      "long": "偏多",
+      "short": "偏空",
+      "wait": "等待",
+      "entryZone": "建议进场区间",
+      "referencePrice": "参考进场价",
+      "watchZone": "关注区域",
+      "candidate": "成立",
+      "waiting": "等待",
+      "disclaimer": "仅为收盘 K 线技术参考，不是交易执行信号。"
+    },
     "openAnalyst": "在 AI 分析师中打开",
     "algorithm": "结构位 V1.1 · 趋势状态 V1.1 · 行情属性 V1",
     "marketState": {
