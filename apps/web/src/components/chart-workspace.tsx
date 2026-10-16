@@ -29,6 +29,8 @@ import {
 import type { TechnicalContextSnapshot } from "@/lib/market/technical-context";
 import { connectChartStream } from "@/lib/market/market-stream";
 import { cn } from "@/lib/utils";
+import { ChartHistoryReconciler } from "@/lib/market/chart-history-reconciler";
+import type { ChartRefreshHealth } from "@/lib/market/chart-refresh-health";
 
 interface Props {
   instruments: MarketInstrument[];
@@ -60,8 +62,12 @@ export function ChartWorkspace(props: Props) {
       entry: store.context(instrument.id, interval)!,
     }),
   );
-  const [error, setError] = useState(false);
-  const [retry, setRetry] = useState(0);
+  const [health, setHealth] = useState<ChartRefreshHealth | "loading">(() =>
+    store.peek(instrument.id, interval)?.history.items.length
+      ? store.refreshHealth(instrument.id, interval)
+      : "loading",
+  );
+  const reconciler = useRef<ChartHistoryReconciler | null>(null);
   const selected = useRef({ instrumentId: instrument.id, interval });
   const observedPrice = useRef(props.currentPrice);
   const primaryReady = useRef<string | null>(null);
@@ -73,17 +79,20 @@ export function ChartWorkspace(props: Props) {
   } | null>(null);
 
   const selectInterval = (next: MarketInterval, push = true) => {
+    if (selected.current.interval === next) return;
     switchTiming.current = {
       key: chartIdentityKey(instrument.id, next),
       started: performance.now(),
       cacheHit: !!store.cachedContext(instrument.id, next),
     };
     selected.current = { instrumentId: instrument.id, interval: next };
+    reconciler.current?.dispose();
+    reconciler.current = null;
     primaryReady.current = null;
     setStreamReady(null);
     setInterval(next);
-    setError(false);
     const cached = store.cachedContext(instrument.id, next);
+    setHealth(cached ? store.refreshHealth(instrument.id, next) : "loading");
     if (cached)
       setView({ key: chartIdentityKey(instrument.id, next), entry: cached });
     if (push) {
@@ -96,29 +105,41 @@ export function ChartWorkspace(props: Props) {
 
   useEffect(() => {
     let disposed = false;
-    const refresh = async () => {
-      try {
-        const entry = await store.load(instrument.id, interval);
+    const coordinator = new ChartHistoryReconciler(
+      store,
+      instrument.id,
+      interval,
+      (entry, status) => {
         if (
           !disposed &&
           selected.current.interval === interval &&
           selected.current.instrumentId === instrument.id
         ) {
-          setView({ key: chartIdentityKey(instrument.id, interval), entry });
-          setError(false);
+          if (entry)
+            setView({ key: chartIdentityKey(instrument.id, interval), entry });
+          setHealth(status);
         }
-      } catch {
-        if (!disposed) setError(true);
-      }
-    };
-    void refresh();
+      },
+    );
+    reconciler.current = coordinator;
+    void coordinator.refresh();
     // Reconcile missed closed candles after a suspended tab/network session, not
     // on every tick or trade. The store uses canonical incremental history.
     const resume = () => {
-      if (document.visibilityState === "visible") void refresh();
+      if (document.visibilityState === "visible") void coordinator.refresh();
     };
     window.addEventListener("online", resume);
     document.addEventListener("visibilitychange", resume);
+    return () => {
+      disposed = true;
+      coordinator.dispose();
+      if (reconciler.current === coordinator) reconciler.current = null;
+      window.removeEventListener("online", resume);
+      document.removeEventListener("visibilitychange", resume);
+    };
+  }, [instrument.id, interval, store]);
+
+  useEffect(() => {
     const pop = () => {
       const query = new URLSearchParams(window.location.search);
       const defaultInstrument =
@@ -129,12 +150,17 @@ export function ChartWorkspace(props: Props) {
         (query.get("instrument") ?? defaultInstrument?.id) === instrument.id
       ) {
         const next = parseMarketInterval(query.get("interval") ?? undefined);
+        if (selected.current.interval === next) return;
         selected.current = { instrumentId: instrument.id, interval: next };
+        reconciler.current?.dispose();
+        reconciler.current = null;
         primaryReady.current = null;
         setStreamReady(null);
         setInterval(next);
-        setError(false);
         const cached = store.cachedContext(instrument.id, next);
+        setHealth(
+          cached ? store.refreshHealth(instrument.id, next) : "loading",
+        );
         if (cached)
           setView({
             key: chartIdentityKey(instrument.id, next),
@@ -144,12 +170,9 @@ export function ChartWorkspace(props: Props) {
     };
     window.addEventListener("popstate", pop);
     return () => {
-      disposed = true;
-      window.removeEventListener("online", resume);
-      document.removeEventListener("visibilitychange", resume);
       window.removeEventListener("popstate", pop);
     };
-  }, [instrument.id, interval, store, retry, props.instruments]);
+  }, [instrument.id, store, props.instruments]);
 
   const confirm = (value: StreamCandle, sourceInterval: MarketInterval) => {
     if (
@@ -161,26 +184,7 @@ export function ChartWorkspace(props: Props) {
     const entry = store.context(instrument.id, interval);
     if (entry)
       setView({ key: chartIdentityKey(instrument.id, interval), entry });
-    const higher = higherMarketInterval[interval];
-    if (higher && !store.isCurrent(instrument.id, higher)) {
-      // Recovery for a missed higher close: DB-only, incremental, and only when
-      // its closed boundary is overdue. Never a provider fetch on each live tick.
-      void store
-        .load(instrument.id, interval)
-        .then((updated) => {
-          if (
-            selected.current.instrumentId === instrument.id &&
-            selected.current.interval === interval
-          )
-            setView({
-              key: chartIdentityKey(instrument.id, interval),
-              entry: updated,
-            });
-        })
-        .catch(() => {
-          if (selected.current.interval === interval) setError(true);
-        });
-    }
+    reconciler.current?.confirmed();
   };
 
   useEffect(() => {
@@ -208,8 +212,11 @@ export function ChartWorkspace(props: Props) {
           const entry = store.context(instrument.id, interval);
           if (entry)
             setView({ key: chartIdentityKey(instrument.id, interval), entry });
+          reconciler.current?.confirmed();
         },
-        resumed: () => setRetry((value) => value + 1),
+        resumed: () => {
+          void reconciler.current?.refresh();
+        },
       },
       (url) => new WebSocket(url),
     );
@@ -287,15 +294,19 @@ export function ChartWorkspace(props: Props) {
         {snapshot &&
           ` · ${snapshot.version} · ${snapshot.trend.version} · ${snapshot.state.algorithm_version} · trade-setup-v1`}
       </p>
-      {error && (
+      {(health === "degraded" || health === "failed") && (
         <div
           role="alert"
           className="mt-4 border border-amber-300/25 p-3 text-xs"
         >
-          {messages.chart.contextRefreshFailed}{" "}
+          {health === "degraded"
+            ? messages.chart.contextDegraded
+            : messages.chart.contextRefreshFailed}{" "}
           <button
             className="underline"
-            onClick={() => setRetry((value) => value + 1)}
+            onClick={() => {
+              void reconciler.current?.refresh(true);
+            }}
           >
             {messages.chart.retryContext}
           </button>
@@ -303,7 +314,7 @@ export function ChartWorkspace(props: Props) {
       )}
       {!entry || !snapshot ? (
         <div role="status" className="mt-4 border p-8 text-sm">
-          {error
+          {health === "failed"
             ? messages.chart.historyUnavailable
             : messages.chart.contextLoading}
         </div>
@@ -333,7 +344,9 @@ export function ChartWorkspace(props: Props) {
                   setStreamReady(key);
                 }
               }}
-              onStreamResume={() => setRetry((value) => value + 1)}
+              onStreamResume={() => {
+                void reconciler.current?.refresh();
+              }}
               onStreamDisconnected={() => {
                 primaryReady.current = null;
                 setStreamReady(null);
