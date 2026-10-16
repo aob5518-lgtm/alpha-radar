@@ -119,6 +119,7 @@
     "closedOnly": "Confirmed levels use closed candles only. The open candle is excluded.",
     "contextLoading": "Loading confirmed history…",
     "contextRefreshFailed": "Confirmed history refresh failed. Cached context may be stale.",
+    "contextDegraded": "History sync is temporarily delayed. The chart continues using the latest confirmed data.",
     "retryContext": "Retry",
     "tradeSetup": {
       "direction": "Directional bias",

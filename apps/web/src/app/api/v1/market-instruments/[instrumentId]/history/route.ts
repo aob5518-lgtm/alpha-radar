@@ -1,5 +1,15 @@
 /** Same-origin transport only. PostgreSQL history remains the canonical API's responsibility. */
+import { logHistoryRefresh } from "../../../../../../lib/market/chart-refresh-health.ts";
+
 export const dynamic = "force-dynamic";
+const HISTORY_TIMEOUT_MS = 25000;
+
+interface HistoryTransportFailure {
+  error: {
+    code: "history_timeout" | "history_unavailable";
+    message: string;
+  };
+}
 
 export async function GET(
   request: Request,
@@ -22,6 +32,24 @@ export async function GET(
     );
   }
   const incoming = new URL(request.url);
+  const interval = incoming.searchParams.get("interval") ?? "1d";
+  const role =
+    incoming.searchParams.get("role") === "higher" ? "higher" : "primary";
+  const incremental =
+    incoming.searchParams.has("start") || incoming.searchParams.has("end");
+  const started = performance.now();
+  const diagnostic = (errorType: string) =>
+    logHistoryRefresh({
+      event: "chart_history_refresh_failed",
+      market_instrument_id: instrumentId,
+      timeframe: ["1m", "5m", "15m", "1h", "4h", "1d", "1w"].includes(interval)
+        ? interval
+        : "invalid",
+      role,
+      incremental,
+      elapsed_ms: performance.now() - started,
+      error_type: errorType,
+    });
   const target = new URL(
     `/api/v1/market-instruments/${encodeURIComponent(instrumentId)}/history`,
     process.env.API_URL ?? "http://localhost:8000",
@@ -30,34 +58,48 @@ export async function GET(
     const value = incoming.searchParams.get(key);
     if (value !== null) target.searchParams.set(key, value);
   }
+  const deadline = AbortSignal.timeout(HISTORY_TIMEOUT_MS);
   try {
     const response = await fetch(target, {
       cache: "no-store",
-      signal: AbortSignal.timeout(15000),
+      // Covers headers AND response body, bounded below the 30s maximum retry interval.
+      signal: deadline,
     });
-    return new Response(response.body, {
-      status: response.status,
-      headers: {
-        "content-type":
-          response.headers.get("content-type") ?? "application/json",
-        "cache-control": "no-store",
-      },
-    });
-  } catch (error) {
-    console.warn(
-      JSON.stringify({
-        event: "chart_history_transport_failed",
-        error_type: error instanceof Error ? error.name : "UnknownError",
-      }),
-    );
-    return Response.json(
+    const body = await response.arrayBuffer();
+    if (!response.ok) diagnostic(`UpstreamHTTP${response.status}`);
+    return new Response(
+      [204, 205, 304].includes(response.status) ? null : body,
       {
-        error: {
-          code: "history_unavailable",
-          message: "Confirmed history unavailable",
+        status: response.status,
+        headers: {
+          "content-type":
+            response.headers.get("content-type") ?? "application/json",
+          "cache-control": "no-store",
         },
       },
-      { status: 503 },
     );
+  } catch (error) {
+    const timeout =
+      (deadline.aborted && deadline.reason?.name === "TimeoutError") ||
+      (error instanceof Error && error.name === "TimeoutError");
+    diagnostic(
+      timeout
+        ? "TimeoutError"
+        : error instanceof Error
+          ? error.name
+          : "UnknownError",
+    );
+    const failure: HistoryTransportFailure = {
+      error: {
+        code: timeout ? "history_timeout" : "history_unavailable",
+        message: timeout
+          ? "Confirmed history request timed out"
+          : "Confirmed history unavailable",
+      },
+    };
+    return Response.json(failure, {
+      status: 503,
+      headers: { "cache-control": "no-store" },
+    });
   }
 }
