@@ -1,5 +1,10 @@
 # Chart confirmed context and Trade Setup V1
 
+The current interactive execution/cache layer is described in `CHART_WORKER.md`.
+Browser calculations now run in a Web Worker; the contracts/rules below remain
+unchanged. Historical measurements below describe their original implementation,
+not a new production performance claim.
+
 Base: `b55e9189cca559b5a565d4f34727b8f8ac8e7739`. No backend schema, provider,
 threshold, phase, Structural Level ranking, or Analyst contract changes.
 

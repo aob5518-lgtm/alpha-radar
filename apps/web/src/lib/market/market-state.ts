@@ -22,6 +22,10 @@ import {
   normalizeClosedCandles,
   type NumericCandle,
   type TechnicalSnapshot,
+  prepareTechnicalSeries,
+  prefixPivots,
+  type TechnicalSeries,
+  type ConfirmedPivot,
 } from "./technical-levels.ts";
 import {
   measureTechnical,
@@ -377,10 +381,14 @@ function buildMarketState(
   candles: MarketCandle[],
   snapshot: TechnicalSnapshot,
   stablePhase?: PhaseResult,
+  prepared?: TechnicalSeries,
+  prefixLength = prepared?.closed.length,
 ): MarketState {
-  const closed = normalizeClosedCandles(candles).slice(
-    -MARKET_STATE_CONSTANTS.calculationWindow,
-  );
+  const closed = (
+    prepared
+      ? prepared.closed.slice(0, prefixLength)
+      : normalizeClosedCandles(candles)
+  ).slice(-MARKET_STATE_CONSTANTS.calculationWindow);
   const last = closed.at(-1);
   const direction = normalizeDirection(snapshot.trend.direction);
 
@@ -399,10 +407,9 @@ function buildMarketState(
     };
   }
 
-  const atrSeries = calculateAtrSeries(
-    closed,
-    MARKET_STATE_CONSTANTS.atrPeriod,
-  );
+  const atrSeries =
+    prepared?.atr.slice(0, closed.length) ??
+    calculateAtrSeries(closed, MARKET_STATE_CONSTANTS.atrPeriod);
   const atr = Math.max(atrSeries.at(-1) ?? 0, Number.EPSILON);
   const phaseResult =
     stablePhase ?? classifyPhase(closed, snapshot, atrSeries, atr);
@@ -571,6 +578,197 @@ export function calculateMarketStateAnalysis(
   timeframe: MarketInterval,
   timings?: TechnicalTimings,
 ): MarketStateAnalysis {
+  return calculateReplayAnalysis(
+    candles,
+    snapshot,
+    marketInstrumentId,
+    timeframe,
+    undefined,
+    timings,
+  ).analysis;
+}
+
+type ReplayRow = ReturnType<typeof replayMarketStates>[number];
+export interface MarketStateReplayState {
+  version: string;
+  timeframe: MarketInterval;
+  source: MarketCandle[];
+  cursor: PhaseReplayCursor;
+  beforeLast: PhaseReplayCursor;
+  rows: ReplayRow[];
+}
+const REPLAY_VERSION = `${MARKET_STATE_VERSION}:structural-levels-v1.1:trend-regime-v1.1:replay-1`;
+
+function replaySource(candles: MarketCandle[]) {
+  return candles
+    .filter((candle) => candle.is_closed)
+    .sort((a, b) => Date.parse(a.open_time) - Date.parse(b.open_time))
+    .slice(-MARKET_STATE_CONSTANTS.calculationWindow);
+}
+export function replayFingerprint(candles: MarketCandle[]): string {
+  return JSON.stringify(
+    candles.map((c) => [
+      c.market_instrument_id,
+      c.interval,
+      c.open_time,
+      c.close_time,
+      c.open,
+      c.high,
+      c.low,
+      c.close,
+      c.volume,
+      c.is_closed,
+    ]),
+  );
+}
+
+/** Contains the no-HTF historical cursor. Final HTF evidence is applied on a copy,
+ * never fed back into the next historical prefix (the production contract). */
+export function prepareMarketReplay(
+  candles: MarketCandle[],
+  timeframe: MarketInterval,
+  previous?: MarketStateReplayState,
+  timings?: TechnicalTimings,
+) {
+  const source = replaySource(candles);
+  const series = prepareTechnicalSeries(normalizeClosedCandles(source));
+  const reusable =
+    previous?.version === REPLAY_VERSION &&
+    previous.timeframe === timeframe &&
+    previous.source.length <= source.length &&
+    replayFingerprint(previous.source) ===
+      replayFingerprint(source.slice(0, previous.source.length));
+  const cursor = reusable
+    ? structuredClone(previous.cursor)
+    : createPhaseReplayCursor();
+  let beforeLast = reusable
+    ? structuredClone(previous.beforeLast)
+    : createPhaseReplayCursor();
+  const rows: ReplayRow[] = reusable ? previous.rows.slice() : [];
+  const first = Math.max(
+    MARKET_STATE_CONSTANTS.minimumStateCandles - 1,
+    reusable ? previous.source.length + 1 : 0,
+  );
+  for (let length = first; length <= source.length; length++) {
+    const prefix = source.slice(0, length),
+      closed = series.closed.slice(0, length);
+    beforeLast = structuredClone(cursor);
+    const snapshot = calculateTechnicalSnapshot(
+      prefix,
+      Number(prefix.at(-1)!.close),
+      timeframe,
+      {},
+      timings,
+      series,
+      length,
+    );
+    const started = performance.now();
+    const atrSeries = series.atr.slice(0, length),
+      atr = Math.max(atrSeries.at(-1) ?? 0, Number.EPSILON);
+    const stable = advanceMarketPhase(
+      cursor,
+      classifyPhase(closed, snapshot, atrSeries, atr, series),
+      closed,
+      atr,
+    );
+    rows.push({
+      state: buildMarketState(prefix, snapshot, stable.result, series, length),
+      markerEligible: stable.markerEligible,
+      sequence: length,
+      candle: prefix.at(-1)!,
+    });
+    if (timings) timings.market_state_ms += performance.now() - started;
+  }
+  return {
+    replay: {
+      version: REPLAY_VERSION,
+      timeframe,
+      source,
+      cursor,
+      beforeLast,
+      rows,
+    } satisfies MarketStateReplayState,
+    series,
+    incremental: Boolean(reusable),
+  };
+}
+
+export function calculateReplayAnalysis(
+  candles: MarketCandle[],
+  snapshot: TechnicalSnapshot,
+  marketInstrumentId: string,
+  timeframe: MarketInterval,
+  previous?: MarketStateReplayState,
+  timings?: TechnicalTimings,
+): {
+  analysis: MarketStateAnalysis;
+  replay?: MarketStateReplayState;
+  incremental: boolean;
+} {
+  // Invalid numeric rows historically do not advance the cursor. Keep that exact
+  // legacy path for malformed inputs instead of changing normalization semantics.
+  const source = replaySource(candles);
+  if (normalizeClosedCandles(source).length !== source.length) {
+    return {
+      analysis: calculateLegacyMarketStateAnalysis(
+        candles,
+        snapshot,
+        marketInstrumentId,
+        timeframe,
+        timings,
+      ),
+      incremental: false,
+    };
+  }
+  const started = performance.now();
+  const { replay, series, incremental } = prepareMarketReplay(
+    source,
+    timeframe,
+    previous,
+    timings,
+  );
+  const rows = replay.rows.slice();
+  if (rows.length) {
+    const cursor = structuredClone(replay.beforeLast),
+      closed = series.closed;
+    const atr = Math.max(series.atr.at(-1) ?? 0, Number.EPSILON);
+    const stable = advanceMarketPhase(
+      cursor,
+      classifyPhase(closed, snapshot, series.atr, atr, series),
+      closed,
+      atr,
+    );
+    rows[rows.length - 1] = {
+      state: buildMarketState(source, snapshot, stable.result, series),
+      markerEligible: stable.markerEligible,
+      sequence: source.length,
+      candle: source.at(-1)!,
+    };
+  }
+  if (timings) timings.marker_replay_ms += performance.now() - started;
+  return {
+    replay,
+    incremental,
+    analysis: {
+      state: rows.at(-1)?.state ?? buildMarketState(candles, snapshot),
+      markers: selectMarketStateMarkers(
+        rows,
+        marketInstrumentId,
+        timeframe,
+        candles.filter((c) => c.is_closed).length,
+      ),
+    },
+  };
+}
+
+/** Retained for standalone public state/marker callers and malformed-input fallback. */
+function calculateLegacyMarketStateAnalysis(
+  candles: MarketCandle[],
+  snapshot: TechnicalSnapshot,
+  marketInstrumentId: string,
+  timeframe: MarketInterval,
+  timings?: TechnicalTimings,
+): MarketStateAnalysis {
   const replay = measureTechnical(timings, "marker_replay_ms", () =>
     replayMarketStates(candles, timeframe, snapshot, timings),
   );
@@ -590,6 +788,7 @@ function classifyPhase(
   snapshot: TechnicalSnapshot,
   atrSeries: number[],
   atr: number,
+  prepared?: TechnicalSeries,
 ): PhaseResult {
   const last = candles.at(-1)!;
   const baselineAtr = Math.max(
@@ -618,7 +817,12 @@ function classifyPhase(
     mean(recentTrueRanges(candles, MARKET_STATE_CONSTANTS.shortWindow)) /
     baselineAtr;
   const stabilization = detectStabilization(candles, baselineAtr);
-  const reversal = detectReversal(candles, atrSeries, stabilization);
+  const reversal = detectReversal(
+    candles,
+    atrSeries,
+    stabilization,
+    prepared ? prefixPivots(prepared, candles.length) : undefined,
+  );
   const support = detectLevelConfirmation(
     candles,
     snapshot.supports[0] ?? null,
@@ -629,11 +833,13 @@ function classifyPhase(
     snapshot.resistances[0] ?? null,
     atr,
   );
-  const exhaustion = detectExhaustion(candles, atrSeries);
-  const ema20 = calculateSeededEma(
-    candles.map((candle) => candle.close),
-    20,
-  ).at(-1);
+  const exhaustion = detectExhaustion(candles, atrSeries, prepared);
+  const ema20 =
+    prepared?.ema20[candles.length - 1] ??
+    calculateSeededEma(
+      candles.map((candle) => candle.close),
+      20,
+    ).at(-1);
 
   if (support.confirmed && support.level) {
     return levelPhase("support_confirmed", support.level, 84);
@@ -908,9 +1114,10 @@ function detectReversal(
   candles: NumericCandle[],
   atrSeries: number[],
   stabilization: StabilizationResult,
+  preparedPivots?: ConfirmedPivot[],
 ): ReversalResult {
   const atr = Math.max(atrSeries.at(-1) ?? 0, Number.EPSILON);
-  const pivots = detectConfirmedPivots(candles);
+  const pivots = preparedPivots ?? detectConfirmedPivots(candles);
   const currentIndex = candles.length - 1;
   const high = [...pivots]
     .reverse()
@@ -1066,7 +1273,11 @@ function detectLevelConfirmation(
   };
 }
 
-function detectExhaustion(candles: NumericCandle[], atrSeries: number[]) {
+function detectExhaustion(
+  candles: NumericCandle[],
+  atrSeries: number[],
+  prepared?: TechnicalSeries,
+) {
   const window = candles.slice(-MARKET_STATE_CONSTANTS.exhaustionLookback);
   if (window.length < MARKET_STATE_CONSTANTS.exhaustionLookback) {
     return {
@@ -1080,10 +1291,12 @@ function detectExhaustion(candles: NumericCandle[], atrSeries: number[]) {
   }
   const atr = Math.max(atrSeries.at(-1) ?? 0, Number.EPSILON);
   const move = ((window.at(-1)?.close ?? 0) - (window[0]?.close ?? 0)) / atr;
-  const ema20 = calculateSeededEma(
-    candles.map((candle) => candle.close),
-    20,
-  ).at(-1);
+  const ema20 =
+    prepared?.ema20[candles.length - 1] ??
+    calculateSeededEma(
+      candles.map((candle) => candle.close),
+      20,
+    ).at(-1);
   const last = window.at(-1);
   const groups = [window.slice(0, 4), window.slice(4, 8), window.slice(8, 12)];
   const highs = groups.map((group) =>

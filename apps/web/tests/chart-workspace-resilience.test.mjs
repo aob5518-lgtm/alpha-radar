@@ -8,6 +8,8 @@ import ts from "typescript";
 import * as context from "../src/lib/market/chart-context-store.ts";
 import * as intervals from "../src/lib/market/intervals.ts";
 import * as reconciler from "../src/lib/market/chart-history-reconciler.ts";
+import { calculateTechnicalContext } from "../src/lib/market/technical-context.ts";
+import { TechnicalWorkerEngine } from "../src/lib/market/technical-worker-engine.ts";
 import {
   btcId,
   fixtureNow,
@@ -31,7 +33,7 @@ const compiled = ts.transpileModule(
 
 // Run the actual workspace TSX, effects and handlers with deterministic React hooks.
 // Canvas/socket internals retain their separate existing component regression suite.
-async function harness(locale = "zh-CN") {
+async function harness(locale = "zh-CN", asynchronous = false) {
   let now = fixtureNow,
     outage = false,
     cursor = 0,
@@ -42,6 +44,18 @@ async function harness(locale = "zh-CN") {
     controllers = [];
   let chartProps,
     timerId = 0;
+  const workerTasks = [];
+  const computer = {
+    select() {},
+    retry() {},
+    dispose() {},
+    request(input, complete) {
+      workerTasks.push({
+        input: { ...input, generation: workerTasks.length },
+        complete,
+      });
+    },
+  };
   const store = new context.ChartContextStore(
     async (id, interval) => {
       if (outage) throw new DOMException("timeout", "TimeoutError");
@@ -49,6 +63,7 @@ async function harness(locale = "zh-CN") {
     },
     () => now,
     () => {},
+    asynchronous ? computer : undefined,
   );
   await store.load(btcId, "15m");
   await store.load(btcId, "1h");
@@ -109,6 +124,10 @@ async function harness(locale = "zh-CN") {
     }
   }
   const modules = {
+    "@/lib/market/browser-technical-computer": {
+      createBrowserTechnicalComputer: () => undefined,
+      observeChartLongTasks: () => () => {},
+    },
     react: hooks,
     "react/jsx-runtime": jsx,
     "lucide-react": { Activity: () => null, DatabaseZap: () => null },
@@ -157,6 +176,7 @@ async function harness(locale = "zh-CN") {
     process: { env: {} },
     URL,
     URLSearchParams,
+    queueMicrotask,
     performance,
     window,
     document: {
@@ -182,7 +202,15 @@ async function harness(locale = "zh-CN") {
     initialInterval: "15m",
     initialHistory: fixtureHistory(),
     initialHigherHistory: fixtureHistory("1h"),
-    initialSnapshot: store.context(btcId, "15m").snapshot,
+    initialSnapshot: asynchronous
+      ? calculateTechnicalContext(
+          fixtureHistory().items,
+          113,
+          "15m",
+          fixtureHistory("1h").items,
+          btcId,
+        )
+      : store.context(btcId, "15m").snapshot,
     currentPrice: 113,
     locale,
     messages,
@@ -212,6 +240,7 @@ async function harness(locale = "zh-CN") {
   return {
     render,
     store,
+    workerTasks,
     controllers,
     streams,
     timers,
@@ -284,6 +313,75 @@ test("actual workspace renders cached switch immediately, retains canvas on fail
   assert.equal(h.streams.at(-1), stream);
   assert.equal(stream.stopped, false);
   h.controllers.forEach((value) => value.dispose());
+});
+
+test("actual workspace shows canonical candles while a long worker is pending, switches again immediately and never blocks navigation links", async () => {
+  const h = await harness("zh-CN", true);
+  h.render();
+  await h.flush();
+  h.render();
+  const started = performance.now();
+  h.switchTo("1h");
+  h.render();
+  await h.flush();
+  const markup = h.render();
+  assert.match(markup, /data-chart="1h"/);
+  assert.match(markup, /正在更新结构分析/);
+  assert.equal(h.chart.marketState, undefined);
+  assert.ok(h.workerTasks.length);
+  // The real navigation is outside the workspace and contains ordinary Next Links;
+  // no worker/history promise participates in Events/Analyst navigation.
+  const shellSource = readFileSync(
+    new URL("../src/components/app-shell.tsx", import.meta.url),
+    "utf8",
+  );
+  const shellCompiled = ts.transpileModule(shellSource, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      esModuleInterop: true,
+      jsx: ts.JsxEmit.ReactJSX,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const exports = {};
+  const modules = {
+    "react/jsx-runtime": jsx,
+    "next/link": ({ children, ...props }) =>
+      jsx.jsx("a", { ...props, children }),
+    "next/navigation": { usePathname: () => "/chart" },
+    "lucide-react": {
+      Bot: () => null,
+      CalendarDays: () => null,
+      LineChart: () => null,
+      Radar: () => null,
+    },
+    "@/components/language-switcher": { LanguageSwitcher: () => null },
+    "@/lib/utils": { cn: (...values) => values.filter(Boolean).join(" ") },
+  };
+  runInNewContext(shellCompiled, { exports, require: (name) => modules[name] });
+  const messages = JSON.parse(
+    readFileSync(new URL("../messages/zh-CN.json", import.meta.url), "utf8"),
+  );
+  const shell = renderToStaticMarkup(
+    jsx.jsx(exports.AppShell, {
+      locale: "zh-CN",
+      messages,
+      children: "pending chart",
+    }),
+  );
+  assert.match(shell, /href="\/events"/);
+  assert.match(shell, /href="\/analyst"/);
+  h.switchTo("15m");
+  assert.match(h.render(), /data-chart="15m"/);
+  assert.ok(
+    performance.now() - started < 1000,
+    "UI handlers must return without waiting for the unresolved worker",
+  );
+  const late = h.workerTasks.find((task) => task.input.timeframe === "1h");
+  late.complete(new TechnicalWorkerEngine().compute(late.input));
+  assert.match(h.render(), /data-chart="15m"/);
+  h.controllers.forEach((value) => value.dispose());
+  h.store.dispose();
 });
 
 test("English degraded copy is nonblocking and switching back preserves exact cached identity", async () => {

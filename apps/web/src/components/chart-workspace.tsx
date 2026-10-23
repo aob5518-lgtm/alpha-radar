@@ -31,6 +31,10 @@ import { connectChartStream } from "@/lib/market/market-stream";
 import { cn } from "@/lib/utils";
 import { ChartHistoryReconciler } from "@/lib/market/chart-history-reconciler";
 import type { ChartRefreshHealth } from "@/lib/market/chart-refresh-health";
+import {
+  createBrowserTechnicalComputer,
+  observeChartLongTasks,
+} from "@/lib/market/browser-technical-computer";
 
 interface Props {
   instruments: MarketInstrument[];
@@ -49,10 +53,16 @@ interface Props {
 export function ChartWorkspace(props: Props) {
   const { instrument, messages, locale } = props;
   const [store] = useState(() => {
-    const value = new ChartContextStore(fetchChartHistory);
+    const value = new ChartContextStore(
+      fetchChartHistory,
+      Date.now,
+      undefined,
+      createBrowserTechnicalComputer(),
+    );
     value.seed(props.initialHistory, props.initialSnapshot);
     if (props.initialHigherHistory) value.seed(props.initialHigherHistory);
     value.sealSeed(instrument.id, props.initialInterval);
+    value.select(instrument.id, props.initialInterval);
     return value;
   });
   const [interval, setInterval] = useState(props.initialInterval);
@@ -68,6 +78,7 @@ export function ChartWorkspace(props: Props) {
       : "loading",
   );
   const reconciler = useRef<ChartHistoryReconciler | null>(null);
+  const lifecycle = useRef<{ active: boolean } | null>(null);
   const selected = useRef({ instrumentId: instrument.id, interval });
   const observedPrice = useRef(props.currentPrice);
   const primaryReady = useRef<string | null>(null);
@@ -76,6 +87,7 @@ export function ChartWorkspace(props: Props) {
     key: string;
     started: number;
     cacheHit: boolean;
+    candles?: number;
   } | null>(null);
 
   const selectInterval = (next: MarketInterval, push = true) => {
@@ -86,6 +98,7 @@ export function ChartWorkspace(props: Props) {
       cacheHit: !!store.cachedContext(instrument.id, next),
     };
     selected.current = { instrumentId: instrument.id, interval: next };
+    store.select(instrument.id, next);
     reconciler.current?.dispose();
     reconciler.current = null;
     primaryReady.current = null;
@@ -102,6 +115,38 @@ export function ChartWorkspace(props: Props) {
       window.history.pushState(null, "", url);
     }
   };
+
+  useEffect(() => {
+    store.select(instrument.id, interval);
+    const stop = store.subscribe(() => {
+      if (
+        selected.current.instrumentId !== instrument.id ||
+        selected.current.interval !== interval
+      )
+        return;
+      const entry = store.context(instrument.id, interval);
+      if (entry)
+        setView({ key: chartIdentityKey(instrument.id, interval), entry });
+    });
+    const stopObserving = observeChartLongTasks();
+    return () => {
+      stop();
+      stopObserving();
+    };
+  }, [store, instrument.id, interval]);
+
+  useEffect(() => {
+    // Deferring disposal survives React Strict Mode's development effect replay.
+    let active = true;
+    const token = { active: true };
+    lifecycle.current = token;
+    return () => {
+      active = false;
+      queueMicrotask(() => {
+        if (!active && lifecycle.current === token) store.dispose();
+      });
+    };
+  }, [store]);
 
   useEffect(() => {
     let disposed = false;
@@ -152,6 +197,7 @@ export function ChartWorkspace(props: Props) {
         const next = parseMarketInterval(query.get("interval") ?? undefined);
         if (selected.current.interval === next) return;
         selected.current = { instrumentId: instrument.id, interval: next };
+        store.select(instrument.id, next);
         reconciler.current?.dispose();
         reconciler.current = null;
         primaryReady.current = null;
@@ -232,6 +278,9 @@ export function ChartWorkspace(props: Props) {
   useEffect(() => {
     const timing = switchTiming.current;
     if (!timing || view.key !== timing.key) return;
+    if (timing.candles === undefined)
+      timing.candles = performance.now() - timing.started;
+    if (view.entry.analysisPending || !view.entry.snapshot) return;
     if (process.env.NODE_ENV === "development")
       console.info(
         JSON.stringify({
@@ -239,6 +288,8 @@ export function ChartWorkspace(props: Props) {
           identity: timing.key,
           cache_hit: timing.cacheHit,
           timeframe_switch_ms: performance.now() - timing.started,
+          timeframe_switch_to_candles_ms: timing.candles,
+          timeframe_switch_to_analysis_ms: performance.now() - timing.started,
         }),
       );
     switchTiming.current = null;
@@ -306,13 +357,29 @@ export function ChartWorkspace(props: Props) {
             className="underline"
             onClick={() => {
               void reconciler.current?.refresh(true);
+              store.retryAnalysis(instrument.id, interval);
             }}
           >
             {messages.chart.retryContext}
           </button>
         </div>
       )}
-      {!entry || !snapshot ? (
+      {(entry?.analysisPending || entry?.analysisError) && (
+        <p role="status" className="mt-3 text-xs text-amber-200">
+          {entry.analysisError
+            ? messages.chart.analysisUnavailable
+            : messages.chart.analysisLoading}
+          {entry.analysisError && (
+            <button
+              className="ml-2 underline"
+              onClick={() => store.retryAnalysis(instrument.id, interval)}
+            >
+              {messages.chart.retryContext}
+            </button>
+          )}
+        </p>
+      )}
+      {!entry ? (
         <div role="status" className="mt-4 border p-8 text-sm">
           {health === "failed"
             ? messages.chart.historyUnavailable
@@ -329,9 +396,11 @@ export function ChartWorkspace(props: Props) {
             <StructuralMarketChart
               key={`${instrument.id}:${interval}`}
               history={entry.history}
-              levels={[...snapshot.resistances, ...snapshot.supports]}
-              marketState={snapshot.state}
-              marketStateMarkers={snapshot.markers}
+              levels={
+                snapshot ? [...snapshot.resistances, ...snapshot.supports] : []
+              }
+              marketState={snapshot?.state}
+              marketStateMarkers={snapshot?.markers ?? []}
               tradeSetup={entry.setup ?? undefined}
               currentPrice={observedPrice.current}
               instrumentId={instrument.id}
@@ -365,39 +434,41 @@ export function ChartWorkspace(props: Props) {
               chartMessages={messages.chart}
             />
           </div>
-          <aside className="space-y-4">
-            <section className="border p-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="section-label">{messages.chart.trend}</span>
-                <Activity className="size-4 text-emerald-300" />
-              </div>
-              <p className="mt-4 text-2xl font-semibold uppercase">
-                {messages.chart[snapshot.trend.direction]}
-              </p>
-              <p className="mt-1 font-mono text-sm text-[var(--muted)]">
-                {messages.chart.trendStrength}: {snapshot.trend.strength}/100
-              </p>
-              <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
-                {locale === "zh-CN"
-                  ? messages.chart.trendDescription
-                  : snapshot.trend.reason}
-              </p>
-            </section>
-            <LevelTable
-              title={messages.chart.resistance}
-              levels={snapshot.resistances}
-              locale={locale}
-              quoteCurrency={instrument.quote_currency}
-              messages={messages}
-            />
-            <LevelTable
-              title={messages.chart.support}
-              levels={snapshot.supports}
-              locale={locale}
-              quoteCurrency={instrument.quote_currency}
-              messages={messages}
-            />
-          </aside>
+          {snapshot && (
+            <aside className="space-y-4">
+              <section className="border p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="section-label">{messages.chart.trend}</span>
+                  <Activity className="size-4 text-emerald-300" />
+                </div>
+                <p className="mt-4 text-2xl font-semibold uppercase">
+                  {messages.chart[snapshot.trend.direction]}
+                </p>
+                <p className="mt-1 font-mono text-sm text-[var(--muted)]">
+                  {messages.chart.trendStrength}: {snapshot.trend.strength}/100
+                </p>
+                <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
+                  {locale === "zh-CN"
+                    ? messages.chart.trendDescription
+                    : snapshot.trend.reason}
+                </p>
+              </section>
+              <LevelTable
+                title={messages.chart.resistance}
+                levels={snapshot.resistances}
+                locale={locale}
+                quoteCurrency={instrument.quote_currency}
+                messages={messages}
+              />
+              <LevelTable
+                title={messages.chart.support}
+                levels={snapshot.supports}
+                locale={locale}
+                quoteCurrency={instrument.quote_currency}
+                messages={messages}
+              />
+            </aside>
+          )}
         </section>
       )}
       {snapshot?.insufficientData && (

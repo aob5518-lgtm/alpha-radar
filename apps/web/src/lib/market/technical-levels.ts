@@ -61,6 +61,39 @@ export interface TechnicalSnapshot {
   insufficientData: boolean;
 }
 
+/** Prefix-stable series; computed once per replay origin, never across origins. */
+export interface TechnicalSeries {
+  closed: NumericCandle[];
+  atr: number[];
+  pivots: ConfirmedPivot[];
+  ema20: Array<number | null>;
+  ema50: Array<number | null>;
+  ema200: Array<number | null>;
+  adx: WilderAdxSeries;
+}
+
+export function prepareTechnicalSeries(
+  closed: NumericCandle[],
+): TechnicalSeries {
+  const closes = closed.map((candle) => candle.close);
+  return {
+    closed,
+    atr: calculateAtrSeries(closed),
+    pivots: detectConfirmedPivots(closed),
+    ema20: calculateSeededEma(closes, 20),
+    ema50: calculateSeededEma(closes, 50),
+    ema200: calculateSeededEma(closes, 200),
+    adx: calculateWilderAdx(closed),
+  };
+}
+
+export function prefixPivots(
+  series: TechnicalSeries,
+  length: number,
+): ConfirmedPivot[] {
+  return series.pivots.filter((pivot) => pivot.index < length - 3);
+}
+
 export interface StructuralLevelOptions {
   pivotLeft?: number;
   pivotRight?: number;
@@ -518,6 +551,7 @@ export function calculateWilderAdx(
 export function calculateTrendRegime(
   candles: NumericCandle[],
   higherTimeframeDirection?: "bullish" | "neutral" | "bearish",
+  prepared?: TechnicalSeries,
 ): TrendRegime {
   const emptyBreakdown: TrendBreakdown = {
     market_structure: 0,
@@ -538,9 +572,13 @@ export function calculateTrendRegime(
     };
   }
   const closes = candles.map((candle) => candle.close);
-  const ema20 = calculateSeededEma(closes, 20);
-  const ema50 = calculateSeededEma(closes, 50);
-  const ema200 = calculateSeededEma(closes, 200);
+  const ema20 =
+    prepared?.ema20.slice(0, candles.length) ?? calculateSeededEma(closes, 20);
+  const ema50 =
+    prepared?.ema50.slice(0, candles.length) ?? calculateSeededEma(closes, 50);
+  const ema200 =
+    prepared?.ema200.slice(0, candles.length) ??
+    calculateSeededEma(closes, 200);
   const last = closes.at(-1) ?? 0;
   const e20 = lastNumber(ema20);
   const e50 = lastNumber(ema50);
@@ -553,7 +591,9 @@ export function calculateTrendRegime(
       ? 0
       : clamp(((current - previous) / previous) * 100, -1, 1);
   };
-  const pivots = detectConfirmedPivots(candles);
+  const pivots = prepared
+    ? prefixPivots(prepared, candles.length)
+    : detectConfirmedPivots(candles);
   const highs = pivots.filter((pivot) => pivot.side === "high").slice(-2);
   const lows = pivots.filter((pivot) => pivot.side === "low").slice(-2);
   const structure =
@@ -572,8 +612,8 @@ export function calculateTrendRegime(
     last > e50 ? 1 : -1,
     last > e200 ? 1 : -1,
   ]);
-  const adxSeries = calculateWilderAdx(candles, 14);
-  const adxValue = lastNumber(adxSeries.adx);
+  const adxSeries = prepared?.adx ?? calculateWilderAdx(candles, 14);
+  const adxValue = lastNumber(adxSeries.adx.slice(0, candles.length));
   const adxDirectionalWeight = clamp(adxValue / 50, 0, 1);
   const higher =
     higherTimeframeDirection === undefined
@@ -639,10 +679,16 @@ export function calculateTechnicalSnapshot(
   timeframe: MarketInterval,
   options: StructuralLevelOptions = {},
   timings?: TechnicalTimings,
+  prepared?: TechnicalSeries,
+  prefixLength = prepared?.closed.length,
 ): TechnicalSnapshot {
   const structuralStart = timings ? performance.now() : 0;
-  const closedCandles = normalizeClosedCandles(candles);
-  const pivots = detectConfirmedPivots(closedCandles, options);
+  const closedCandles = prepared
+    ? prepared.closed.slice(0, prefixLength)
+    : normalizeClosedCandles(candles);
+  const pivots = prepared
+    ? prefixPivots(prepared, closedCandles.length)
+    : detectConfirmedPivots(closedCandles, options);
   const zones = clusterPivots(
     pivots,
     closedCandles.length,
@@ -663,7 +709,11 @@ export function calculateTechnicalSnapshot(
     supports,
     resistances,
     trend: measureTechnical(timings, "trend_regime_ms", () =>
-      calculateTrendRegime(closedCandles, options.higherTimeframeDirection),
+      calculateTrendRegime(
+        closedCandles,
+        options.higherTimeframeDirection,
+        prepared,
+      ),
     ),
     version: TECHNICAL_LEVELS_VERSION,
     insufficientData:

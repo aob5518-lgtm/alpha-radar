@@ -14,6 +14,7 @@ import {
 } from "./technical-context.ts";
 import { logTechnicalDiagnostics } from "./technical-diagnostics.ts";
 import { calculateTradeSetup } from "./trade-setup.ts";
+import type { TechnicalComputer } from "./technical-worker-protocol.ts";
 import {
   logHistoryRefresh,
   type ChartRefreshHealth,
@@ -32,6 +33,9 @@ export interface ChartContextEntry {
   setup: TradeSetupCandidateV1 | null;
   revision: number;
   calculatedRevision: string;
+  analysisPending?: boolean;
+  analysisError?: boolean;
+  requestedRevision?: string;
 }
 
 export type HistoryLoader = (
@@ -157,6 +161,9 @@ export class ChartContextStore {
   private pending = new Map<string, Promise<void>>();
   private failures = new Map<string, HistoryRefreshDiagnostic>();
   private reportedHealth = new Map<string, ChartRefreshHealth>();
+  private selected = "";
+  private listeners = new Set<() => void>();
+  private computer?: TechnicalComputer;
 
   private loader: HistoryLoader;
   private now: () => number;
@@ -165,10 +172,57 @@ export class ChartContextStore {
     loader: HistoryLoader,
     now: () => number = Date.now,
     diagnostic: (event: HistoryRefreshDiagnostic) => void = logHistoryRefresh,
+    computer?: TechnicalComputer,
   ) {
     this.loader = loader;
     this.now = now;
     this.diagnostic = diagnostic;
+    this.computer = computer;
+  }
+
+  select(instrumentId: string, interval: MarketInterval) {
+    const key = chartIdentityKey(instrumentId, interval);
+    if (this.selected === key) return;
+    const old = this.entries.get(this.selected);
+    if (old) {
+      old.requestedRevision = "";
+      old.analysisPending = false;
+    }
+    this.selected = key;
+    this.computer?.select(instrumentId, interval);
+    this.evict();
+  }
+  subscribe(listener: () => void) {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+  retryAnalysis(instrumentId: string, interval: MarketInterval) {
+    const entry = this.peek(instrumentId, interval);
+    if (entry) entry.requestedRevision = "";
+    this.computer?.retry();
+    this.context(instrumentId, interval);
+  }
+  dispose() {
+    this.selected = "";
+    this.computer?.dispose();
+    this.listeners.clear();
+  }
+  private evict() {
+    const active = this.entries.get(this.selected);
+    const higher = active && higherMarketInterval[active.history.interval];
+    const protectedHigher =
+      active && higher
+        ? chartIdentityKey(active.history.market_instrument_id, higher)
+        : "";
+    for (const key of this.entries.keys()) {
+      if (this.entries.size <= 16) break;
+      if (key === this.selected || key === protectedHigher) continue;
+      this.entries.delete(key);
+      this.failures.delete(key);
+      this.reportedHealth.delete(key);
+    }
   }
 
   seed(
@@ -199,13 +253,20 @@ export class ChartContextStore {
       revision: 1,
       calculatedRevision: snapshot ? "seed" : "",
     });
+    this.evict();
   }
 
   peek(
     instrumentId: string,
     interval: MarketInterval,
   ): ChartContextEntry | undefined {
-    return this.entries.get(chartIdentityKey(instrumentId, interval));
+    const key = chartIdentityKey(instrumentId, interval),
+      entry = this.entries.get(key);
+    if (entry) {
+      this.entries.delete(key);
+      this.entries.set(key, entry);
+    }
+    return entry;
   }
 
   isCurrent(instrumentId: string, interval: MarketInterval): boolean {
@@ -231,7 +292,10 @@ export class ChartContextStore {
     interval: MarketInterval,
   ): ChartContextEntry | undefined {
     const entry = this.peek(instrumentId, interval);
-    return entry?.snapshot && entry.history.items.length > 0
+    return (entry?.snapshot ||
+      (this.computer && entry?.history.items.length)) &&
+      entry &&
+      entry.history.items.length > 0
       ? this.context(instrumentId, interval)
       : undefined;
   }
@@ -411,6 +475,68 @@ export class ChartContextStore {
     const revision = this.contextRevision(instrumentId, interval);
     if (entry.calculatedRevision !== revision) {
       const close = Number(entry.history.items.at(-1)?.close ?? 0);
+      if (this.computer) {
+        if (
+          this.selected === chartIdentityKey(instrumentId, interval) &&
+          entry.requestedRevision !== revision &&
+          entry.history.items.length
+        ) {
+          entry.requestedRevision = revision;
+          entry.analysisPending = true;
+          entry.analysisError = false;
+          // Queue outside React render; no synchronous technical fallback exists.
+          queueMicrotask(() => {
+            if (
+              this.selected !== chartIdentityKey(instrumentId, interval) ||
+              entry.requestedRevision !== revision
+            )
+              return;
+            this.computer!.request(
+              {
+                market_instrument_id: instrumentId,
+                timeframe: interval,
+                revision,
+                candles: entry.history.items,
+                higherCandles: higherEntry?.history.items,
+                confirmedClose: close,
+              },
+              (result) => {
+                if (
+                  this.selected === chartIdentityKey(instrumentId, interval) &&
+                  this.entries.get(this.selected) === entry &&
+                  entry.requestedRevision === revision &&
+                  this.contextRevision(instrumentId, interval) !== revision
+                ) {
+                  // A higher boundary can expire while a worker is computing.
+                  // Replace that job rather than leaving analysis pending forever.
+                  entry.requestedRevision = "";
+                  entry.analysisPending = false;
+                  this.context(instrumentId, interval);
+                  return;
+                }
+                if (
+                  this.selected !== chartIdentityKey(instrumentId, interval) ||
+                  this.entries.get(this.selected) !== entry ||
+                  this.contextRevision(instrumentId, interval) !== revision ||
+                  result.market_instrument_id !== instrumentId ||
+                  result.timeframe !== interval ||
+                  result.revision !== revision
+                )
+                  return;
+                entry.analysisPending = false;
+                entry.analysisError = !result.ok;
+                if (result.ok) {
+                  entry.snapshot = result.snapshot;
+                  entry.setup = result.setup;
+                  entry.calculatedRevision = revision;
+                }
+                for (const listener of this.listeners) listener();
+              },
+            );
+          });
+        }
+        return entry;
+      }
       entry.snapshot = calculateTechnicalContext(
         entry.history.items,
         close,

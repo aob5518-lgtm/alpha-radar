@@ -55,6 +55,12 @@ navigation after hydration. A scoped same-origin history transport reads the exi
 DB API, not providers. Neither client observations nor Trade Setup are persisted or executable.
 See `CHART_REALTIME.md` for identity safety, cache/recovery and diagnostics.
 
+Interactive technical calculation is delegated to a browser module Web Worker,
+not the Python ingestion worker or a new service. It uses generation-scoped result
+application, a bounded replay cache and output-equivalent prefix intermediates.
+Canonical candles render independently of analysis completion. See `CHART_WORKER.md`
+for rolling-window checkpoint correctness, failure boundaries and measured limitations.
+
 The prior Command Center, Discover, Strategy/Opportunity, Cycle, Watchlist, Alerts, Asset Directory,
 Impact Map and Heatmap implementations are archived presentation history, not current product scope.
 Their backend-independent fixtures are not imported by Core 3 pages.
