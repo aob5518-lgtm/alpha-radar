@@ -82,6 +82,70 @@
     }
   },
   "chart": {
+    "maEntry": {
+      "overlays": {
+        "levels": "显示支撑压力",
+        "markers": "显示状态标记",
+        "ma": "显示均线",
+        "entries": "显示开仓信号"
+      },
+      "settings": "均线设置",
+      "period": "周期",
+      "averageType": "均线类型",
+      "opportunity": "均线机会",
+      "score": "规则匹配分（非胜率）",
+      "candidateLabel": "候选／确认参考，非自动开仓指令",
+      "zone": "参考开仓区间",
+      "trigger": "触发价",
+      "invalidation": "失效价",
+      "target": "第一目标",
+      "disclaimer": "仅供参考，不构成交易建议或收益保证。信号仅基于已收盘 K 线；规则分未经胜率校准，不是自动执行指令。",
+      "slopes": {
+        "rising": "均线上行",
+        "falling": "均线下行",
+        "flat": "均线走平"
+      },
+      "states": {
+        "disabled": "已停用",
+        "no_setup": "观望",
+        "observe_long": "观察多",
+        "observe_short": "观察空",
+        "candidate_long": "观察多 · 候选",
+        "candidate_short": "观察空 · 候选",
+        "trigger_long": "可开多 · 收盘确认",
+        "trigger_short": "可开空 · 收盘确认",
+        "invalidated": "已失效 · 观望"
+      },
+      "types": {
+        "ma_pullback_long": "顺势回踩均线做多",
+        "ma_rejection_short": "反弹遇压均线做空"
+      },
+      "reasons": {
+        "insufficient_history": "已确认历史／趋势不足",
+        "flat_ma": "均线走平，震荡过滤",
+        "trend_conflict": "方向背景不一致",
+        "repeated_crosses": "反复穿越均线，假突破过滤",
+        "excess_retests": "均线反复测试过多",
+        "no_impulse": "缺少远离均线的有效冲量",
+        "no_retest": "缺少近期受控回踩／反抽",
+        "near_obstruction": "邻近结构阻挡，可用空间不足",
+        "no_target": "暂无已确认结构目标",
+        "weak_confirmation": "等待有力度的收盘确认",
+        "weak_volume": "确认量能不足",
+        "missing_volume": "量能证据缺失",
+        "macd_conflict": "MACD 与方向冲突",
+        "macd_unready": "MACD 历史不足",
+        "overextended": "价格已偏离，不追价",
+        "level_failed": "均线测试已失效",
+        "trend_aligned": "趋势同向",
+        "slope_aligned": "均线斜率同向",
+        "impulse_retest": "冲量后受控回踩／反抽均线",
+        "price_confirmed": "收盘反应有力度",
+        "macd_aligned": "MACD 支持该反应",
+        "volume_healthy": "确认量能健康",
+        "structure_aligned": "结构支撑／压力共振"
+      }
+    },
     "eyebrow": "专业加密图表",
     "title": "市场结构",
     "description": "基于已持久化的数据源 K 线，计算确定性、仅使用收盘 K 线的结构位与趋势状态。",

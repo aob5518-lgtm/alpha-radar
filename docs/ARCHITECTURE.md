@@ -55,6 +55,12 @@ navigation after hydration. A scoped same-origin history transport reads the exi
 DB API, not providers. Neither client observations nor Trade Setup are persisted or executable.
 See `CHART_REALTIME.md` for identity safety, cache/recovery and diagnostics.
 
+The independent `ma-confluence-entry-v1` presentation module consumes the unchanged
+confirmed technical snapshot for one configurable MA and heuristic research setup.
+Visibility/preferences are separate from calculation and never modify the original
+engines or backend contracts. See `MA_CONFLUENCE_ENTRY.md` for exact gates, score
+semantics, execution boundary and limitations; it is not a trading execution system.
+
 Interactive technical calculation is delegated to a browser module Web Worker,
 not the Python ingestion worker or a new service. It uses generation-scoped result
 application, a bounded replay cache and output-equivalent prefix intermediates.

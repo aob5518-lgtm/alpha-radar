@@ -132,8 +132,8 @@ async function harness(locale = "zh-CN", asynchronous = false) {
     "react/jsx-runtime": jsx,
     "lucide-react": { Activity: () => null, DatabaseZap: () => null },
     "@/components/chart-asset-selector": { ChartAssetSelector: () => null },
-    "@/components/structural-market-chart": {
-      StructuralMarketChart: (props) => {
+    "@/components/ma-chart-layer": {
+      MaChartLayer: (props) => {
         chartProps = props;
         return jsx.jsx("div", {
           "data-chart": props.interval,

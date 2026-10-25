@@ -10,7 +10,7 @@ import { Activity, DatabaseZap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { ChartAssetSelector } from "@/components/chart-asset-selector";
-import { StructuralMarketChart } from "@/components/structural-market-chart";
+import { MaChartLayer } from "@/components/ma-chart-layer";
 import { formatDateTime, formatMarketPrice } from "@/lib/i18n/format";
 import type { Messages } from "@/lib/i18n/messages";
 import { analystHref } from "@/lib/market/analyst-context";
@@ -393,8 +393,9 @@ export function ChartWorkspace(props: Props) {
       ) : (
         <section className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="overflow-hidden border bg-[var(--panel)]">
-            <StructuralMarketChart
+            <MaChartLayer
               key={`${instrument.id}:${interval}`}
+              snapshot={snapshot}
               history={entry.history}
               levels={
                 snapshot ? [...snapshot.resistances, ...snapshot.supports] : []

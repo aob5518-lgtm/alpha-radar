@@ -112,6 +112,10 @@ optimizes for usefulness, accuracy, speed and clarity rather than surface count.
 shown as unavailable and is never replaced by fictional financial intelligence. See
 `CORE_3_PRODUCT.md` and `TECHNICAL_LEVELS.md`.
 
+The authorized MA Confluence Entry V1 Chart extension adds one configurable MA,
+independent overlay visibility and closed-candle heuristic setup references. It is
+not a validated predictive model or an execution system; see `MA_CONFLUENCE_ENTRY.md`.
+
 ## 4. Archived Product Surfaces
 
 The following sections describe historical prototypes and are **archived / not current product
