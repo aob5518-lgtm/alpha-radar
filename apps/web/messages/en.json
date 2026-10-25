@@ -82,6 +82,70 @@
     }
   },
   "chart": {
+    "maEntry": {
+      "overlays": {
+        "levels": "Structural levels",
+        "markers": "State markers",
+        "ma": "MA line",
+        "entries": "Entry signals"
+      },
+      "settings": "MA settings",
+      "period": "Period",
+      "averageType": "MA type",
+      "opportunity": "MA setup",
+      "score": "Rule-match score (not win probability)",
+      "candidateLabel": "Setup reference · not an order",
+      "zone": "Reference entry zone",
+      "trigger": "Trigger reference",
+      "invalidation": "Invalidation",
+      "target": "First structural target",
+      "disclaimer": "Deterministic research setup only. Not investment advice, a profit guarantee, or an execution instruction. Score is uncalibrated rule agreement.",
+      "slopes": {
+        "rising": "MA rising",
+        "falling": "MA falling",
+        "flat": "MA flat"
+      },
+      "states": {
+        "disabled": "Disabled",
+        "no_setup": "Wait",
+        "observe_long": "Observe long",
+        "observe_short": "Observe short",
+        "candidate_long": "Long candidate",
+        "candidate_short": "Short candidate",
+        "trigger_long": "Long setup confirmed",
+        "trigger_short": "Short setup confirmed",
+        "invalidated": "Invalidated · wait"
+      },
+      "types": {
+        "ma_pullback_long": "Trend-aligned MA pullback long",
+        "ma_rejection_short": "Trend-aligned MA rejection short"
+      },
+      "reasons": {
+        "insufficient_history": "Insufficient confirmed context",
+        "flat_ma": "Flat MA: chop filter",
+        "trend_conflict": "Directional context does not align",
+        "repeated_crosses": "Repeated MA crossings: chop filter",
+        "excess_retests": "Too many MA interactions",
+        "no_impulse": "No prior impulse separation",
+        "no_retest": "No recent controlled retest",
+        "near_obstruction": "Nearby structure leaves insufficient room",
+        "no_target": "No observed structural target",
+        "weak_confirmation": "Await a strong closed-candle confirmation",
+        "weak_volume": "Confirmation volume is weak",
+        "missing_volume": "Volume evidence is unavailable",
+        "macd_conflict": "MACD conflicts with the setup",
+        "macd_unready": "MACD is not seeded",
+        "overextended": "Price is extended: do not chase",
+        "level_failed": "MA interaction invalidated",
+        "trend_aligned": "Trend aligns",
+        "slope_aligned": "MA slope aligns",
+        "impulse_retest": "Impulse followed by controlled MA retest",
+        "price_confirmed": "Strong closed-candle reaction",
+        "macd_aligned": "MACD supports the reaction",
+        "volume_healthy": "Healthy confirmation participation",
+        "structure_aligned": "Structural support/resistance aligns"
+      }
+    },
     "eyebrow": "Professional Crypto Chart",
     "title": "Market structure",
     "description": "Persisted provider candles with deterministic, closed-candle structural levels and trend regime.",

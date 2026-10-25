@@ -16,6 +16,7 @@ import {
   CandlestickSeries,
   ColorType,
   HistogramSeries,
+  LineSeries,
   LineStyle,
   createChart,
   createSeriesMarkers,
@@ -48,6 +49,11 @@ import {
 } from "@/lib/market/chart-context-store";
 import { tradeSetupMatchesIdentity } from "@/lib/market/trade-setup";
 import { connectChartStream } from "@/lib/market/market-stream";
+import {
+  maMatchesIdentity,
+  type MaEntryAnalysis,
+} from "@/lib/market/ma-confluence-entry";
+import type { OverlayVisibility } from "@/lib/market/chart-overlay-preferences";
 
 interface Props {
   history: MarketHistory;
@@ -70,6 +76,8 @@ interface Props {
   locale: "en" | "zh-CN";
   chartMessages: Messages["chart"];
   tradeSetup?: TradeSetupCandidateV1;
+  maAnalysis?: MaEntryAnalysis;
+  overlays?: OverlayVisibility;
   onConfirmedCandle?: (candle: StreamCandle) => void;
   onObservedPrice?: (price: number) => void;
   onStreamResume?: () => void;
@@ -200,21 +208,44 @@ export function StructuralMarketChart(props: Props) {
     const markerById = new Map(
       props.marketStateMarkers.map((marker) => [marker.id, marker]),
     );
-    const markerData = (markers: MarketStateMarker[]) =>
-      markers.map((marker) => ({
-        id: marker.id,
-        time: Math.floor(
-          Date.parse(marker.candle_open_time) / 1000,
-        ) as UTCTimestamp,
-        position: marker.position,
-        shape: markerShape(marker.phase),
-        color: markerColor(marker.phase),
-        text: marketStateMarkerLabel(
-          marker.phase,
-          latestProps.current.chartMessages,
-        ),
-        size: 1,
-      }));
+    const markerData = (markers: MarketStateMarker[]) => {
+      const current = latestProps.current;
+      const output = (current.overlays?.markers === false ? [] : markers).map(
+        (marker) => ({
+          id: marker.id,
+          time: Math.floor(
+            Date.parse(marker.candle_open_time) / 1000,
+          ) as UTCTimestamp,
+          position: marker.position,
+          shape: markerShape(marker.phase),
+          color: markerColor(marker.phase),
+          text: marketStateMarkerLabel(
+            marker.phase,
+            latestProps.current.chartMessages,
+          ),
+          size: 1,
+        }),
+      );
+      const entry = current.maAnalysis;
+      if (
+        current.overlays?.entries !== false &&
+        entry &&
+        maMatchesIdentity(entry, props.instrumentId, props.interval) &&
+        (entry.state === "trigger_long" || entry.state === "trigger_short")
+      )
+        output.push({
+          id: `ma:${entry.market_instrument_id}:${entry.timeframe}:${entry.confirmed_at}`,
+          time: Math.floor(
+            Date.parse(entry.candle_open_time) / 1000,
+          ) as UTCTimestamp,
+          position: entry.setup_direction === "long" ? "belowBar" : "aboveBar",
+          shape: entry.setup_direction === "long" ? "arrowUp" : "arrowDown",
+          color: entry.setup_direction === "long" ? "#22d3ee" : "#fbbf24",
+          text: current.chartMessages.maEntry.states[entry.state],
+          size: 1,
+        });
+      return output;
+    };
     const markerApi = createSeriesMarkers(
       candleSeries,
       markerData(props.marketStateMarkers),
@@ -240,7 +271,9 @@ export function StructuralMarketChart(props: Props) {
     let levelLines: ReturnType<typeof candleSeries.createPriceLine>[] = [];
     const renderLevels = (levels: StructuralLevel[]) => {
       for (const line of levelLines) candleSeries.removePriceLine(line);
-      levelLines = levels.map((level) =>
+      levelLines = (
+        latestProps.current.overlays?.levels === false ? [] : levels
+      ).map((level) =>
         candleSeries.createPriceLine({
           price: level.representative_price,
           color: level.kind === "resistance" ? "#fb7185" : "#34d399",
@@ -251,11 +284,53 @@ export function StructuralMarketChart(props: Props) {
         }),
       );
     };
+    const maSeries = props.maAnalysis
+      ? chart.addSeries(LineSeries, {
+          color: "#fbbf24",
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: true,
+        })
+      : null;
+    let entryLines: ReturnType<typeof candleSeries.createPriceLine>[] = [];
+    const renderMa = () => {
+      const current = latestProps.current,
+        entry = current.maAnalysis;
+      const valid =
+        entry && maMatchesIdentity(entry, props.instrumentId, props.interval);
+      maSeries?.setData(
+        valid && current.overlays?.ma !== false
+          ? entry.line.map((point) => ({
+              time: Math.floor(Date.parse(point.time) / 1000) as UTCTimestamp,
+              value: point.value,
+            }))
+          : [],
+      );
+      for (const line of entryLines) candleSeries.removePriceLine(line);
+      entryLines = [];
+      if (valid && current.overlays?.entries !== false && entry.entry_zone)
+        entryLines = [entry.entry_zone.low, entry.entry_zone.high].map(
+          (price) =>
+            candleSeries.createPriceLine({
+              price,
+              color: "#22d3ee66",
+              lineWidth: 1,
+              lineStyle: LineStyle.Dashed,
+              axisLabelVisible: false,
+              title: current.chartMessages.maEntry.zone,
+            }),
+        );
+    };
+    renderMa();
     renderLevels(props.levels);
     updateOverlays.current = (levels, markers) => {
       renderLevels(levels);
+      renderMa();
       markerById.clear();
-      for (const marker of markers) markerById.set(marker.id, marker);
+      for (const marker of latestProps.current.overlays?.markers === false
+        ? []
+        : markers)
+        markerById.set(marker.id, marker);
       markerApi?.setMarkers(markerData(markers));
       pinnedMarkerId = null;
       setMarkerDetail(null);
@@ -466,7 +541,13 @@ export function StructuralMarketChart(props: Props) {
 
   useEffect(() => {
     updateOverlays.current?.(props.levels, props.marketStateMarkers);
-  }, [props.levels, props.marketStateMarkers, props.chartMessages]);
+  }, [
+    props.levels,
+    props.marketStateMarkers,
+    props.chartMessages,
+    props.overlays,
+    props.maAnalysis,
+  ]);
 
   const setup =
     props.tradeSetup &&

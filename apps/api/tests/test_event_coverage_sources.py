@@ -143,9 +143,16 @@ def test_github_repository_allowlist_is_code_owned() -> None:
         Settings.model_validate({"crypto_event_official_sources": ["github-unreviewed/repository"]})
 
 
-async def test_github_public_fetch_works_without_token_and_optional_token_is_server_header() -> (
-    None
-):
+async def test_github_public_fetch_works_without_token_and_optional_token_is_server_header(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Fixed release fixtures must retain their original observation window.
+    class FixtureClock:
+        @staticmethod
+        def now(_timezone: object) -> datetime:
+            return MOMENT
+
+    monkeypatch.setattr("alpha_radar.sources.transport.datetime", FixtureClock)
     source = github_release_source_settings()["github-bitcoin-core"]
     authorization_headers: list[str | None] = []
 

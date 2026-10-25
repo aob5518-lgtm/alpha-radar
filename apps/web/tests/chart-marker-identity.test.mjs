@@ -13,6 +13,8 @@ import * as displayHelpers from "../src/lib/market/market-state-display.ts";
 import * as contextStore from "../src/lib/market/chart-context-store.ts";
 import * as tradeSetup from "../src/lib/market/trade-setup.ts";
 import * as marketStream from "../src/lib/market/market-stream.ts";
+import * as maEntry from "../src/lib/market/ma-confluence-entry.ts";
+import { maFixture } from "./helpers/ma-fixtures.mjs";
 import {
   btcId,
   fixtureNow,
@@ -128,6 +130,7 @@ function harness() {
     },
   };
   const chartLibrary = {
+    LineSeries: "line",
     CandlestickSeries: "candle",
     HistogramSeries: "volume",
     ColorType: { Solid: "solid" },
@@ -141,13 +144,20 @@ function harness() {
       };
     },
     createChart() {
+      const priceLines = [];
+      let maData = [];
       const series = {
         setData() {},
         update() {},
-        createPriceLine() {
-          return { applyOptions() {} };
+        createPriceLine(options) {
+          const line = { ...options, applyOptions() {} };
+          priceLines.push(line);
+          return line;
         },
-        removePriceLine() {},
+        removePriceLine(line) {
+          const i = priceLines.indexOf(line);
+          if (i >= 0) priceLines.splice(i, 1);
+        },
         priceScale() {
           return { applyOptions() {} };
         },
@@ -159,7 +169,19 @@ function harness() {
       };
       const chart = {
         series,
-        addSeries: () => series,
+        priceLines,
+        get maData() {
+          return maData;
+        },
+        addSeries: (kind) =>
+          kind === "line"
+            ? {
+                ...series,
+                setData(value) {
+                  maData = value;
+                },
+              }
+            : series,
         timeScale: () => scale,
         applyOptions() {},
         remove() {},
@@ -205,6 +227,7 @@ function harness() {
     "@/lib/market/chart-context-store": contextStore,
     "@/lib/market/trade-setup": tradeSetup,
     "@/lib/market/market-stream": marketStream,
+    "@/lib/market/ma-confluence-entry": maEntry,
     "@/lib/market/market-state-presentation": {
       formatMarketStateWait: (state) => state.next_wait,
       formatMarketStateEvidence: (evidence) => evidence.code,
@@ -248,6 +271,52 @@ function harness() {
   }
   return { render, sockets, charts };
 }
+
+test("four overlay visibilities update existing chart without recomputation/socket recreation and reject stale MA identity", () => {
+  const h = harness(),
+    analysis = maEntry.calculateMaEntry(maFixture(), btcId, "15m"),
+    input = {
+      ...props(),
+      maAnalysis: analysis,
+      levels: [{ label: "S1", kind: "support", representative_price: 100 }],
+      overlays: { levels: true, markers: true, ma: true, entries: true },
+    };
+  h.render(input);
+  const chart = h.charts[0],
+    socket = h.sockets[0];
+  assert.ok(chart.maData.length);
+  assert.ok(chart.priceLines.some((line) => line.title === "S1"));
+  assert.ok(chart.series.markers.some((m) => m.id.startsWith("ma:")));
+  h.render({
+    ...input,
+    overlays: { levels: false, markers: true, ma: false, entries: false },
+  });
+  assert.equal(chart.maData.length, 0);
+  assert.ok(!chart.priceLines.some((line) => line.title === "S1"));
+  assert.equal(chart.series.markers.length, 1);
+  h.render({
+    ...input,
+    overlays: { levels: true, markers: false, ma: true, entries: true },
+  });
+  assert.ok(chart.maData.length);
+  assert.equal(chart.series.markers.length, 1);
+  assert.ok(chart.series.markers[0].id.startsWith("ma:"));
+  h.render({
+    ...input,
+    maAnalysis: { ...analysis, market_instrument_id: eth },
+  });
+  assert.equal(chart.maData.length, 0);
+  assert.equal(
+    chart.series.markers.some((m) => m.id.startsWith("ma:")),
+    false,
+  );
+  h.render({ ...input, maAnalysis: { ...analysis, timeframe: "1h" } });
+  assert.equal(chart.maData.length, 0);
+  assert.equal(h.charts.length, 1);
+  assert.equal(h.sockets.length, 1);
+  assert.equal(h.sockets[0], socket);
+  assert.equal(input.maAnalysis, analysis);
+});
 
 for (const [name, from, to] of [
   ["BTC → ETH", props(btc), props(eth, "15m", 2500)],
