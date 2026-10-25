@@ -1,5 +1,10 @@
 # Chart confirmed context and Trade Setup V1
 
+The current interactive execution/cache layer is described in `CHART_WORKER.md`.
+Browser calculations now run in a Web Worker; the contracts/rules below remain
+unchanged. Historical measurements below describe their original implementation,
+not a new production performance claim.
+
 Base: `b55e9189cca559b5a565d4f34727b8f8ac8e7739`. No backend schema, provider,
 threshold, phase, Structural Level ranking, or Analyst contract changes.
 
@@ -16,7 +21,8 @@ The workspace's memory cache key is exactly `instrumentId:interval`. Each entry 
 at most the existing 800 confirmed candles and a revision-bound technical snapshot.
 A higher-history entry is not treated as a computed lower-timeframe cache hit.
 Current, fully computed entries render immediately without history fetch or replay.
-First/expired visits fetch canonical history and the required higher history; expired
+Confirmed cached entries also remain usable when reconciliation is overdue; see
+the degraded-mode rules below. First/expired visits fetch canonical history and the required higher history; expired
 entries request a delta starting at the last cached open time rather than refetching
 an already-current 800-candle page. Concurrent fetches deduplicate. A stale response
 cannot overwrite a newer streamed close/correction received during that request.
@@ -143,3 +149,54 @@ Unit/component regression covers current/higher closed updates, duplicates, cach
 and fetch races, identity reset/guards, partial safety, setup rules and formulas.
 Compose integration additionally exercises the same-origin transport against seeded
 real PostgreSQL history while retaining existing checks.
+
+## History refresh resilience
+
+Primary and higher REST reads start independently (primary first). A primary result
+is published without waiting for higher reconciliation. A failed/slow higher request
+cannot reject usable primary context. A confirmed primary cache is usable only for
+its exact UUID/interval after the existing history validation/closed-candle merge;
+being overdue alone does not make it unsafe. No arbitrary new expiry/model threshold
+is introduced. With no confirmed primary bars, initial fetch failure remains a hard
+error. With cached bars, the chart stays rendered and reconciles in the background.
+
+Refresh health is `healthy` when primary and required higher histories satisfy the
+existing closed-boundary currency check, `degraded` when primary is usable but a
+source is overdue/missing, and `failed` when no usable primary history exists.
+Degraded UI is a small nonblocking bilingual warning, not a loading/error overlay:
+“历史同步暂时延迟，当前图表继续使用最近确认数据。” The manual retry remains available.
+
+Higher history contributes evidence **only** while the original `isCurrent` rule
+holds. Expired higher evidence invalidates the cached calculation revision and is
+omitted from the next context calculation, including an immediately rendered cached
+switch. Missing higher evidence uses the engines' existing missing-input behavior;
+no higher prices, direction, confluence or replacement weight rules are invented.
+
+The selected-identity `ChartHistoryReconciler` retries REST only, after completed
+unsuccessful reconciliation, at 2/5/10/30 seconds (then 30 seconds indefinitely).
+Success resets backoff; manual retry resets it and starts immediately unless an
+existing request is already in flight. Online/visibility/stream resume can reconcile
+early. Pending requests remain deduplicated. Cleanup cancels retry timers and guards
+late publications; it does not recreate a chart or websocket. Existing stream retry
+and identity guards remain separate and unchanged.
+
+The same-origin history transport has a bounded **25-second total deadline** covering
+both headers and body. Timeout returns HTTP 503 `history_timeout`; network failure
+returns HTTP 503 `history_unavailable`. Existing upstream validation/status responses
+are preserved. Only fixed canonical path/query fields go upstream; the client `role`
+diagnostic hint is not forwarded. No credentials or upstream error bodies are logged.
+
+Ticker/trade/partial candles remain visual-only throughout a REST outage. Valid
+confirmed closes merge and recompute context immediately from available confirmed
+bars; higher failure cannot freeze that path. A newer stream correction still wins
+over a slower REST response. Healthy/degraded transitions never force socket/chart
+recreation or reset visual price. Unusable initial history still cannot start a
+chart from invented bars. Memory cache remains local to the instrument-keyed workspace.
+
+Production JSON diagnostics are `chart_history_refresh_failed`,
+`chart_history_refresh_recovered`, and `chart_context_degraded`. Each includes
+`market_instrument_id`, `timeframe`, `role` (`primary`/`higher`), `incremental`,
+`elapsed_ms`, and `error_type`. Failures/recoveries are source-scoped; degraded logs
+are transition-scoped, not emitted per tick/render. A valid streamed close can record
+`ConfirmedStreamRecovery`. Error messages, private URLs, response bodies and secrets
+are excluded. These logs add no dashboard or algorithm/performance refactor.

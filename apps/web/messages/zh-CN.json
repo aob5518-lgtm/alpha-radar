@@ -119,6 +119,9 @@
     "closedOnly": "已确认结构位仅使用收盘 K 线；当前未收盘 K 线会被排除。",
     "contextLoading": "正在加载已确认历史…",
     "contextRefreshFailed": "已确认历史刷新失败，缓存上下文可能已过期。",
+    "contextDegraded": "历史同步暂时延迟，当前图表继续使用最近确认数据。",
+    "analysisLoading": "正在更新结构分析…",
+    "analysisUnavailable": "结构分析暂时不可用，图表继续实时更新。可重试分析。",
     "retryContext": "重试",
     "tradeSetup": {
       "direction": "方向",
