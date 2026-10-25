@@ -146,7 +146,8 @@ def test_github_repository_allowlist_is_code_owned() -> None:
 async def test_github_public_fetch_works_without_token_and_optional_token_is_server_header(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Fixed release fixtures must retain their original observation window.
+    # This is a transport/header test, not a wall-clock lookback test. Keep the
+    # fixed release fixture inside its original observation window on every run.
     class FixtureClock:
         @staticmethod
         def now(_timezone: object) -> datetime:

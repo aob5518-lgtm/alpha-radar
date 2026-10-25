@@ -207,3 +207,25 @@ test("denied local storage still renders usable bilingual controls and aligned r
     assert.equal(Object.keys(copy.states).length, 9);
   }
 });
+
+test("pending Worker context leaves canvas and controls usable; accepted context calculates once without visibility replay", () => {
+  const h = harness();
+  const pending = { ...h.input, snapshot: undefined };
+  assert.match(h.render(pending), /CANVAS/);
+  assert.equal(h.calls, 0);
+  assert.equal(h.chart.maAnalysis, undefined);
+  assert.doesNotMatch(h.render(pending), /data-ma-state/);
+  h.toggle(2);
+  h.render(pending);
+  assert.equal(h.calls, 0);
+  h.render(h.input);
+  assert.equal(h.calls, 1);
+  assert.ok(h.chart.maAnalysis);
+  h.toggle(2);
+  h.render(h.input);
+  assert.equal(h.calls, 1);
+  // A new identity can have candles before its first accepted Worker result.
+  h.render({ ...pending, instrumentId: ethId, interval: "1h" });
+  assert.equal(h.chart.maAnalysis, undefined);
+  assert.equal(h.calls, 1);
+});

@@ -14,7 +14,7 @@ import {
 } from "@/lib/market/chart-overlay-preferences";
 
 type Props = ComponentProps<typeof StructuralMarketChart> & {
-  snapshot: TechnicalContextSnapshot;
+  snapshot?: TechnicalContextSnapshot | null;
 };
 export function MaChartLayer({ snapshot, ...props }: Props) {
   const [preferences, setPreferences] = useState(() =>
@@ -43,12 +43,14 @@ export function MaChartLayer({ snapshot, ...props }: Props) {
   // never called from this layer; price/trade/partial state belongs to the canvas.
   const analysis = useMemo(
     () =>
-      calculateMaEntry(
-        snapshot,
-        props.instrumentId,
-        props.interval,
-        preferences.ma,
-      ),
+      snapshot
+        ? calculateMaEntry(
+            snapshot,
+            props.instrumentId,
+            props.interval,
+            preferences.ma,
+          )
+        : undefined,
     [snapshot, props.instrumentId, props.interval, preferences.ma],
   );
   const copy = props.chartMessages.maEntry;
@@ -118,64 +120,66 @@ export function MaChartLayer({ snapshot, ...props }: Props) {
           </div>
         </details>
       </div>
-      <div
-        className="space-y-1 border-b px-3 py-2 text-xs"
-        data-ma-state={analysis.state}
-      >
-        <p className="flex flex-wrap gap-x-4 gap-y-1">
-          <span>
-            {analysis.settings.type}
-            {analysis.settings.period}:{" "}
-            {analysis.ma_value?.toLocaleString(props.locale, {
-              maximumFractionDigits: 6,
-            }) ?? "—"}{" "}
-            · {copy.slopes[analysis.ma_slope]}
-          </span>
-          <strong>
-            {copy.opportunity}: {copy.states[analysis.state]}
-          </strong>
-          <span>
-            {copy.score}: {analysis.confidence_score}/100 ·{" "}
-            {analysis.quality_tier}
-          </span>
-        </p>
-        {analysis.setup_type && (
-          <p>
-            {copy.types[analysis.setup_type]} · {copy.candidateLabel}
+      {analysis && (
+        <div
+          className="space-y-1 border-b px-3 py-2 text-xs"
+          data-ma-state={analysis.state}
+        >
+          <p className="flex flex-wrap gap-x-4 gap-y-1">
+            <span>
+              {analysis.settings.type}
+              {analysis.settings.period}:{" "}
+              {analysis.ma_value?.toLocaleString(props.locale, {
+                maximumFractionDigits: 6,
+              }) ?? "—"}{" "}
+              · {copy.slopes[analysis.ma_slope]}
+            </span>
+            <strong>
+              {copy.opportunity}: {copy.states[analysis.state]}
+            </strong>
+            <span>
+              {copy.score}: {analysis.confidence_score}/100 ·{" "}
+              {analysis.quality_tier}
+            </span>
           </p>
-        )}
-        {analysis.entry_zone && (
-          <p>
-            {copy.zone}:{" "}
-            {analysis.entry_zone.low.toLocaleString(props.locale, {
-              maximumFractionDigits: 6,
-            })}{" "}
-            –{" "}
-            {analysis.entry_zone.high.toLocaleString(props.locale, {
-              maximumFractionDigits: 6,
-            })}{" "}
-            · {copy.trigger}:{" "}
-            {analysis.trigger_price?.toLocaleString(props.locale, {
-              maximumFractionDigits: 6,
-            })}{" "}
-            · {copy.invalidation}:{" "}
-            {analysis.invalidation_price?.toLocaleString(props.locale, {
-              maximumFractionDigits: 6,
-            })}{" "}
-            · {copy.target}:{" "}
-            {analysis.first_target?.toLocaleString(props.locale, {
-              maximumFractionDigits: 6,
-            }) ?? "—"}
+          {analysis.setup_type && (
+            <p>
+              {copy.types[analysis.setup_type]} · {copy.candidateLabel}
+            </p>
+          )}
+          {analysis.entry_zone && (
+            <p>
+              {copy.zone}:{" "}
+              {analysis.entry_zone.low.toLocaleString(props.locale, {
+                maximumFractionDigits: 6,
+              })}{" "}
+              –{" "}
+              {analysis.entry_zone.high.toLocaleString(props.locale, {
+                maximumFractionDigits: 6,
+              })}{" "}
+              · {copy.trigger}:{" "}
+              {analysis.trigger_price?.toLocaleString(props.locale, {
+                maximumFractionDigits: 6,
+              })}{" "}
+              · {copy.invalidation}:{" "}
+              {analysis.invalidation_price?.toLocaleString(props.locale, {
+                maximumFractionDigits: 6,
+              })}{" "}
+              · {copy.target}:{" "}
+              {analysis.first_target?.toLocaleString(props.locale, {
+                maximumFractionDigits: 6,
+              }) ?? "—"}
+            </p>
+          )}
+          <p className="text-[var(--muted)]">
+            {analysis.reason_codes
+              .slice(0, 4)
+              .map((code) => copy.reasons[code])
+              .join(" · ")}
           </p>
-        )}
-        <p className="text-[var(--muted)]">
-          {analysis.reason_codes
-            .slice(0, 4)
-            .map((code) => copy.reasons[code])
-            .join(" · ")}
-        </p>
-        <p className="text-[10px] text-[var(--muted)]">{copy.disclaimer}</p>
-      </div>
+          <p className="text-[10px] text-[var(--muted)]">{copy.disclaimer}</p>
+        </div>
+      )}
       <StructuralMarketChart
         {...props}
         maAnalysis={analysis}

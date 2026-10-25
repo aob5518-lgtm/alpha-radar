@@ -8,12 +8,19 @@ All source prices are canonical confirmed candles; no provider or AI is added.
 
 ## Scope and execution
 
-Base main is `1ca729cf5c8e3f91a1bcd2f217d5986287f22fe5`. Worker PR #18 is still
-unmerged: this branch is independently based on main and does not merge that PR.
-The four existing engines and their returned snapshots remain unchanged. A pure
-`calculateMaEntry` consumes their immutable context in a memoized presentation
-layer. It has no browser dependency and can be executed with that snapshot in a
-future Worker integration. This PR does not claim the pending worker is on main.
+Integrated performance base main is `8b5eb27a0417ab5867a78283179ec006e5a2bbbe`
+(squashed PR #18). The four existing engines execute in the identity/revision-guarded
+technical Web Worker; their returned snapshots and rules remain unchanged. A pure
+`calculateMaEntry` consumes the accepted immutable context in a lightweight memoized
+main-thread presentation layer. Its sub-millisecond synthetic cost does not justify
+a second async pipeline or copying the context back into the Worker on setting changes.
+See `CHART_WORKER.md` for the heavy execution boundary and equivalence tests.
+
+While the first Worker result is pending, candles, overlay controls and navigation
+render without MA/setup claims. An empty retained MA series receives the first
+accepted result without rebuilding the chart/socket. New confirmed results recalculate
+MA once; visibility, price/trade/partial state do not. Worker failure keeps the existing
+nonblocking analysis warning/retry behavior, not synchronous technical replay.
 
 The extra calculation is bounded to 800 confirmed bars: rolling-sum SMA, existing
 SMA-seeded EMA recurrence, Wilder ATR14, one MACD pass and the existing bounded
@@ -131,7 +138,7 @@ Existing technical-engine/identity/REST/stream suites remain unchanged in behavi
 
 Run `node --experimental-strip-types scripts/benchmark-ma-entry.mjs` for an offline,
 synthetic 800-bar benchmark. It measures the **additional MA engine only**, not the
-unmerged Worker PR's improvements or production p95. No profitability, calibration
+Worker's improvements or production p95. No profitability, calibration
 or live-signal effectiveness claim is made. Those require versioned historical /
 walk-forward validation with fees and slippage in a future separately approved task.
 

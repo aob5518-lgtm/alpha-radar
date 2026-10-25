@@ -6,6 +6,8 @@ import type {
 import { higherMarketInterval } from "./intervals.ts";
 import {
   calculateMarketStateAnalysis,
+  calculateReplayAnalysis,
+  type MarketStateReplayState,
   type MarketStateAnalysis,
 } from "./market-state.ts";
 import {
@@ -27,6 +29,13 @@ export function calculateTechnicalContext(
   higherTimeframeCandles?: MarketCandle[],
   marketInstrumentId = "unknown",
   diagnostics?: (timings: TechnicalTimings) => void,
+  replay?: {
+    previous?: MarketStateReplayState;
+    accept: (
+      state: MarketStateReplayState | undefined,
+      incremental: boolean,
+    ) => void;
+  },
 ): TechnicalContextSnapshot {
   const timings = diagnostics ? createTechnicalTimings() : undefined;
   const started = performance.now();
@@ -78,15 +87,27 @@ export function calculateTechnicalContext(
           options,
           timings,
         );
+  const analysis = replay
+    ? calculateReplayAnalysis(
+        candles,
+        confirmedSnapshot,
+        marketInstrumentId,
+        interval,
+        replay.previous,
+        timings,
+      )
+    : undefined;
+  if (replay && analysis) replay.accept(analysis.replay, analysis.incremental);
   const result = {
     ...snapshot,
-    ...calculateMarketStateAnalysis(
-      candles,
-      confirmedSnapshot,
-      marketInstrumentId,
-      interval,
-      timings,
-    ),
+    ...(analysis?.analysis ??
+      calculateMarketStateAnalysis(
+        candles,
+        confirmedSnapshot,
+        marketInstrumentId,
+        interval,
+        timings,
+      )),
   };
   if (timings && diagnostics) {
     timings.total_technical_context_ms = performance.now() - started;

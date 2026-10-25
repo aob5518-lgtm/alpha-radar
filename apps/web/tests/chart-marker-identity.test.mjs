@@ -522,6 +522,23 @@ test("current-identity hover, hover-out, pin and unpin behavior remains intact",
   assert.doesNotMatch(h.render(input), /level_reclaimed/);
 });
 
+test("MA series accepts its first delayed Worker context without rebuilding canvas or socket", () => {
+  const h = harness(),
+    input = props();
+  h.render(input);
+  const chart = h.charts[0],
+    socket = h.sockets[0];
+  assert.equal(chart.maData.length, 0);
+  const analysis = maEntry.calculateMaEntry(maFixture(), btc, "15m");
+  h.render({ ...input, maAnalysis: analysis });
+  assert.ok(chart.maData.length > 0);
+  assert.equal(h.charts.length, 1);
+  assert.equal(h.sockets.length, 1);
+  assert.equal(h.sockets[0], socket);
+  h.render({ ...input, maAnalysis: { ...analysis, timeframe: "1h" } });
+  assert.equal(chart.maData.length, 0);
+});
+
 test("Chart workspace keys the client by exact UUID and timeframe", () => {
   const page = readFileSync(
     new URL("../src/components/chart-workspace.tsx", import.meta.url),
