@@ -265,7 +265,12 @@ function harness() {
     const tree = exports.StructuralMarketChart(input);
     function attach(node) {
       if (!node || typeof node !== "object") return;
-      if (node.props?.ref) node.props.ref.current = { clientWidth: 1200 };
+      if (node.props?.ref)
+        node.props.ref.current = {
+          clientWidth: 1200,
+          clientHeight: 540,
+          offsetTop: 260,
+        };
       for (const child of [node.props?.children].flat(Infinity)) attach(child);
     }
     attach(tree);
@@ -591,6 +596,7 @@ test("one primary Guide marker replaces redundant MA signal; click opens plan; t
     false,
   );
   chart.click({ hoveredObjectId: primary.id, point: { x: 50, y: 100 } });
+  assert.match(h.render(input), /top:372px/);
   assert.equal((h.render(input).match(/data-guide-test=/g) ?? []).length, 2);
   socket.send({ type: "price", price: "99999" });
   socket.send({

@@ -444,13 +444,31 @@ export function StructuralMarketChart(props: Props) {
       id: unknown,
       point: { x: number; y: number } | undefined,
     ) => {
+      const position = (width: number, height: number) => ({
+        x: Math.max(
+          8,
+          Math.min(
+            (point?.x ?? 0) + 12,
+            (container.current?.clientWidth ?? 720) - width,
+          ),
+        ),
+        // Marker coordinates are canvas-local; the popup also includes the
+        // guidance header. Respect its real height rather than a fixed offset.
+        y:
+          (container.current?.offsetTop ?? 0) +
+          Math.max(
+            8,
+            Math.min(
+              (point?.y ?? 0) + 12,
+              (container.current?.clientHeight ?? 540) - height - 8,
+            ),
+          ),
+      });
       const guide = currentGuide();
       if (guide && id === guideId(guide) && point) {
-        const width = container.current?.clientWidth ?? 720;
         setGuideDetail({
           guide,
-          x: Math.max(8, Math.min(point.x + 12, width - 320)),
-          y: point.y,
+          ...position(320, 340),
         });
         setMarkerDetail(null);
         return;
@@ -458,11 +476,9 @@ export function StructuralMarketChart(props: Props) {
       const marker = typeof id === "string" ? markerById.get(id) : undefined;
       if (marker && point) {
         setGuideDetail(null);
-        const width = container.current?.clientWidth ?? 720;
         setMarkerDetail({
           marker,
-          x: Math.max(8, Math.min(point.x + 12, width - 264)),
-          y: point.y,
+          ...position(264, 200),
         });
       } else if (!pinnedMarkerId) {
         setMarkerDetail(null);
@@ -801,10 +817,10 @@ export function StructuralMarketChart(props: Props) {
         guideReady(guideDetail.guide) &&
         guideDetail.guide.confirmed_at === props.tradeGuide?.confirmed_at && (
           <div
-            className="absolute z-20 w-80 max-w-[90vw] border border-white/15 bg-[#111827]/95 p-3 text-xs shadow-xl"
+            className="absolute z-20 max-h-[70vh] w-80 max-w-[90vw] overflow-y-auto border border-white/15 bg-[#111827]/95 p-3 text-xs shadow-xl"
             style={{
               left: guideDetail.x,
-              top: Math.max(76, guideDetail.y + 44),
+              top: Math.max(76, guideDetail.y),
             }}
           >
             <button
@@ -829,7 +845,7 @@ export function StructuralMarketChart(props: Props) {
             className="pointer-events-none absolute z-20 w-64 border border-white/15 bg-[#111827]/95 p-3 text-[11px] shadow-xl"
             style={{
               left: markerDetail.x,
-              top: Math.max(76, markerDetail.y + 44),
+              top: Math.max(76, markerDetail.y),
             }}
           >
             <div className="flex items-center justify-between gap-2">
