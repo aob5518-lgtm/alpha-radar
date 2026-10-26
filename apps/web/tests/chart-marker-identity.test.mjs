@@ -14,6 +14,7 @@ import * as contextStore from "../src/lib/market/chart-context-store.ts";
 import * as tradeSetup from "../src/lib/market/trade-setup.ts";
 import * as marketStream from "../src/lib/market/market-stream.ts";
 import * as maEntry from "../src/lib/market/ma-confluence-entry.ts";
+import * as tradeGuide from "../src/lib/market/trade-guide.ts";
 import { maFixture } from "./helpers/ma-fixtures.mjs";
 import {
   btcId,
@@ -228,6 +229,14 @@ function harness() {
     "@/lib/market/trade-setup": tradeSetup,
     "@/lib/market/market-stream": marketStream,
     "@/lib/market/ma-confluence-entry": maEntry,
+    "@/lib/market/trade-guide": tradeGuide,
+    "@/components/trade-guide-panel": {
+      TradeGuidePanel: ({ guide }) =>
+        jsxRuntime.jsx("div", {
+          "data-guide-test": guide.market_instrument_id + ":" + guide.timeframe,
+          children: `${guide.state} stop=${guide.stop_price} tp1=${guide.tp1_price}`,
+        }),
+    },
     "@/lib/market/market-state-presentation": {
       formatMarketStateWait: (state) => state.next_wait,
       formatMarketStateEvidence: (evidence) => evidence.code,
@@ -256,7 +265,12 @@ function harness() {
     const tree = exports.StructuralMarketChart(input);
     function attach(node) {
       if (!node || typeof node !== "object") return;
-      if (node.props?.ref) node.props.ref.current = { clientWidth: 1200 };
+      if (node.props?.ref)
+        node.props.ref.current = {
+          clientWidth: 1200,
+          clientHeight: 540,
+          offsetTop: 260,
+        };
       for (const child of [node.props?.children].flat(Infinity)) attach(child);
     }
     attach(tree);
@@ -546,3 +560,102 @@ test("Chart workspace keys the client by exact UUID and timeframe", () => {
   );
   assert.match(page, /key=\{`\$\{instrument\.id\}:\$\{interval\}`\}/);
 });
+
+function withGuide(input) {
+  const snapshot = maFixture();
+  const ma = maEntry.calculateMaEntry(
+    snapshot,
+    input.instrumentId,
+    input.interval,
+  );
+  return {
+    ...input,
+    guideMode: true,
+    marketState: { ...input.marketState, ...snapshot.state },
+    maAnalysis: ma,
+    tradeGuide: tradeGuide.calculateTradeGuide(
+      snapshot,
+      ma,
+      undefined,
+      input.instrumentId,
+      input.interval,
+    ),
+  };
+}
+test("one primary Guide marker replaces redundant MA signal; click opens plan; toggles retain chart/socket and hide independent overlays", () => {
+  const h = harness(),
+    input = withGuide(props());
+  h.render(input);
+  const chart = h.charts[0],
+    socket = h.sockets[0];
+  const markers = chart.series.markers,
+    primary = markers.find((m) => m.id.startsWith("guide:"));
+  assert.ok(primary);
+  assert.equal(
+    markers.some((m) => m.id.startsWith("ma:")),
+    false,
+  );
+  chart.click({ hoveredObjectId: primary.id, point: { x: 50, y: 100 } });
+  assert.match(h.render(input), /top:372px/);
+  assert.equal((h.render(input).match(/data-guide-test=/g) ?? []).length, 2);
+  // A correction or setting change can replace the plan at the same confirmed
+  // timestamp. The render guard must reject old evidence before effects run.
+  for (const nextGuide of [
+    { ...input.tradeGuide, stop_price: input.tradeGuide.stop_price - 1 },
+    { ...input.tradeGuide, state: "WAIT", direction: "none" },
+  ]) {
+    assert.equal(
+      (
+        h
+          .render({ ...input, tradeGuide: nextGuide }, false)
+          .match(/data-guide-test=/g) ?? []
+      ).length,
+      1,
+    );
+  }
+  socket.send({ type: "price", price: "99999" });
+  socket.send({
+    type: "trade",
+    price: "99998",
+    provider_timestamp: input.tradeGuide.confirmed_at,
+  });
+  h.render(input);
+  assert.deepEqual(chart.series.markers, markers);
+  assert.equal(input.tradeGuide.state, "LONG_READY");
+  const hidden = {
+    ...input,
+    overlays: { levels: false, markers: false, ma: true, entries: false },
+  };
+  assert.equal((h.render(hidden).match(/data-guide-test=/g) ?? []).length, 1);
+  assert.equal(chart.series.markers.length, 0);
+  assert.ok(chart.maData.length > 0);
+  h.render({ ...hidden, overlays: { ...hidden.overlays, entries: true } });
+  assert.equal(chart.series.markers.length, 1);
+  assert.ok(chart.series.markers[0].id.startsWith("guide:"));
+  assert.equal(h.charts.length, 1);
+  assert.equal(h.sockets.length, 1);
+});
+for (const [fromId, fromInterval, toId, toInterval] of [
+  [btc, "15m", eth, "15m"],
+  [eth, "15m", btc, "15m"],
+  [btc, "15m", btc, "1h"],
+  [btc, "1h", btc, "15m"],
+])
+  test(`Guide tooltip and primary plan reject old identity ${fromId}/${fromInterval} → ${toId}/${toInterval}`, () => {
+    const h = harness(),
+      input = withGuide(props(fromId, fromInterval));
+    h.render(input);
+    const marker = h.charts[0].series.markers.find((m) =>
+      m.id.startsWith("guide:"),
+    );
+    assert.ok(marker);
+    h.charts[0].click({ hoveredObjectId: marker.id, point: { x: 50, y: 100 } });
+    assert.equal((h.render(input).match(/data-guide-test=/g) ?? []).length, 2);
+    const stale = { ...input, ...props(toId, toInterval), guideMode: true };
+    const html = h.render(stale);
+    assert.doesNotMatch(html, /data-guide-test=/);
+    assert.equal(
+      h.charts.at(-1).series.markers.some((m) => m.id.startsWith("guide:")),
+      false,
+    );
+  });

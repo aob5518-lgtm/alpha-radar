@@ -436,7 +436,10 @@ export function ChartWorkspace(props: Props) {
             />
           </div>
           {snapshot && (
-            <aside className="space-y-4">
+            <details className="space-y-4">
+              <summary className="cursor-pointer text-sm text-[var(--muted)]">
+                {messages.chart.tradeGuide.technicalDetails}
+              </summary>
               <section className="border p-4">
                 <div className="flex items-center justify-between gap-3">
                   <span className="section-label">{messages.chart.trend}</span>
@@ -468,7 +471,7 @@ export function ChartWorkspace(props: Props) {
                 quoteCurrency={instrument.quote_currency}
                 messages={messages}
               />
-            </aside>
+            </details>
           )}
         </section>
       )}

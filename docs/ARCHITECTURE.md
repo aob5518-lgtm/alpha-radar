@@ -61,6 +61,12 @@ Visibility/preferences are separate from calculation and never modify the origin
 engines or backend contracts. See `MA_CONFLUENCE_ENTRY.md` for exact gates, score
 semantics, execution boundary and limitations; it is not a trading execution system.
 
+`trade-guide-v1` consumes these accepted closed-candle outputs in a cheap memoized
+aggregation layer, without rerunning any technical engine. One primary state combines
+confirmation, observed targets, structural invalidation, R:R and bounded no-chase
+evidence. The existing four overlays remain presentation-only. See `TRADE_GUIDE.md`
+for precedence, prior-evidence/reload boundaries and non-execution semantics.
+
 Interactive technical calculation is delegated to a browser module Web Worker,
 not the Python ingestion worker or a new service. It uses generation-scoped result
 application, a bounded replay cache and output-equivalent prefix intermediates.

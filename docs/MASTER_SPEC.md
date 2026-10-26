@@ -116,6 +116,11 @@ The authorized MA Confluence Entry V1 Chart extension adds one configurable MA,
 independent overlay visibility and closed-candle heuristic setup references. It is
 not a validated predictive model or an execution system; see `MA_CONFLUENCE_ENTRY.md`.
 
+Trade Guide V1 aggregates those unchanged confirmed outputs into one primary
+LONG/SHORT/WATCH/WAIT/MISSED presentation with observed stop/target references and
+conservative reward/risk filters. It does not add execution, sizing, indicators or
+predictive certainty; see `TRADE_GUIDE.md`.
+
 ## 4. Archived Product Surfaces
 
 The following sections describe historical prototypes and are **archived / not current product
