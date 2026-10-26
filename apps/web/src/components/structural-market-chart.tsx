@@ -808,6 +808,7 @@ export function StructuralMarketChart(props: Props) {
       </div>
       <div ref={container} className="min-h-[540px] w-full" />
       {guideDetail &&
+        guideDetail.guide === props.tradeGuide &&
         props.overlays?.entries !== false &&
         guideMatchesIdentity(
           guideDetail.guide,

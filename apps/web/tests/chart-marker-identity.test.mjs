@@ -598,6 +598,21 @@ test("one primary Guide marker replaces redundant MA signal; click opens plan; t
   chart.click({ hoveredObjectId: primary.id, point: { x: 50, y: 100 } });
   assert.match(h.render(input), /top:372px/);
   assert.equal((h.render(input).match(/data-guide-test=/g) ?? []).length, 2);
+  // A correction or setting change can replace the plan at the same confirmed
+  // timestamp. The render guard must reject old evidence before effects run.
+  for (const nextGuide of [
+    { ...input.tradeGuide, stop_price: input.tradeGuide.stop_price - 1 },
+    { ...input.tradeGuide, state: "WAIT", direction: "none" },
+  ]) {
+    assert.equal(
+      (
+        h
+          .render({ ...input, tradeGuide: nextGuide }, false)
+          .match(/data-guide-test=/g) ?? []
+      ).length,
+      1,
+    );
+  }
   socket.send({ type: "price", price: "99999" });
   socket.send({
     type: "trade",
