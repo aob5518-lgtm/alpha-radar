@@ -82,12 +82,65 @@
     }
   },
   "chart": {
+    "tradeGuide": {
+      "close": "Close Trade Guide details",
+      "technicalDetails": "Technical inputs · not a second recommendation",
+      "maDetails": "MA evidence / advanced",
+      "entry": "Entry area",
+      "potentialEntry": "Potential entry area · unconfirmed",
+      "reference": "Reference entry (not a fill)",
+      "stop": "Stop / invalidation reference",
+      "rr": "Reward / risk to TP1",
+      "favorable": "Favorable R:R, not higher certainty",
+      "waitCondition": "Confirmation required",
+      "nextAction": "Next action",
+      "markerLong": "Long",
+      "markerShort": "Short",
+      "disclaimer": "Closed-candle heuristic reference only, not an order, executable fill, win probability or profit guarantee.",
+      "states": {
+        "LONG_READY": "Long ready",
+        "SHORT_READY": "Short ready",
+        "WATCH_LONG": "Watch long",
+        "WATCH_SHORT": "Watch short",
+        "WAIT": "Wait",
+        "MISSED": "Missed"
+      },
+      "actions": {
+        "consider_long": "May consider long",
+        "consider_short": "May consider short",
+        "wait_pullback": "Wait for pullback confirmation",
+        "wait_rejection": "Wait for rebound rejection confirmation",
+        "wait": "Do not trade yet; wait for a better location",
+        "no_chase_long": "Do not chase long; wait for the next pullback",
+        "no_chase_short": "Do not chase short; wait for the next rebound"
+      },
+      "stops": {
+        "below_retest_support": "A close below the retest/support invalidates the long setup",
+        "above_retest_resistance": "A close above the retest/resistance invalidates the short setup"
+      },
+      "reasons": {
+        "unavailable": "No validated current setup references",
+        "identity_mismatch": "Instrument/timeframe mismatch: no plan",
+        "context_mismatch": "Await aligned confirmed context",
+        "conflict": "Directional evidence conflicts",
+        "noise": "Noisy or conflicting technical evidence",
+        "invalidated": "Setup invalidated; wait",
+        "no_target": "No usable observed target / structural room",
+        "invalid_risk": "Invalid risk reference",
+        "poor_rr": "Reward/risk below 1.2",
+        "watch_rr": "Reward/risk below 1.5: watch only",
+        "confirmation_pending": "Wait for a valid closed-candle confirmation",
+        "confirmed": "Closed confirmation and quality filters passed",
+        "extended": "Price has left the valid entry area; do not chase",
+        "target_reached": "Prior target reached; wait for a new setup"
+      }
+    },
     "maEntry": {
       "overlays": {
         "levels": "Structural levels",
         "markers": "State markers",
         "ma": "MA line",
-        "entries": "Entry signals"
+        "entries": "Trade Guide signals"
       },
       "settings": "MA settings",
       "period": "Period",

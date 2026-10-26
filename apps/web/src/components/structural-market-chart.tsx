@@ -54,6 +54,12 @@ import {
   type MaEntryAnalysis,
 } from "@/lib/market/ma-confluence-entry";
 import type { OverlayVisibility } from "@/lib/market/chart-overlay-preferences";
+import {
+  guideMatchesIdentity,
+  guideReady,
+  type TradeGuideV1,
+} from "@/lib/market/trade-guide";
+import { TradeGuidePanel } from "@/components/trade-guide-panel";
 
 interface Props {
   history: MarketHistory;
@@ -77,6 +83,8 @@ interface Props {
   chartMessages: Messages["chart"];
   tradeSetup?: TradeSetupCandidateV1;
   maAnalysis?: MaEntryAnalysis;
+  tradeGuide?: TradeGuideV1;
+  guideMode?: boolean;
   overlays?: OverlayVisibility;
   onConfirmedCandle?: (candle: StreamCandle) => void;
   onObservedPrice?: (price: number) => void;
@@ -102,6 +110,7 @@ function candleData(candle: MarketCandle) {
 export function StructuralMarketChart(props: Props) {
   const container = useRef<HTMLDivElement>(null);
   const returnLatest = useRef<(() => void) | null>(null);
+  const dismissMarker = useRef<(() => void) | null>(null);
   const latestProps = useRef(props);
   const updateOverlays = useRef<
     ((levels: StructuralLevel[], markers: MarketStateMarker[]) => void) | null
@@ -116,6 +125,11 @@ export function StructuralMarketChart(props: Props) {
   });
   const [markerDetail, setMarkerDetail] = useState<{
     marker: MarketStateMarker;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [guideDetail, setGuideDetail] = useState<{
+    guide: TradeGuideV1;
     x: number;
     y: number;
   } | null>(null);
@@ -135,6 +149,7 @@ export function StructuralMarketChart(props: Props) {
       interval: props.interval,
     };
     setMarkerDetail(null);
+    setGuideDetail(null);
     setPrice(props.currentPrice);
     setStatus({ live: false, closed: false });
   }, [props.instrumentId, props.interval, props.currentPrice]);
@@ -154,6 +169,11 @@ export function StructuralMarketChart(props: Props) {
       ) / 1000,
     );
     let pinnedMarkerId: string | null = null;
+    dismissMarker.current = () => {
+      pinnedMarkerId = null;
+      setMarkerDetail(null);
+      setGuideDetail(null);
+    };
     let disposed = false;
     const chart = createChart(container.current, {
       height: 540,
@@ -208,6 +228,19 @@ export function StructuralMarketChart(props: Props) {
     const markerById = new Map(
       props.marketStateMarkers.map((marker) => [marker.id, marker]),
     );
+    const guideId = (guide: TradeGuideV1) =>
+      `guide:${guide.market_instrument_id}:${guide.timeframe}:${guide.confirmed_at}`;
+    const currentGuide = () => {
+      const current = latestProps.current,
+        guide = current.tradeGuide;
+      return current.overlays?.entries !== false &&
+        guide &&
+        guideReady(guide) &&
+        guideMatchesIdentity(guide, props.instrumentId, props.interval) &&
+        guide.confirmed_at === current.marketState?.confirmed_at
+        ? guide
+        : undefined;
+    };
     const markerData = (markers: MarketStateMarker[]) => {
       const current = latestProps.current;
       const output = (current.overlays?.markers === false ? [] : markers).map(
@@ -228,6 +261,7 @@ export function StructuralMarketChart(props: Props) {
       );
       const entry = current.maAnalysis;
       if (
+        !current.guideMode &&
         current.overlays?.entries !== false &&
         entry &&
         maMatchesIdentity(entry, props.instrumentId, props.interval) &&
@@ -242,6 +276,22 @@ export function StructuralMarketChart(props: Props) {
           shape: entry.setup_direction === "long" ? "arrowUp" : "arrowDown",
           color: entry.setup_direction === "long" ? "#22d3ee" : "#fbbf24",
           text: current.chartMessages.maEntry.states[entry.state],
+          size: 1,
+        });
+      const guide = currentGuide();
+      if (guide)
+        output.push({
+          id: guideId(guide),
+          time: Math.floor(
+            Date.parse(guide.candle_open_time) / 1000,
+          ) as UTCTimestamp,
+          position: guide.direction === "long" ? "belowBar" : "aboveBar",
+          shape: guide.direction === "long" ? "arrowUp" : "arrowDown",
+          color: guide.direction === "long" ? "#22d3ee" : "#fbbf24",
+          text:
+            guide.direction === "long"
+              ? current.chartMessages.tradeGuide.markerLong
+              : current.chartMessages.tradeGuide.markerShort,
           size: 1,
         });
       return output;
@@ -308,17 +358,24 @@ export function StructuralMarketChart(props: Props) {
       );
       for (const line of entryLines) candleSeries.removePriceLine(line);
       entryLines = [];
-      if (valid && current.overlays?.entries !== false && entry.entry_zone)
-        entryLines = [entry.entry_zone.low, entry.entry_zone.high].map(
-          (price) =>
-            candleSeries.createPriceLine({
-              price,
-              color: "#22d3ee66",
-              lineWidth: 1,
-              lineStyle: LineStyle.Dashed,
-              axisLabelVisible: false,
-              title: current.chartMessages.maEntry.zone,
-            }),
+      const guide = currentGuide();
+      const zone = current.guideMode
+        ? guide
+          ? [guide.entry_zone_low!, guide.entry_zone_high!]
+          : null
+        : valid && current.overlays?.entries !== false && entry.entry_zone
+          ? [entry.entry_zone.low, entry.entry_zone.high]
+          : null;
+      if (zone)
+        entryLines = zone.map((price) =>
+          candleSeries.createPriceLine({
+            price,
+            color: "#22d3ee66",
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: false,
+            title: current.chartMessages.maEntry.zone,
+          }),
         );
     };
     renderMa();
@@ -334,6 +391,7 @@ export function StructuralMarketChart(props: Props) {
       markerApi?.setMarkers(markerData(markers));
       pinnedMarkerId = null;
       setMarkerDetail(null);
+      setGuideDetail(null);
     };
     const fallbackPrice =
       props.currentPrice ?? Number(allCandles.at(-1)?.close ?? 0);
@@ -386,8 +444,20 @@ export function StructuralMarketChart(props: Props) {
       id: unknown,
       point: { x: number; y: number } | undefined,
     ) => {
+      const guide = currentGuide();
+      if (guide && id === guideId(guide) && point) {
+        const width = container.current?.clientWidth ?? 720;
+        setGuideDetail({
+          guide,
+          x: Math.max(8, Math.min(point.x + 12, width - 320)),
+          y: point.y,
+        });
+        setMarkerDetail(null);
+        return;
+      }
       const marker = typeof id === "string" ? markerById.get(id) : undefined;
       if (marker && point) {
+        setGuideDetail(null);
         const width = container.current?.clientWidth ?? 720;
         setMarkerDetail({
           marker,
@@ -396,6 +466,7 @@ export function StructuralMarketChart(props: Props) {
         });
       } else if (!pinnedMarkerId) {
         setMarkerDetail(null);
+        setGuideDetail(null);
       }
     };
     const crosshairHandler: Parameters<
@@ -408,9 +479,11 @@ export function StructuralMarketChart(props: Props) {
         typeof event.hoveredObjectId === "string"
           ? event.hoveredObjectId
           : null;
-      if (!id || !markerById.has(id)) {
+      const guide = currentGuide();
+      if (!id || (!markerById.has(id) && (!guide || id !== guideId(guide)))) {
         pinnedMarkerId = null;
         setMarkerDetail(null);
+        setGuideDetail(null);
         return;
       }
       pinnedMarkerId = pinnedMarkerId === id ? null : id;
@@ -532,6 +605,7 @@ export function StructuralMarketChart(props: Props) {
       chart.unsubscribeCrosshairMove(crosshairHandler);
       chart.unsubscribeClick(clickHandler);
       returnLatest.current = null;
+      dismissMarker.current = null;
       updateOverlays.current = null;
       observer.disconnect();
       stopStream();
@@ -547,6 +621,7 @@ export function StructuralMarketChart(props: Props) {
     props.chartMessages,
     props.overlays,
     props.maAnalysis,
+    props.tradeGuide,
   ]);
 
   const setup =
@@ -585,91 +660,113 @@ export function StructuralMarketChart(props: Props) {
               · {props.providerLabel}
             </span>
           </div>
+          {props.tradeGuide &&
+            guideMatchesIdentity(
+              props.tradeGuide,
+              props.instrumentId,
+              props.interval,
+            ) &&
+            props.tradeGuide.confirmed_at ===
+              props.marketState?.confirmed_at && (
+              <TradeGuidePanel
+                guide={props.tradeGuide}
+                copy={props.chartMessages.tradeGuide}
+                locale={props.locale}
+              />
+            )}
           {props.marketState && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-              <strong className="text-emerald-300">
-                {
-                  props.chartMessages.marketState.directions[
-                    props.marketState.direction
-                  ]
-                }{" "}
-                {props.marketState.direction_strength}
-              </strong>
-              {!isNeutralMarketStateFallback(props.marketState) && (
-                <span>
-                  {props.chartMessages.marketState.phase}:{" "}
+            <details open={!props.guideMode}>
+              <summary className="cursor-pointer text-[11px] text-[var(--muted)]">
+                {props.chartMessages.tradeGuide.technicalDetails}
+              </summary>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                <strong className="text-emerald-300">
                   {
-                    props.chartMessages.marketState.phases[
-                      props.marketState.phase
+                    props.chartMessages.marketState.directions[
+                      props.marketState.direction
                     ]
-                  }
-                </span>
-              )}
-              <span className="text-[var(--muted)]">
-                {props.chartMessages.marketState.nextWait}:{" "}
-                {formatMarketStateWait(props.marketState, props.chartMessages)}
-              </span>
-              {!setup && props.marketState.reference_level && (
-                <span className="font-mono text-[var(--muted)]">
-                  {props.chartMessages.marketState.keyZone}:{" "}
-                  {formatZone(
-                    props.marketState.reference_level.zone_low,
-                    props.marketState.reference_level.zone_high,
-                    props.locale,
-                  )}
-                </span>
-              )}
-              <span
-                className={
-                  (
-                    setup
-                      ? setup.status === "candidate"
-                      : props.marketState.entry_window_candidate
-                  )
-                    ? "text-emerald-300"
-                    : "text-[var(--muted)]"
-                }
-              >
-                {props.chartMessages.marketState.entryWindow}:{" "}
-                {setup
-                  ? props.chartMessages.tradeSetup[setup.status]
-                  : props.marketState.entry_window_candidate
-                    ? props.chartMessages.marketState.established
-                    : props.chartMessages.marketState.waiting}
-              </span>
-              {setup && (
-                <>
+                  }{" "}
+                  {props.marketState.direction_strength}
+                </strong>
+                {!isNeutralMarketStateFallback(props.marketState) && (
                   <span>
-                    {props.chartMessages.tradeSetup.direction}:{" "}
-                    {props.chartMessages.tradeSetup[setup.direction]}
+                    {props.chartMessages.marketState.phase}:{" "}
+                    {
+                      props.chartMessages.marketState.phases[
+                        props.marketState.phase
+                      ]
+                    }
                   </span>
-                  {setup.reference_level && (
-                    <span className="font-mono text-[var(--muted)]">
-                      {setup.direction === "wait"
-                        ? props.chartMessages.tradeSetup.watchZone
-                        : props.chartMessages.tradeSetup.entryZone}
-                      : {setup.reference_level.level_label}{" "}
-                      {formatZone(
-                        setup.reference_level.zone_low,
-                        setup.reference_level.zone_high,
-                        props.locale,
-                      )}
-                    </span>
+                )}
+                <span className="text-[var(--muted)]">
+                  {props.chartMessages.marketState.nextWait}:{" "}
+                  {formatMarketStateWait(
+                    props.marketState,
+                    props.chartMessages,
                   )}
-                  {setup.preferred_entry_price !== null && (
-                    <span className="font-mono text-[var(--muted)]">
-                      {props.chartMessages.tradeSetup.referencePrice}:{" "}
-                      {setup.preferred_entry_price.toLocaleString(
-                        props.locale,
-                        {
-                          maximumFractionDigits: 6,
-                        },
-                      )}
+                </span>
+                {!setup && props.marketState.reference_level && (
+                  <span className="font-mono text-[var(--muted)]">
+                    {props.chartMessages.marketState.keyZone}:{" "}
+                    {formatZone(
+                      props.marketState.reference_level.zone_low,
+                      props.marketState.reference_level.zone_high,
+                      props.locale,
+                    )}
+                  </span>
+                )}
+                <span
+                  className={
+                    (
+                      setup
+                        ? setup.status === "candidate"
+                        : props.marketState.entry_window_candidate
+                    )
+                      ? "text-emerald-300"
+                      : "text-[var(--muted)]"
+                  }
+                >
+                  {props.chartMessages.marketState.entryWindow}:{" "}
+                  {setup
+                    ? props.chartMessages.tradeSetup[setup.status]
+                    : props.marketState.entry_window_candidate
+                      ? props.chartMessages.marketState.established
+                      : props.chartMessages.marketState.waiting}
+                </span>
+                {setup && (
+                  <>
+                    <span>
+                      {props.chartMessages.tradeSetup.direction}:{" "}
+                      {props.chartMessages.tradeSetup[setup.direction]}
                     </span>
-                  )}
-                </>
-              )}
-            </div>
+                    {setup.reference_level && (
+                      <span className="font-mono text-[var(--muted)]">
+                        {setup.direction === "wait"
+                          ? props.chartMessages.tradeSetup.watchZone
+                          : props.chartMessages.tradeSetup.entryZone}
+                        : {setup.reference_level.level_label}{" "}
+                        {formatZone(
+                          setup.reference_level.zone_low,
+                          setup.reference_level.zone_high,
+                          props.locale,
+                        )}
+                      </span>
+                    )}
+                    {setup.preferred_entry_price !== null && (
+                      <span className="font-mono text-[var(--muted)]">
+                        {props.chartMessages.tradeSetup.referencePrice}:{" "}
+                        {setup.preferred_entry_price.toLocaleString(
+                          props.locale,
+                          {
+                            maximumFractionDigits: 6,
+                          },
+                        )}
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            </details>
           )}
           {setup && (
             <p className="text-[10px] text-[var(--muted)]">
@@ -694,6 +791,37 @@ export function StructuralMarketChart(props: Props) {
         </div>
       </div>
       <div ref={container} className="min-h-[540px] w-full" />
+      {guideDetail &&
+        props.overlays?.entries !== false &&
+        guideMatchesIdentity(
+          guideDetail.guide,
+          props.instrumentId,
+          props.interval,
+        ) &&
+        guideReady(guideDetail.guide) &&
+        guideDetail.guide.confirmed_at === props.tradeGuide?.confirmed_at && (
+          <div
+            className="absolute z-20 w-80 max-w-[90vw] border border-white/15 bg-[#111827]/95 p-3 text-xs shadow-xl"
+            style={{
+              left: guideDetail.x,
+              top: Math.max(76, guideDetail.y + 44),
+            }}
+          >
+            <button
+              type="button"
+              className="float-right px-2"
+              aria-label={props.chartMessages.tradeGuide.close}
+              onClick={() => dismissMarker.current?.()}
+            >
+              ×
+            </button>
+            <TradeGuidePanel
+              guide={guideDetail.guide}
+              copy={props.chartMessages.tradeGuide}
+              locale={props.locale}
+            />
+          </div>
+        )}
       {markerDetail &&
         markerDetail.marker.market_instrument_id === props.instrumentId &&
         markerDetail.marker.timeframe === props.interval && (

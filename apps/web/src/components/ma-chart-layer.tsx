@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+} from "react";
 import { StructuralMarketChart } from "@/components/structural-market-chart";
 import type { TechnicalContextSnapshot } from "@/lib/market/technical-context";
 import {
@@ -12,6 +18,11 @@ import {
   parseOverlayPreferences,
   type OverlayVisibility,
 } from "@/lib/market/chart-overlay-preferences";
+import {
+  calculateTradeGuide,
+  guideReady,
+  type TradeGuideV1,
+} from "@/lib/market/trade-guide";
 
 type Props = ComponentProps<typeof StructuralMarketChart> & {
   snapshot?: TechnicalContextSnapshot | null;
@@ -54,6 +65,30 @@ export function MaChartLayer({ snapshot, ...props }: Props) {
     [snapshot, props.instrumentId, props.interval, preferences.ma],
   );
   const copy = props.chartMessages.maEntry;
+  const previous = useRef<TradeGuideV1 | undefined>(undefined);
+  const guide = useMemo(
+    () =>
+      snapshot && analysis
+        ? calculateTradeGuide(
+            snapshot,
+            analysis,
+            props.tradeSetup,
+            props.instrumentId,
+            props.interval,
+            previous.current,
+          )
+        : undefined,
+    [snapshot, analysis, props.tradeSetup, props.instrumentId, props.interval],
+  );
+  useEffect(() => {
+    if (guide && guideReady(guide)) previous.current = guide;
+    else if (
+      !guide ||
+      guide.state === "WAIT" ||
+      previous.current?.ma_settings_key !== guide.ma_settings_key
+    )
+      previous.current = undefined;
+  }, [guide]);
   const toggle = (key: keyof OverlayVisibility) =>
     setPreferences((value) => ({
       ...value,
@@ -121,11 +156,14 @@ export function MaChartLayer({ snapshot, ...props }: Props) {
         </details>
       </div>
       {analysis && (
-        <div
+        <details
           className="space-y-1 border-b px-3 py-2 text-xs"
           data-ma-state={analysis.state}
         >
-          <p className="flex flex-wrap gap-x-4 gap-y-1">
+          <summary className="cursor-pointer">
+            {props.chartMessages.tradeGuide.maDetails}
+          </summary>
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
             <span>
               {analysis.settings.type}
               {analysis.settings.period}:{" "}
@@ -134,9 +172,6 @@ export function MaChartLayer({ snapshot, ...props }: Props) {
               }) ?? "—"}{" "}
               · {copy.slopes[analysis.ma_slope]}
             </span>
-            <strong>
-              {copy.opportunity}: {copy.states[analysis.state]}
-            </strong>
             <span>
               {copy.score}: {analysis.confidence_score}/100 ·{" "}
               {analysis.quality_tier}
@@ -147,30 +182,6 @@ export function MaChartLayer({ snapshot, ...props }: Props) {
               {copy.types[analysis.setup_type]} · {copy.candidateLabel}
             </p>
           )}
-          {analysis.entry_zone && (
-            <p>
-              {copy.zone}:{" "}
-              {analysis.entry_zone.low.toLocaleString(props.locale, {
-                maximumFractionDigits: 6,
-              })}{" "}
-              –{" "}
-              {analysis.entry_zone.high.toLocaleString(props.locale, {
-                maximumFractionDigits: 6,
-              })}{" "}
-              · {copy.trigger}:{" "}
-              {analysis.trigger_price?.toLocaleString(props.locale, {
-                maximumFractionDigits: 6,
-              })}{" "}
-              · {copy.invalidation}:{" "}
-              {analysis.invalidation_price?.toLocaleString(props.locale, {
-                maximumFractionDigits: 6,
-              })}{" "}
-              · {copy.target}:{" "}
-              {analysis.first_target?.toLocaleString(props.locale, {
-                maximumFractionDigits: 6,
-              }) ?? "—"}
-            </p>
-          )}
           <p className="text-[var(--muted)]">
             {analysis.reason_codes
               .slice(0, 4)
@@ -178,11 +189,13 @@ export function MaChartLayer({ snapshot, ...props }: Props) {
               .join(" · ")}
           </p>
           <p className="text-[10px] text-[var(--muted)]">{copy.disclaimer}</p>
-        </div>
+        </details>
       )}
       <StructuralMarketChart
         {...props}
         maAnalysis={analysis}
+        tradeGuide={guide}
+        guideMode
         overlays={preferences.visibility}
       />
     </>

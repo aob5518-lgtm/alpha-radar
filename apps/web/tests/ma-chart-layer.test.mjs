@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import * as engine from "../src/lib/market/ma-confluence-entry.ts";
 import * as preferences from "../src/lib/market/chart-overlay-preferences.ts";
+import * as tradeGuide from "../src/lib/market/trade-guide.ts";
 import { maFixture } from "./helpers/ma-fixtures.mjs";
 import { btcId, ethId } from "./helpers/chart-fixtures.mjs";
 
@@ -29,8 +30,14 @@ function harness(storage = new Map(), failStorage = false) {
     pending = [],
     tree,
     calls = 0,
-    chart;
+    chart,
+    guideCalls = 0;
   const hooks = {
+    useRef(value) {
+      const i = cursor++;
+      if (!(i in slots)) slots[i] = { current: value };
+      return slots[i];
+    },
     useState(initial) {
       const i = cursor++;
       if (!(i in slots))
@@ -80,6 +87,13 @@ function harness(storage = new Map(), failStorage = false) {
       },
     },
     "@/lib/market/chart-overlay-preferences": preferences,
+    "@/lib/market/trade-guide": {
+      ...tradeGuide,
+      calculateTradeGuide(...args) {
+        guideCalls++;
+        return tradeGuide.calculateTradeGuide(...args);
+      },
+    },
   };
   const exports = {};
   runInNewContext(compiled, {
@@ -137,6 +151,9 @@ function harness(storage = new Map(), failStorage = false) {
     get calls() {
       return calls;
     },
+    get guideCalls() {
+      return guideCalls;
+    },
     toggle(index) {
       const inputs = [];
       const walk = (node) => {
@@ -164,13 +181,17 @@ test("real overlay controls persist independently and do not recompute cached co
   h.render();
   h.render();
   const count = h.calls,
-    analysis = h.chart.maAnalysis;
+    analysis = h.chart.maAnalysis,
+    guideCount = h.guideCalls,
+    guide = h.chart.tradeGuide;
   for (let i = 0; i < 4; i++) {
     h.toggle(i);
     h.render();
   }
   assert.equal(h.calls, count);
   assert.equal(h.chart.maAnalysis, analysis);
+  assert.equal(h.guideCalls, guideCount);
+  assert.equal(h.chart.tradeGuide, guide);
   assert.deepEqual(
     { ...h.chart.overlays },
     { levels: false, markers: false, ma: false, entries: false },
@@ -228,4 +249,44 @@ test("pending Worker context leaves canvas and controls usable; accepted context
   h.render({ ...pending, instrumentId: ethId, interval: "1h" });
   assert.equal(h.chart.maAnalysis, undefined);
   assert.equal(h.calls, 1);
+});
+
+test("committed READY evidence supports bounded MISSED, while visual price updates do not recalculate a Guide", () => {
+  const h = harness();
+  h.render();
+  assert.equal(h.chart.tradeGuide.state, "LONG_READY");
+  const prior = h.chart.tradeGuide,
+    snapshot = structuredClone(h.input.snapshot),
+    last = snapshot.closedCandles.at(-1);
+  const close = prior.entry_zone_high + 3;
+  snapshot.closedCandles.push({
+    ...last,
+    openTime: last.closeTime,
+    closeTime: new Date(Date.parse(last.closeTime) + 900000).toISOString(),
+    open: close - 0.2,
+    high: close + 0.2,
+    low: close - 0.5,
+    close,
+    volume: 120,
+  });
+  snapshot.state.confirmed_at = snapshot.closedCandles.at(-1).closeTime;
+  const next = { ...h.input, snapshot };
+  h.render(next);
+  assert.equal(
+    h.chart.tradeGuide.state,
+    "MISSED",
+    JSON.stringify({
+      ma: h.chart.maAnalysis.reason_codes,
+      guide: h.chart.tradeGuide,
+    }),
+  );
+  const guide = h.chart.tradeGuide,
+    calls = h.guideCalls,
+    maCalls = h.calls;
+  h.render({ ...next, currentPrice: 999999 });
+  assert.equal(h.guideCalls, calls);
+  assert.equal(h.calls, maCalls);
+  assert.equal(h.chart.tradeGuide, guide);
+  assert.equal(guide.stop_price, prior.stop_price);
+  assert.equal(guide.tp1_price, prior.tp1_price);
 });
