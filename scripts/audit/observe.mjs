@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { runInNewContext } from "node:vm";
 import * as levels from "../../apps/web/src/lib/market/technical-levels.ts";
-import * as maModule from "../../apps/web/src/lib/market/ma-confluence-entry.ts";
+import * as maModule from "../../apps/web/tests/fixtures/ma-entry-v1/ma-confluence-entry.ts";
 import * as setup from "../../apps/web/src/lib/market/trade-setup.ts";
 import * as intervals from "../../apps/web/src/lib/market/intervals.ts";
 const require = createRequire(
@@ -47,7 +47,7 @@ function probe(path, replacements, modules, name) {
 export function observers() {
   return {
     ma: probe(
-      "../../apps/web/src/lib/market/ma-confluence-entry.ts",
+      "../../apps/web/tests/fixtures/ma-entry-v1/ma-confluence-entry.ts",
       [
         [
           "  result.confidence_score = score;",
@@ -63,11 +63,11 @@ export function observers() {
   result.confidence_score = score;`,
         ],
       ],
-      { "./technical-levels.ts": levels },
+      { "../../../src/lib/market/technical-levels.ts": levels },
       "calculateMaEntry",
     ),
     guide: probe(
-      "../../apps/web/src/lib/market/trade-guide.ts",
+      "../../apps/web/tests/fixtures/ma-entry-v1/trade-guide.ts",
       [
         [
           "    result.favorable_reward_risk =",
@@ -76,8 +76,8 @@ export function observers() {
       ],
       {
         "./ma-confluence-entry.ts": maModule,
-        "./trade-setup.ts": setup,
-        "./intervals.ts": intervals,
+        "../../../src/lib/market/trade-setup.ts": setup,
+        "../../../src/lib/market/intervals.ts": intervals,
       },
       "calculateTradeGuide",
     ),

@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { verifyV1Integrity } from "./v1-integrity.mjs";
 import {
   Worker,
   isMainThread,
@@ -30,18 +30,7 @@ if (!isMainThread) {
     data = JSON.parse(bytes);
   assert.equal(data.format, "alpha-radar-signal-history-v1");
   assert.equal(data.base_sha, "69a74425e68157ef634a723309d665b3996d9509");
-  execFileSync(
-    "git",
-    [
-      "diff",
-      "--exit-code",
-      data.base_sha,
-      "--",
-      "apps/web/src",
-      "packages/types",
-    ],
-    { stdio: "pipe" },
-  );
+  verifyV1Integrity();
   const start = Date.parse(data.requested_start),
     end = Date.parse(data.exported_at);
   assert.ok(Number.isFinite(start) && end > start);

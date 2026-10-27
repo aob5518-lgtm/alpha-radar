@@ -5,11 +5,11 @@ import {
   calculateMaEntry,
   MA_RULES,
   movingAverage,
-} from "../../apps/web/src/lib/market/ma-confluence-entry.ts";
+} from "../../apps/web/tests/fixtures/ma-entry-v1/ma-confluence-entry.ts";
 import {
   calculateTradeGuide,
   guideReady,
-} from "../../apps/web/src/lib/market/trade-guide.ts";
+} from "../../apps/web/tests/fixtures/ma-entry-v1/trade-guide.ts";
 import { calculateAtrSeries } from "../../apps/web/src/lib/market/technical-levels.ts";
 import {
   higherMarketInterval,

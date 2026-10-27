@@ -48,6 +48,13 @@ for (const locale of ["en", "zh-CN"])
     assert.match(ready, /TP2/);
     assert.ok(ready.includes(copy.stop));
     assert.ok(ready.includes(copy.states.LONG_READY));
+    assert.ok(ready.includes(` · ${result.quality_grade}`));
+    assert.ok(ready.includes(copy.evidence.volume.neutral));
+    assert.ok(ready.includes(copy.evidenceLabel));
+    assert.doesNotMatch(
+      render({ ...result, tp1_source: "swing-high", tp2_source: "swing-low" }),
+      /swing-high|swing-low/,
+    );
     assert.ok(!ready.includes(copy.states.SHORT_READY));
     for (const state of ["WATCH_LONG", "WATCH_SHORT", "WAIT", "MISSED"]) {
       const output = render({

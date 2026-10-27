@@ -121,6 +121,11 @@ LONG/SHORT/WATCH/WAIT/MISSED presentation with observed stop/target references a
 conservative reward/risk filters. It does not add execution, sizing, indicators or
 predictive certainty; see `TRADE_GUIDE.md`.
 
+The separately reviewed Entry V1.2 / Guide V1.1 proposal splits safety gates,
+ordinal evidence quality and deterministic plan generation. It adds no underlying
+technical engine or execution system; see `TRADE_GUIDE_V12.md` and its frozen-input
+coverage comparison. V1 fixtures remain immutable.
+
 ## 4. Archived Product Surfaces
 
 The following sections describe historical prototypes and are **archived / not current product

@@ -20,7 +20,7 @@ import {
 } from "@/lib/market/chart-overlay-preferences";
 import {
   calculateTradeGuide,
-  guideReady,
+  retainGuideEvidence,
   type TradeGuideV1,
 } from "@/lib/market/trade-guide";
 
@@ -81,13 +81,7 @@ export function MaChartLayer({ snapshot, ...props }: Props) {
     [snapshot, analysis, props.tradeSetup, props.instrumentId, props.interval],
   );
   useEffect(() => {
-    if (guide && guideReady(guide)) previous.current = guide;
-    else if (
-      !guide ||
-      guide.state === "WAIT" ||
-      previous.current?.ma_settings_key !== guide.ma_settings_key
-    )
-      previous.current = undefined;
+    previous.current = retainGuideEvidence(previous.current, guide);
   }, [guide]);
   const toggle = (key: keyof OverlayVisibility) =>
     setPreferences((value) => ({

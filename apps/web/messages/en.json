@@ -88,6 +88,8 @@
       "maDetails": "MA evidence / advanced",
       "entry": "Entry area",
       "potentialEntry": "Potential entry area · unconfirmed",
+      "swingHigh": "Confirmed swing high",
+      "swingLow": "Confirmed swing low",
       "reference": "Reference entry (not a fill)",
       "stop": "Stop / invalidation reference",
       "rr": "Reward / risk to TP1",
@@ -129,10 +131,48 @@
         "invalid_risk": "Invalid risk reference",
         "poor_rr": "Reward/risk below 1.2",
         "watch_rr": "Reward/risk below 1.5: watch only",
-        "confirmation_pending": "Wait for a valid closed-candle confirmation",
+        "confirmation_pending": "Wait for stronger evidence / closed confirmation",
         "confirmed": "Closed confirmation and quality filters passed",
         "extended": "Price has left the valid entry area; do not chase",
         "target_reached": "Prior target reached; wait for a new setup"
+      },
+      "evidenceLabel": "Evidence quality, not win probability",
+      "evidence": {
+        "trend": {
+          "positive": "Aligned trend",
+          "neutral": "Neutral structural trend",
+          "negative": "Weak trend"
+        },
+        "ma": {
+          "positive": "MA aligned / confluence",
+          "neutral": "Partial MA confluence",
+          "negative": "MA flat or opposing"
+        },
+        "state": {
+          "positive": "State supports setup",
+          "neutral": "State neutral",
+          "negative": "State opposes setup"
+        },
+        "macd": {
+          "positive": "MACD supports",
+          "neutral": "MACD neutral / lagging",
+          "negative": "MACD opposes"
+        },
+        "volume": {
+          "positive": "Volume supports",
+          "neutral": "Volume ordinary / light",
+          "negative": "Volume weak / unavailable"
+        },
+        "structure": {
+          "positive": "Confirmed structure",
+          "neutral": "Limited confluence",
+          "negative": "Structure weak"
+        },
+        "price": {
+          "positive": "Closed price confirmation",
+          "neutral": "Acceptable close",
+          "negative": "Waiting for closed confirmation"
+        }
       }
     },
     "maEntry": {
@@ -171,11 +211,15 @@
       },
       "types": {
         "ma_pullback_long": "Trend-aligned MA pullback long",
-        "ma_rejection_short": "Trend-aligned MA rejection short"
+        "ma_rejection_short": "Trend-aligned MA rejection short",
+        "support_pullback": "Support pullback",
+        "resistance_rejection": "Resistance rejection",
+        "breakout_retest": "Breakout retest",
+        "breakdown_retest": "Breakdown retest"
       },
       "reasons": {
         "insufficient_history": "Insufficient confirmed context",
-        "flat_ma": "Flat MA: chop filter",
+        "flat_ma": "Flat MA: no slope contribution",
         "trend_conflict": "Directional context does not align",
         "repeated_crosses": "Repeated MA crossings: chop filter",
         "excess_retests": "Too many MA interactions",
@@ -186,6 +230,7 @@
         "weak_confirmation": "Await a strong closed-candle confirmation",
         "weak_volume": "Confirmation volume is weak",
         "missing_volume": "Volume evidence is unavailable",
+        "opposing_volume": "Unreclaimed explosive opposing volume",
         "macd_conflict": "MACD conflicts with the setup",
         "macd_unready": "MACD is not seeded",
         "overextended": "Price is extended: do not chase",

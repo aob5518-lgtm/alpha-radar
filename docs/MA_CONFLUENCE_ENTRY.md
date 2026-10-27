@@ -1,5 +1,8 @@
 # MA Confluence Entry V1
 
+Frozen V1 specification. The current proposed V1.2 model is documented separately
+in [TRADE_GUIDE_V12.md](TRADE_GUIDE_V12.md); immutable V1 fixtures remain for comparison.
+
 Version: `ma-confluence-entry-v1`. This is a deterministic, unvalidated research
 setup assistant, not a calibrated win probability, backtested strategy, execution
 system, price forecast or guaranteed opportunity. The Chinese “可开多／可开空”

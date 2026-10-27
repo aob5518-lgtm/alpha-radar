@@ -3,8 +3,8 @@ import test from "node:test";
 import {
   calculateTradeGuide,
   guideMatchesIdentity,
-} from "../src/lib/market/trade-guide.ts";
-import { calculateMaEntry } from "../src/lib/market/ma-confluence-entry.ts";
+} from "./fixtures/ma-entry-v1/trade-guide.ts";
+import { calculateMaEntry } from "./fixtures/ma-entry-v1/ma-confluence-entry.ts";
 import { calculateTradeSetup } from "../src/lib/market/trade-setup.ts";
 import { maFixture } from "./helpers/ma-fixtures.mjs";
 import { btcId, ethId } from "./helpers/chart-fixtures.mjs";
