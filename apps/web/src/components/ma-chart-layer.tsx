@@ -12,6 +12,7 @@ import {
   calculateMaEntry,
   MA_RULES,
   type MaSettings,
+  type MaEntryAnalysis,
 } from "@/lib/market/ma-confluence-entry";
 import {
   OVERLAY_STORAGE_KEY,
@@ -52,6 +53,7 @@ export function MaChartLayer({ snapshot, ...props }: Props) {
   }, [preferences, restored]);
   // Visibility is intentionally NOT a calculation dependency. Existing engines are
   // never called from this layer; price/trade/partial state belongs to the canvas.
+  const priorAnalysis = useRef<MaEntryAnalysis | undefined>(undefined);
   const analysis = useMemo(
     () =>
       snapshot
@@ -60,10 +62,14 @@ export function MaChartLayer({ snapshot, ...props }: Props) {
             props.instrumentId,
             props.interval,
             preferences.ma,
+            priorAnalysis.current,
           )
         : undefined,
     [snapshot, props.instrumentId, props.interval, preferences.ma],
   );
+  useEffect(() => {
+    priorAnalysis.current = analysis;
+  }, [analysis]);
   const copy = props.chartMessages.maEntry;
   const previous = useRef<TradeGuideV1 | undefined>(undefined);
   const guide = useMemo(

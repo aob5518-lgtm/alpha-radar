@@ -9,6 +9,7 @@ import * as levels from "../../apps/web/src/lib/market/technical-levels.ts";
 import * as maModule from "../../apps/web/src/lib/market/ma-confluence-entry.ts";
 import * as setup from "../../apps/web/src/lib/market/trade-setup.ts";
 import * as intervals from "../../apps/web/src/lib/market/intervals.ts";
+import * as retest from "../../apps/web/src/lib/market/ma-retest-episode.ts";
 const require = createRequire(
   new URL("../../apps/web/package.json", import.meta.url),
 );
@@ -44,11 +45,19 @@ function probe(path, replacements, modules, name) {
     return { result: structuredClone(result), trace };
   };
 }
-export function observers() {
+export function observers({
+  maPath = "../../apps/web/src/lib/market/ma-confluence-entry.ts",
+  changes = [],
+} = {}) {
+  const modern = readFileSync(
+    new URL(maPath, import.meta.url),
+    "utf8",
+  ).includes("retest_memory");
   return {
     ma: probe(
-      "../../apps/web/src/lib/market/ma-confluence-entry.ts",
+      maPath,
       [
+        ...changes,
         [
           "  result.confidence_score = score;",
           `  __observe({direction,slope,impulse,retests:retests.map(v=>v.i),atr,low,high,trigger,invalidation,target,
@@ -58,12 +67,16 @@ export function observers() {
         zoneBreak:direction*(last.close-(direction===1?high:low))>=0,
         candleDirection:direction*(last.close-last.open)>0,
         locationPassed:direction===1?closeLocation>=r.closeStrength:closeLocation<=1-r.closeStrength,
-        fresh:direction*(previous.close-averages.at(-2))<=r.zoneAtr*(atrSeries.at(-2)??atr)||retests.some(v=>v.i===candles.length-1),
+        fresh:${modern ? "result.diagnostics.retest_active" : "direction*(previous.close-averages.at(-2))<=r.zoneAtr*(atrSeries.at(-2)??atr)||retests.some(v=>v.i===candles.length-1)"},
         reasons:[...reasons]});
   result.confidence_score = score;`,
         ],
       ],
-      { "./technical-levels.ts": levels },
+      {
+        "./technical-levels.ts": levels,
+        "../../../src/lib/market/technical-levels.ts": levels,
+        "./ma-retest-episode.ts": retest,
+      },
       "calculateMaEntry",
     ),
     guide: probe(

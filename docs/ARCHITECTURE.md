@@ -55,7 +55,7 @@ navigation after hydration. A scoped same-origin history transport reads the exi
 DB API, not providers. Neither client observations nor Trade Setup are persisted or executable.
 See `CHART_REALTIME.md` for identity safety, cache/recovery and diagnostics.
 
-The independent `ma-confluence-entry-v1` presentation module consumes the unchanged
+The independent `ma-confluence-entry-v1.1` presentation module consumes the unchanged
 confirmed technical snapshot for one configurable MA and heuristic research setup.
 Visibility/preferences are separate from calculation and never modify the original
 engines or backend contracts. See `MA_CONFLUENCE_ENTRY.md` for exact gates, score

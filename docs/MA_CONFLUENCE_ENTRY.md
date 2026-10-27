@@ -1,4 +1,74 @@
-# MA Confluence Entry V1
+# MA Confluence Entry
+
+## V1.1 — bounded retest episode and entry-based room
+
+Version `ma-confluence-entry-v1.1`; base main
+`4ec1617e17a560e244b7c89616f3519e472b173e`. Only the following two
+conceptual gates change. All `MA_RULES` numeric values/weights equal the frozen V1
+oracle; original Levels/Trend/Market State/Trade Setup and Trade Guide remain unchanged.
+
+### Retest lifecycle
+
+`calculateMaEntry` takes optional explicit prior analysis. The existing lightweight
+MA layer commits this cursor only after an accepted immutable Worker context renders.
+It is not in localStorage, the backend, the Worker protocol or a position ledger.
+
+- A current **closed** touch after the unchanged qualifying impulse starts an
+  episode. Touch bar age is zero; at most **three additional closed bars** may
+  confirm. Consecutive touching bars never renew its start time. A fully departed
+  range followed by a new touch starts a separate episode under the unchanged
+  maximum-touch/episode/chop filters.
+- A trigger consumes the episode; another continuation candle does not repeatedly
+  trigger the same interaction. Current-trigger diagnostics show its eligible age;
+  the committed cursor is already consumed for the following candle.
+- Closed MA invalidation, direction flip, materially opposite Market State direction,
+  existing chop/excess-touch rejection or existing >1 ATR extension cancels it.
+  No new directional/chop/chase threshold is introduced. Failure is checked before
+  admitting the current candle's retest extreme. Expired/cancelled history cannot
+  resurrect without a newly observed touch.
+- Diagnostic fields are `retest_started_at`, `retest_age_bars`, `retest_extreme`,
+  `retest_active`; stop still uses the existing current zone/prior retest extrema
+  and **one** 0.25 ATR buffer. Current failure/confirmation candle extremes remain
+  excluded from their own failure reference. No R:R-driven stop adjustment.
+
+The pure cursor keeps before/after-current checkpoints. Same-timestamp higher-context
+replacements re-evaluate from before-current (never age twice); source corrections,
+missing steps, UUID/timeframe/settings changes reset eligibility. Its source signature
+is bounded to the existing 800 bars. Full chronological folding and incremental
+accepted-Worker folding deep-equal; neither calls the technical engines from MA.
+Partial/ticker/trade updates are not dependencies and cannot start, age or consume it.
+
+**Cold/session boundary:** without an accepted prior cursor, a currently observed
+closed touch may start an episode; an old absent touch is not searched six bars back
+and invented as an active episode. Reloads/settings changes or identity remounts can
+therefore suppress delayed confirmations that a continuously mounted session would
+observe. This is explicit, conservative session state, not retrospective signal
+storage. Historical comparison burns in 27 pre-scoring accepted contexts and models
+a continuously mounted SMA99 session, not unarchived historical browser delivery.
+
+### Structural room / observed targets
+
+Room anchor is the existing authoritative trigger reference:
+long `max(MA-zone high, previous high)`, short its existing mirror. The confirmed
+close is **not** substituted as anchor. `roomAtr` stays **0.9**.
+
+Select the nearest confirmed opposing zone edge or swing pivot **strictly beyond
+entry**, not merely beyond MA. Points/zone edges inside the planned MA/trigger
+interaction range are classified in `diagnostics.entry_obstacles` as local/entry
+confluence, not TP1. A genuinely forward obstacle is never skipped just because it
+fails 0.9 ATR; no meaningful forward target still rejects the setup. An overlapping
+zone straddling entry is not converted to a fabricated target at its farther edge.
+Diagnostics expose `room_anchor` and `structural_room_atr`.
+
+Trade Guide consumes the same reference/stop/target contracts normally; its existing
+nearest-real-target logic already excludes behind-entry points. No aggregation
+change or version increment is required (`trade-guide-v1`). Reached TP1, poor R:R,
+invalid risk, direction conflicts and no-chase rules still reject promotion.
+
+The exact frozen-input comparison, ablations and compact READY examples are in
+`MA_ENTRY_V11_COVERAGE.md`. No PnL, profitability or win-rate claim is made.
+
+## Historical V1 specification (frozen oracle)
 
 Version: `ma-confluence-entry-v1`. This is a deterministic, unvalidated research
 setup assistant, not a calibrated win probability, backtested strategy, execution

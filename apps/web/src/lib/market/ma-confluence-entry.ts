@@ -5,8 +5,9 @@ import {
   calculateSeededEma,
   detectConfirmedPivots,
 } from "./technical-levels.ts";
+import { advanceRetest, type RetestMemory } from "./ma-retest-episode.ts";
 
-export const MA_ENTRY_VERSION = "ma-confluence-entry-v1" as const;
+export const MA_ENTRY_VERSION = "ma-confluence-entry-v1.1" as const;
 export const MA_RULES = {
   defaultPeriod: 99,
   macdFast: 12,
@@ -119,12 +120,20 @@ export interface MaEntryAnalysis {
   trigger_price: number | null;
   invalidation_price: number | null;
   first_target: number | null;
+  retest_memory?: RetestMemory;
   diagnostics: {
     crosses: number;
     touches: number;
     episodes: number;
     histogram: number | null;
     volume_ratio: number | null;
+    retest_started_at: string | null;
+    retest_age_bars: number | null;
+    retest_extreme: number | null;
+    retest_active: boolean;
+    room_anchor: number | null;
+    structural_room_atr: number | null;
+    entry_obstacles: number[];
   };
 }
 export function validMaSettings(value: unknown): MaSettings {
@@ -188,6 +197,7 @@ export function calculateMaEntry(
   id: string,
   timeframe: MarketInterval,
   input: MaSettings = DEFAULT_MA,
+  previousAnalysis?: MaEntryAnalysis,
 ): MaEntryAnalysis {
   const settings = validMaSettings(input),
     r = MA_RULES;
@@ -234,6 +244,13 @@ export function calculateMaEntry(
       episodes: 0,
       histogram: null,
       volume_ratio: null,
+      retest_started_at: null,
+      retest_age_bars: null,
+      retest_extreme: null,
+      retest_active: false,
+      room_anchor: null,
+      structural_room_atr: null,
+      entry_obstacles: [],
     },
   };
   const finish = (reasons: MaReason[]) => {
@@ -267,7 +284,30 @@ export function calculateMaEntry(
         : trend.strength >= r.neutralStrength && structure !== 0
           ? Math.sign(structure)
           : 0;
-  if (!direction) return finish(["trend_conflict"]);
+  if (!direction) {
+    result.retest_memory = advanceRetest(
+      {
+        id,
+        interval: timeframe,
+        settings: `${settings.type}:${settings.period}:${settings.enabled}`,
+        candles,
+        direction: 0,
+        low: result.ma_zone_low!,
+        high: result.ma_zone_high!,
+        atr,
+        impulse: -1,
+        touching: false,
+        previousTouching: false,
+        conflicting: true,
+        chop: false,
+        extended: false,
+        maximumAge: r.retestLookback,
+        invalidationAtr: r.invalidationAtr,
+      },
+      previousAnalysis?.retest_memory,
+    ).memory;
+    return finish(["trend_conflict"]);
+  }
   result.setup_direction = direction === 1 ? "long" : "short";
   result.state = direction === 1 ? "observe_long" : "observe_short";
   const reasons: MaReason[] = [];
@@ -317,19 +357,54 @@ export function calculateMaEntry(
     )
       impulse = i;
   if (impulse < 0) reasons.push("no_impulse");
-  const retests = candles
-    .map((c, i) => ({ c, i }))
-    .filter(
-      ({ c, i }) =>
-        i > impulse &&
-        i >= candles.length - r.retestLookback &&
-        averages[i] != null &&
-        c.low <= averages[i]! + r.zoneAtr * (atrSeries[i] ?? atr) &&
-        c.high >= averages[i]! - r.zoneAtr * (atrSeries[i] ?? atr),
-    );
-  if (!retests.length) reasons.push("no_retest");
   const low = result.ma_zone_low!,
     high = result.ma_zone_high!;
+  const previousAverage = averages.at(-2)!,
+    previousAtr = atrSeries.at(-2) ?? atr;
+  const materialConflict =
+    snapshot.state.direction === (direction === 1 ? "bearish" : "bullish");
+  if (materialConflict && !reasons.includes("trend_conflict"))
+    reasons.push("trend_conflict");
+  const episode = advanceRetest(
+    {
+      id,
+      interval: timeframe,
+      settings: `${settings.type}:${settings.period}:${settings.enabled}`,
+      candles,
+      direction,
+      low,
+      high,
+      atr,
+      impulse,
+      touching: last.low <= high && last.high >= low,
+      previousTouching:
+        previous.low <= previousAverage + r.zoneAtr * previousAtr &&
+        previous.high >= previousAverage - r.zoneAtr * previousAtr,
+      conflicting: materialConflict,
+      chop:
+        reasons.includes("repeated_crosses") ||
+        reasons.includes("excess_retests"),
+      extended: direction * (last.close - ma) > r.maximumExtensionAtr * atr,
+      maximumAge: r.retestLookback,
+      invalidationAtr: r.invalidationAtr,
+    },
+    previousAnalysis?.retest_memory,
+  );
+  result.retest_memory = episode.memory;
+  Object.assign(result.diagnostics, {
+    retest_started_at: episode.episode?.started_at ?? null,
+    retest_age_bars: episode.age,
+    retest_extreme: episode.extreme,
+    retest_active: episode.active,
+  });
+  const retests = episode.active
+    ? candles
+        .map((c, i) => ({ c, i }))
+        .filter(({ c }) =>
+          episode.episode!.touches.some((t) => t.time === c.openTime),
+        )
+    : [];
+  if (!episode.active) reasons.push("no_retest");
   const trigger =
     direction === 1
       ? Math.max(high, previous.high)
@@ -350,7 +425,10 @@ export function calculateMaEntry(
             .map((v) => v.c.high),
         ) +
         r.invalidationAtr * atr;
-  if (retests.length && direction * (last.close - invalidation) <= 0) {
+  if (
+    episode.failed ||
+    (retests.length && direction * (last.close - invalidation) <= 0)
+  ) {
     result.state = "invalidated";
     return finish(["level_failed"]);
   }
@@ -368,19 +446,31 @@ export function calculateMaEntry(
           ...pivots.filter((p) => p.side === "low").map((p) => p.price),
         ];
   const ahead = barriers
-    .filter((p) => direction * (p - ma) > 0)
+    .filter((p) => direction * (p - trigger) > 0)
     .sort((a, b) => direction * (a - b));
   const target = ahead[0] ?? null;
   if (target === null) reasons.push("no_target");
-  else if (
-    direction *
-      (target -
-        (direction === 1
-          ? Math.max(last.close, trigger, high)
-          : Math.min(last.close, trigger, low))) <
-    r.roomAtr * atr
-  )
+  else if (direction * (target - trigger) < r.roomAtr * atr)
     reasons.push("near_obstruction");
+  result.diagnostics.room_anchor = trigger;
+  result.diagnostics.structural_room_atr =
+    target === null ? null : (direction * (target - trigger)) / atr;
+  result.diagnostics.entry_obstacles = barriers.filter(
+    (p) => p >= Math.min(low, trigger) && p <= Math.max(high, trigger),
+  );
+  for (const level of direction === 1
+    ? snapshot.resistances
+    : snapshot.supports)
+    if (
+      level.zone_low <= Math.max(high, trigger) &&
+      level.zone_high >= Math.min(low, trigger)
+    )
+      result.diagnostics.entry_obstacles.push(
+        direction === 1 ? level.zone_low : level.zone_high,
+      );
+  result.diagnostics.entry_obstacles = [
+    ...new Set(result.diagnostics.entry_obstacles),
+  ];
   const momentum = macd(candles.map((c) => c.close)),
     hist = momentum.at(-1)?.histogram ?? null,
     previousHist = momentum.at(-2)?.histogram ?? null;
@@ -467,11 +557,7 @@ export function calculateMaEntry(
   result.first_target = target;
   result.setup_type =
     direction === 1 ? "ma_pullback_long" : "ma_rejection_short";
-  const previousAverage = averages.at(-2)!,
-    previousAtr = atrSeries.at(-2) ?? atr;
-  const fresh =
-    direction * (previous.close - previousAverage) <= r.zoneAtr * previousAtr ||
-    retests.some((v) => v.i === candles.length - 1);
+  const fresh = episode.active;
   result.state =
     score >= r.triggerScore && confirmed && fresh
       ? direction === 1
@@ -482,6 +568,11 @@ export function calculateMaEntry(
           ? "candidate_long"
           : "candidate_short"
         : result.state;
+  if (result.state.startsWith("trigger_") && result.retest_memory?.after)
+    result.retest_memory.after = {
+      ...result.retest_memory.after,
+      consumed: true,
+    };
   return finish([
     ...reasons,
     "trend_aligned",

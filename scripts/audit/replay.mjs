@@ -5,7 +5,7 @@ import {
   calculateMaEntry,
   MA_RULES,
   movingAverage,
-} from "../../apps/web/src/lib/market/ma-confluence-entry.ts";
+} from "../../apps/web/tests/fixtures/ma-entry-v1/ma-confluence-entry.ts";
 import {
   calculateTradeGuide,
   guideReady,
@@ -175,7 +175,10 @@ export function replay(
 ) {
   validateSeries(series, end);
   if (higher) validateSeries(higher, end);
-  const probe = observers(),
+  const probe = observers({
+      maPath:
+        "../../apps/web/tests/fixtures/ma-entry-v1/ma-confluence-entry.ts",
+    }),
     counts = zeros(states),
     maRaw = zeros(maBlockers),
     maFirst = zeros(maBlockers),
