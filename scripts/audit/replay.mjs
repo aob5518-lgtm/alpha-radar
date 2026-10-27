@@ -151,7 +151,9 @@ function hypothetical(ma, d, remove, addWeight) {
     confidence_score: score,
     reason_codes: ma.reason_codes.filter((r) => r !== remove),
     state:
-      (d.confirmed || remove === "weak_confirmation") && d.fresh && score >= 80
+      (d.confirmed || remove === "weak_confirmation") &&
+      d.fresh &&
+      score >= MA_RULES.triggerScore
         ? d.direction === 1
           ? "trigger_long"
           : "trigger_short"
@@ -319,15 +321,24 @@ export function replay(
           series.interval,
         );
       for (const [reason, key, weight] of [
-        ["weak_volume", "volume", 10],
-        ["macd_conflict", "macd", 10],
+        ["weak_volume", "volume", MA_RULES.weights.volume],
+        ["macd_conflict", "macd", MA_RULES.weights.macd],
       ]) {
-        if (alone(reason) && d.confirmed && d.fresh && d.score + weight >= 80) {
+        if (
+          alone(reason) &&
+          d.confirmed &&
+          d.fresh &&
+          d.score + weight >= MA_RULES.triggerScore
+        ) {
           only[key]++;
           if (guideReady(trial(reason, weight))) counterReady[key]++;
         }
       }
-      if (alone("weak_confirmation") && d.fresh && d.score + 15 >= 80) {
+      if (
+        alone("weak_confirmation") &&
+        d.fresh &&
+        d.score + MA_RULES.weights.confirmation >= MA_RULES.triggerScore
+      ) {
         if (
           !d.previousBreak &&
           d.zoneBreak &&
@@ -335,7 +346,11 @@ export function replay(
           d.locationPassed
         ) {
           only.previous_break++;
-          if (guideReady(trial("weak_confirmation", 15)))
+          if (
+            guideReady(
+              trial("weak_confirmation", MA_RULES.weights.confirmation),
+            )
+          )
             counterReady.previous_break++;
         }
         if (
@@ -345,7 +360,11 @@ export function replay(
           !d.locationPassed
         ) {
           only.close_location++;
-          if (guideReady(trial("weak_confirmation", 15)))
+          if (
+            guideReady(
+              trial("weak_confirmation", MA_RULES.weights.confirmation),
+            )
+          )
             counterReady.close_location++;
         }
       }

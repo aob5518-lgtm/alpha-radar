@@ -10,10 +10,36 @@ import {
   validateSeries,
 } from "./replay.mjs";
 import { verifyPresentation } from "./presentation.mjs";
-const [directory, output, input] = process.argv.slice(2);
+const [directory, output, input, summaryOutput] = process.argv.slice(2);
 assert.ok(directory && output, "Usage: report.mjs OUTPUT_DIR REPORT.md");
 const audit = JSON.parse(readFileSync(join(directory, "summary.json"))),
   rows = audit.results;
+assert.equal(rows.length, 9, "Expected all nine pair/timeframe runs");
+for (const r of rows) {
+  assert.equal(
+    Object.values(r.counts).reduce((a, b) => a + b, 0),
+    r.n,
+  );
+  assert.equal(
+    Object.values(r.rr).reduce((a, b) => a + b, 0) + r.rrMissing,
+    r.maTriggers,
+  );
+  assert.equal(r.funnel["final READY"], r.ready_bars);
+  assert.equal(
+    Object.values(r.guideFirst).reduce((a, b) => a + b, 0),
+    r.n - r.ready_bars,
+  );
+  assert.ok(
+    r.retest[4] <= r.retest[5] &&
+      r.retest[5] <= r.retest[6] &&
+      r.retest[6] <= r.only.no_retest,
+  );
+  for (let i = 1; i < stages.length; i++)
+    assert.ok(
+      r.funnel[stages[i]] <= r.funnel[stages[i - 1]],
+      "Non-cumulative funnel",
+    );
+}
 if (input) {
   const bytes = readFileSync(input),
     data = JSON.parse(bytes);
@@ -59,6 +85,11 @@ const allSamples = rows.flatMap(
     ).samples,
 );
 const ui = allSamples.map(verifyPresentation);
+if (summaryOutput)
+  writeFileSync(
+    summaryOutput,
+    JSON.stringify({ ...audit, presentation: ui }, null, 2) + "\n",
+  );
 writeFileSync(
   join(directory, "presentation.json"),
   JSON.stringify(ui, null, 2) + "\n",
@@ -172,7 +203,8 @@ stored **Bybit USDT perpetual** candles at **${audit.exported_at}**.
 Requested scoring start: **${audit.requested_start}** (90 days).
 Frozen input SHA-256: \`${audit.input_sha256}\`.
 The frozen input and full per-series snapshots remain local operational artifacts,
-not redistributed provider candle data. Committed companion JSON contains counts only.
+not redistributed provider candle data. The [companion JSON](TRADE_GUIDE_SIGNAL_AUDIT.json)
+contains counts/metadata and derived rendering-verification results only.
 
 ${coverage}
 
@@ -214,6 +246,9 @@ independent READY episode starts: **${sum((r) => r.ready_episodes)}**.
 Signals/day and /week count starts, not repeated adjacent READY bars. A different
 READY direction or a non-READY interruption starts a new episode. Median distance
 is in observed primary candle steps; undefined when fewer than two starts.
+WATCH can be an MA observation with incomplete confirmation, not a promoted MA
+candidate or a complete executable plan. Empirical quantiles use the lower order
+statistic at index floor((n−1)×p); undefined cohorts remain unavailable, not zero.
 
 ## 4. MA funnel
 
@@ -222,6 +257,11 @@ Each cell is a **cumulative same-bar** pass count, in the requested diagnostic o
 Later gates masked by an earlier production return are not invented as evaluated.
 
 ${grouped("funnel", stages)}
+
+An adverse MA gate caps the production score at 64. Zero passes at score 65/80
+can therefore be a consequence of earlier gates, not evidence that score thresholds
+are the root cause. Likewise, a zero numeric R:R cohort means R:R was not reached,
+not that changing the R:R threshold would recover those bars.
 
 Directional episodes = contiguous non-none MA directional bias, reset on direction
 change/none. Below, each episode counts once for the furthest cumulative same-bar

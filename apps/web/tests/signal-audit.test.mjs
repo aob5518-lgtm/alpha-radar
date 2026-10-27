@@ -44,6 +44,28 @@ function input(n = 255) {
     candles: s.items.map((c) => ({ ...c, provider: "bybit" })),
   };
 }
+test("RR diagnostics distinguish a cleared poor-RR output from an unevaluated masked gate", () => {
+  const snapshot = maFixture(),
+    ma = calculateMaEntry(snapshot, btcId, "15m"),
+    probe = observers();
+  snapshot.resistances = [];
+  ma.first_target =
+    Math.max(ma.trigger_price, snapshot.closedCandles.at(-1).close) + 0.1;
+  const poor = probe.guide(snapshot, ma, undefined, btcId, "15m");
+  assert.equal(poor.result.state, "WAIT");
+  assert.deepEqual(poor.result.reason_codes, ["poor_rr"]);
+  assert.equal(poor.result.reward_risk_tp1, null);
+  assert.ok(poor.trace.rr > 0 && poor.trace.rr < 1.2);
+  const masked = probe.guide(
+    snapshot,
+    { ...ma, reason_codes: ["flat_ma"] },
+    undefined,
+    btcId,
+    "15m",
+  );
+  assert.equal(masked.trace, undefined);
+  assert.deepEqual(masked.result.reason_codes, ["noise"]);
+});
 test("audit rejects partial, duplicate, wrong identity and invalid OHLC rather than filling", () => {
   for (const mutate of [
     (s) => (s.candles[0].is_closed = false),

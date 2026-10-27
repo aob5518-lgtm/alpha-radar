@@ -12,7 +12,7 @@ existing Node 22.18+ / pnpm workspace dependencies; no new package is added.
 
    ```sh
    node --experimental-strip-types scripts/audit/run.mjs INPUT.json /tmp/signal-audit 3
-   node --experimental-strip-types scripts/audit/report.mjs /tmp/signal-audit docs/TRADE_GUIDE_SIGNAL_AUDIT.md INPUT.json
+   node --experimental-strip-types scripts/audit/report.mjs /tmp/signal-audit docs/TRADE_GUIDE_SIGNAL_AUDIT.md INPUT.json docs/TRADE_GUIDE_SIGNAL_AUDIT.json
    ```
 
    Workers are local CPU threads, not agents or production services. Output is
@@ -21,6 +21,7 @@ existing Node 22.18+ / pnpm workspace dependencies; no new package is added.
    The input hash and frozen cutoff make the run reproducible. Preserve that
    input privately: a later DB export is a different vintage, not the same run.
    Do not commit raw provider candle histories or copied production configuration.
+
 3. Review the generated conclusion with the actual results before committing the
    report; the generator deliberately does not make investment/model judgments.
    Commit summary counts (without raw snapshots) alongside the report if useful.
