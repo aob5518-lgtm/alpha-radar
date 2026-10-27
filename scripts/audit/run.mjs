@@ -37,8 +37,14 @@ if (!isMainThread) {
       "--exit-code",
       data.base_sha,
       "--",
-      "apps/web/src",
-      "packages/types",
+      ...[
+        "technical-levels",
+        "market-state",
+        "trade-setup",
+        "trade-guide",
+        "technical-context",
+        "intervals",
+      ].map((n) => "apps/web/src/lib/market/" + n + ".ts"),
     ],
     { stdio: "pipe" },
   );

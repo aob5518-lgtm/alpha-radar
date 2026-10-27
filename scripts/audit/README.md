@@ -4,6 +4,20 @@ No production imports these tools. No thresholds are modified. No provider calls
 PnL, fees/return fitting, or deployment. Default enabled SMA99 only. Requires the
 existing Node 22.18+ / pnpm workspace dependencies; no new package is added.
 
+The original V1 audit now imports the immutable `tests/fixtures/ma-entry-v1` oracle,
+not the upgraded live MA module. Protected technical engines/Guide still must match
+the original source. The original report/data hash remains a V1 result, not V1.1.
+
+For the V1.1 comparison, run `compare-v11.mjs INPUT.json OUTPUT_DIR`. It requires
+the exact original input SHA-256, compares V1, episode-only, room-only and combined
+on one shared causal technical context per bar, and validates V1 counts/funnels
+against the committed original report. It does not search parameter values or use PnL.
+The two audit-only ablations swap only the guarded original/current target block;
+they are never runtime feature flags or deployed alternative strategies. Full V1.1
+MA/Guide outputs are compared with their observational probes on every bar.
+Only compact derived READY episode records belong in Git; full private sample
+contexts/candles stay in the local output directory for actual TSX verification.
+
 1. Execute `export-signal-history.sql` with `psql -X -qAt -v ON_ERROR_STOP=1`
    through an authorized production read-only connection. Save stdout in a private
    local file. It exports a repeatable-read snapshot with 90 scoring days plus 800
