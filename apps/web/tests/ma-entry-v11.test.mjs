@@ -134,43 +134,79 @@ test("same confirmed revision is idempotent; HTF replacement rewinds before-curr
   corrected.candles[0].close = 99;
   assert.equal(advanceRetest(corrected, first.memory).active, false);
 });
-for (const age of [1, 2, 3])
-  test(`real MA confirmation can trigger ${age} bars later with no new touch`, () => {
-    const s = maFixture();
-    s.closedCandles.pop();
-    s.state.confirmed_at = s.closedCandles.at(-1).closeTime;
-    let analysis = calculateMaEntry(s, btcId, "15m");
-    for (let i = 1; i <= age; i++) {
-      const p = s.closedCandles.at(-1),
-        close = i === age ? p.high + 0.4 : p.close + 0.01;
-      s.closedCandles.push({
-        ...p,
-        openTime: p.closeTime,
-        closeTime: new Date(Date.parse(p.closeTime) + 900000).toISOString(),
-        open: p.close + 0.02,
-        high: Math.max(p.high + 0.1, close + 0.02),
-        low: p.close + 0.01,
-        close,
-        volume: 120,
-      });
+for (const direction of ["long", "short"])
+  for (const age of [1, 2, 3, 4])
+    test(`real ${direction} MA confirmation ${age} bars later respects the episode bound`, () => {
+      const s = maFixture(direction),
+        sign = direction === "long" ? 1 : -1;
+      s.closedCandles.pop();
       s.state.confirmed_at = s.closedCandles.at(-1).closeTime;
-      analysis = calculateMaEntry(s, btcId, "15m", DEFAULT_MA, analysis);
-    }
-    assert.equal(
-      analysis.state,
-      "trigger_long",
-      JSON.stringify({
-        state: analysis.state,
-        reasons: analysis.reason_codes,
-        diag: analysis.diagnostics,
-      }),
-    );
-    assert.equal(analysis.diagnostics.retest_age_bars, age);
-    assert.deepEqual(
-      calculateMaEntry(s, btcId, "15m", DEFAULT_MA, analysis),
-      analysis,
-    );
-  });
+      let analysis = calculateMaEntry(s, btcId, "15m");
+      for (let i = 1; i <= age; i++) {
+        const p = s.closedCandles.at(-1),
+          close =
+            i === age
+              ? sign === 1
+                ? p.high + 0.4
+                : p.low - 0.4
+              : p.close + sign * 0.01;
+        s.closedCandles.push({
+          ...p,
+          openTime: p.closeTime,
+          closeTime: new Date(Date.parse(p.closeTime) + 900000).toISOString(),
+          open: p.close + sign * 0.02,
+          high:
+            sign === 1 ? Math.max(p.high + 0.1, close + 0.02) : p.close - 0.01,
+          low:
+            sign === 1 ? p.close + 0.01 : Math.min(p.low - 0.1, close - 0.02),
+          close,
+          volume: 120,
+        });
+        s.state.confirmed_at = s.closedCandles.at(-1).closeTime;
+        analysis = calculateMaEntry(s, btcId, "15m", DEFAULT_MA, analysis);
+      }
+      if (age === 4) {
+        assert.ok(!analysis.state.startsWith("trigger_"));
+        assert.equal(analysis.diagnostics.retest_active, false);
+        assert.ok(analysis.reason_codes.includes("no_retest"));
+        return;
+      }
+      assert.equal(
+        analysis.state,
+        `trigger_${direction}`,
+        JSON.stringify({
+          state: analysis.state,
+          reasons: analysis.reason_codes,
+          diag: analysis.diagnostics,
+        }),
+      );
+      assert.equal(analysis.diagnostics.retest_age_bars, age);
+      assert.deepEqual(
+        calculateMaEntry(s, btcId, "15m", DEFAULT_MA, analysis),
+        analysis,
+      );
+    });
+test("native partial candle cannot age or consume an accepted episode or change entry/stop/target", () => {
+  const s = maFixture(),
+    first = calculateMaEntry(s, btcId, "15m");
+  const partial = {
+    ...s.closedCandles.at(-1),
+    openTime: s.closedCandles.at(-1).closeTime,
+    isClosed: false,
+    close: 99999,
+    high: 99999,
+  };
+  assert.deepEqual(
+    calculateMaEntry(
+      { ...s, closedCandles: [...s.closedCandles, partial] },
+      btcId,
+      "15m",
+      DEFAULT_MA,
+      first,
+    ),
+    first,
+  );
+});
 test("room is entry-based; inside-zone obstacles are not TP1; nearest real forward obstacle is retained", () => {
   const s = maFixture(),
     base = calculateMaEntry(s, btcId, "15m");
@@ -223,14 +259,21 @@ test("full context fold and incremental Worker sequence deep-equal across rollin
       undefined,
       btcId,
     );
-    const computed = worker.compute({
+    const request = {
       market_instrument_id: btcId,
       timeframe: "15m",
       generation: i,
       revision: String(i),
       candles,
       confirmedClose: close,
-    });
+    };
+    const computed = worker.compute(request);
+    if (i > 790)
+      assert.equal(
+        computed.incremental,
+        true,
+        "Exercise growing and rolling-800 prewarmed appends",
+      );
     full = calculateMaEntry(snapshot, btcId, "15m", DEFAULT_MA, full);
     incremental = calculateMaEntry(
       computed.snapshot,
@@ -240,5 +283,6 @@ test("full context fold and incremental Worker sequence deep-equal across rollin
       incremental,
     );
     assert.deepEqual(incremental, full);
+    worker.prewarm(request);
   }
 });

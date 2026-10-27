@@ -3,7 +3,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { states, stages } from "./replay.mjs";
 import { verifyPresentation } from "./presentation.mjs";
-const [directory] = process.argv.slice(2);
+import { compareSeries } from "./compare-v11.mjs";
+import { createHash } from "node:crypto";
+const [directory, input] = process.argv.slice(2);
 assert.ok(directory);
 const comparison = JSON.parse(readFileSync(join(directory, "comparison.json")));
 const rows = comparison.series,
@@ -28,6 +30,31 @@ for (const row of rows)
       assert.ok(s * (e.reference_entry - e.stop) > 0);
       assert.ok(s * (e.tp1 - e.reference_entry) > 0);
       assert.ok(e.rr >= 1.5);
+      if (key === "v11") {
+        assert.ok(e.retest_age >= 0 && e.retest_age <= 3);
+        assert.ok(e.structural_room_atr >= 0.9);
+        assert.ok(
+          !e.ma_reasons.some((reason) =>
+            [
+              "flat_ma",
+              "trend_conflict",
+              "repeated_crosses",
+              "excess_retests",
+              "no_impulse",
+              "no_retest",
+              "near_obstruction",
+              "no_target",
+              "weak_confirmation",
+              "weak_volume",
+              "missing_volume",
+              "macd_conflict",
+              "macd_unready",
+              "overextended",
+              "level_failed",
+            ].includes(reason),
+          ),
+        );
+      }
     }
   }
 const episodes = rows
@@ -38,11 +65,83 @@ const episodes = rows
       a.instrument.localeCompare(b.instrument) ||
       a.timeframe.localeCompare(b.timeframe),
   );
+const attribution = {
+  episode_only: 0,
+  room_only: 0,
+  combination_required: 0,
+  either_independently: 0,
+  already_v1: 0,
+};
+if (episodes.length) {
+  assert.ok(
+    input,
+    "Frozen input required for exact same-candle READY attribution",
+  );
+  const bytes = readFileSync(input),
+    data = JSON.parse(bytes);
+  assert.equal(
+    createHash("sha256").update(bytes).digest("hex"),
+    comparison.input_sha256,
+  );
+  for (const e of episodes) {
+    const primary = data.series.find(
+      (s) => s.id === e.market_instrument_id && s.interval === e.timeframe,
+    );
+    const higher = data.series.find(
+      (s) =>
+        s.id === e.market_instrument_id &&
+        s.interval === { "15m": "1h", "1h": "4h", "4h": "1d" }[e.timeframe],
+    );
+    const time = Date.parse(e.timestamp),
+      series = {
+        ...primary,
+        candles: primary.candles.filter(
+          (c) => Date.parse(c.close_time) <= time,
+        ),
+      };
+    // Re-evaluate only this confirmation and its bounded cursor warm-up, never
+    // infer same-candle causality from a different variant's episode-start count.
+    const check = compareSeries(
+      series,
+      higher,
+      time,
+      Date.parse(comparison.end),
+    );
+    assert.equal(check.scored, 1);
+    const state = (key) =>
+      Object.entries(check.results[key].counts).find(([, n]) => n === 1)[0];
+    e.ablation_at_confirmation = Object.fromEntries(
+      keys.map((k) => [k, state(k)]),
+    );
+    assert.equal(
+      state("v11"),
+      e.direction === "long" ? "LONG_READY" : "SHORT_READY",
+    );
+    const ready = (k) =>
+      state(k) === "LONG_READY" || state(k) === "SHORT_READY";
+    e.recovered_by = ready("v1")
+      ? "already_v1"
+      : ready("episode_only") && ready("room_only")
+        ? "either_independently"
+        : ready("episode_only")
+          ? "episode_only"
+          : ready("room_only")
+            ? "room_only"
+            : "combination_required";
+    attribution[e.recovered_by]++;
+  }
+}
 const allSamples = rows.flatMap(
   (r) =>
     JSON.parse(
       readFileSync(join(directory, r.symbol + "-" + r.interval + ".json")),
     ).results.v11.samples,
+);
+allSamples.sort(
+  (a, b) =>
+    a.guide.confirmed_at.localeCompare(b.guide.confirmed_at) ||
+    a.guide.market_instrument_id.localeCompare(b.guide.market_instrument_id) ||
+    a.guide.timeframe.localeCompare(b.guide.timeframe),
 );
 const picked = [],
   groups = new Set();
@@ -97,9 +196,19 @@ writeFileSync(
     2,
   ) + "\n",
 );
+const publicComparison = structuredClone(comparison);
+for (const row of publicComparison.series)
+  for (const key of keys.filter((k) => k !== "v11"))
+    row.results[key].episodes = row.results[key].episodes.map((e) => ({
+      instrument: e.instrument,
+      market_instrument_id: e.market_instrument_id,
+      timeframe: e.timeframe,
+      timestamp: e.timestamp,
+      direction: e.direction,
+    }));
 writeFileSync(
   "docs/MA_ENTRY_V11_COMPARISON.json",
-  JSON.stringify(comparison, null, 2) + "\n",
+  JSON.stringify(publicComparison, null, 2) + "\n",
 );
 const totalReady = sum(
   "v11",
@@ -243,14 +352,21 @@ ${frequency}
 ${ablation}
 
 Modes are diagnostic, fixed in advance, not parameter searches. Differences are
-not additive causal/PnL contributions; the gates interact. Pending final review of
-the numbers above: identify whether episode, room, combination, or none recovered READY.
+not additive causal/PnL contributions; the gates interact. Exact same-confirmation
+attribution for V1.1 episode starts: ${JSON.stringify(attribution)}.
+Each actual READY confirmation is independently re-evaluated with bounded pre-scoring
+cursor warm-up; another mode's continuing READY is not mistaken for an absent
+signal just because its episode started earlier. Fields are included in compact records.
 
 ## Complete per-pair funnel (V1 → V1.1)
 
 Same requested cumulative same-bar gate order. Early returned/unmeasured stages
 are not fabricated as passes. Full raw/first-blocker and four-mode per-pair funnels
 remain in [machine-readable comparison](MA_ENTRY_V11_COMPARISON.json).
+Early-return availability can change upstream observed-pass counts even where
+the numeric feature/threshold is frozen: V1 level_failed exits before the probe,
+while an expired/cancelled V1.1 episode may continue as observation. This is not
+evidence that slope/MACD/volume thresholds were changed or relaxed.
 
 ${funnel}
 
@@ -287,7 +403,7 @@ present. Positive/negative synthetic regression fixtures remain explicitly test-
 ## Acceptance answers
 
 1. Any READY? **${totalReady ? "YES" : "NO"}**, ${totalReady} bars, ${episodes.length} episode starts.
-2. Which change recovered it? See fixed ablations; final interpretation below.
+2. Which change recovered it? Fixed ablations and exact same-confirmation attribution above.
 3. Both directions? Long ${sum("v11", (r) => r.counts.LONG_READY)}, short ${sum("v11", (r) => r.counts.SHORT_READY)}.
 4. Timeframes? Exact distribution above; missing cohorts remain unavailable.
 5. Anti-chop? Existing bad-pattern fixtures remain required and unmodified.

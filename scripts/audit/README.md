@@ -17,6 +17,10 @@ they are never runtime feature flags or deployed alternative strategies. Full V1
 MA/Guide outputs are compared with their observational probes on every bar.
 Only compact derived READY episode records belong in Git; full private sample
 contexts/candles stay in the local output directory for actual TSX verification.
+Then `report-v11.mjs OUTPUT_DIR INPUT.json` generates the comparison report,
+every compact READY episode and up to 20 representative examples. At each actual
+V1.1 episode start it independently verifies the four modes on that same candle
+(with bounded prior warm-up), so attribution is not guessed from aggregate counts.
 
 1. Execute `export-signal-history.sql` with `psql -X -qAt -v ON_ERROR_STOP=1`
    through an authorized production read-only connection. Save stdout in a private

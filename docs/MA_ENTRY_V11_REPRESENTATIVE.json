@@ -1,0 +1,5 @@
+{
+  "selection": "First available per instrument/timeframe/direction, then chronological fill; maximum 20; no outcome-based selection",
+  "examples": [],
+  "presentation": []
+}
