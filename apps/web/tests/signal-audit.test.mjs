@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { observers } from "../../../scripts/audit/observe.mjs";
+import { verifyV1Integrity } from "../../../scripts/audit/v1-integrity.mjs";
+test(
+  "immutable production V1 audit fixtures retain their exact source checksums",
+  verifyV1Integrity,
+);
 import {
   replay,
   validateSeries,
@@ -8,8 +13,8 @@ import {
 } from "../../../scripts/audit/replay.mjs";
 import { maFixture } from "./helpers/ma-fixtures.mjs";
 import { fixtureHistory, btcId } from "./helpers/chart-fixtures.mjs";
-import { calculateMaEntry } from "../src/lib/market/ma-confluence-entry.ts";
-import { calculateTradeGuide } from "../src/lib/market/trade-guide.ts";
+import { calculateMaEntry } from "./fixtures/ma-entry-v1/ma-confluence-entry.ts";
+import { calculateTradeGuide } from "./fixtures/ma-entry-v1/trade-guide.ts";
 import { verifyPresentation } from "../../../scripts/audit/presentation.mjs";
 for (const direction of ["long", "short"])
   test(`audit probes preserve exact ${direction} production outputs and observe raw gates`, () => {

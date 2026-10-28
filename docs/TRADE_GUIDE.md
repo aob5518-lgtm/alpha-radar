@@ -1,5 +1,8 @@
 # Trade Guide V1
 
+Frozen V1 specification. The proposed Guide V1.1 / Entry V1.2 contract is documented
+in [TRADE_GUIDE_V12.md](TRADE_GUIDE_V12.md), with the original V1 preserved for audit.
+
 Version `trade-guide-v1`, base main `f6fef543952763eee5d450db963b3279117e352c`.
 This is an unvalidated deterministic aggregation/presentation layer, not an order,
 execution service, price forecast, calibrated win probability or profit guarantee.

@@ -1,0 +1,522 @@
+{
+  "format": "alpha-radar-v12-coverage-v1",
+  "production_base_sha": "69a74425e68157ef634a723309d665b3996d9509",
+  "input_sha256": "ab818b5c304848215f2f82daf4e827b89f4e05f1718c389c6158e0dba4f3d150",
+  "model_sha256": "e8dea0ddb65d652f7b130a986485c22663bab612ae39624a9848b7dbe6463dbf",
+  "requested_start": "2026-07-29T13:11:21.629655+00:00",
+  "exported_at": "2026-10-27T13:11:21.629655+00:00",
+  "totals": {
+    "v1": {
+      "LONG_READY": 0,
+      "SHORT_READY": 0,
+      "WATCH_LONG": 5,
+      "WATCH_SHORT": 0,
+      "WAIT": 34015,
+      "MISSED": 0
+    },
+    "v12": {
+      "LONG_READY": 51,
+      "SHORT_READY": 32,
+      "WATCH_LONG": 129,
+      "WATCH_SHORT": 59,
+      "WAIT": 33691,
+      "MISSED": 58
+    }
+  },
+  "acceptance": "nonzero_selective_review_required",
+  "results": [
+    {
+      "symbol": "BTCUSDT",
+      "interval": "15m",
+      "n": 8640,
+      "counts": {
+        "v1": {
+          "LONG_READY": 0,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 0,
+          "WATCH_SHORT": 0,
+          "WAIT": 8640,
+          "MISSED": 0
+        },
+        "v12": {
+          "LONG_READY": 4,
+          "SHORT_READY": 11,
+          "WATCH_LONG": 21,
+          "WATCH_SHORT": 8,
+          "WAIT": 8588,
+          "MISSED": 8
+        }
+      },
+      "rejected": {
+        "no_retest": 3113,
+        "macd_conflict": 894,
+        "expired": 499,
+        "opposing_volume": 793,
+        "trend_conflict": 1569,
+        "repeated_crosses": 935,
+        "excess_retests": 1005,
+        "poor_rr": 216,
+        "invalidated": 400,
+        "level_failed": 59,
+        "target_reached": 231,
+        "no_target": 35,
+        "confirmation_pending": 15,
+        "overextended": 8,
+        "watch_rr": 14
+      },
+      "htfMissing": 0,
+      "gaps": [],
+      "higherGaps": [],
+      "aggregation_ms": {
+        "n": 8640,
+        "min": 0.0751250000030268,
+        "p25": 0.1837089999971795,
+        "median": 0.21475000004284084,
+        "p75": 0.43829099999857135,
+        "p90": 0.5849999999627471,
+        "max": 5.396584000000075
+      },
+      "ready_episodes": 14,
+      "ready_long": 4,
+      "ready_short": 10
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1h",
+      "n": 2160,
+      "counts": {
+        "v1": {
+          "LONG_READY": 0,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 0,
+          "WATCH_SHORT": 0,
+          "WAIT": 2160,
+          "MISSED": 0
+        },
+        "v12": {
+          "LONG_READY": 1,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 12,
+          "WATCH_SHORT": 2,
+          "WAIT": 2143,
+          "MISSED": 2
+        }
+      },
+      "rejected": {
+        "repeated_crosses": 212,
+        "excess_retests": 237,
+        "trend_conflict": 368,
+        "no_retest": 864,
+        "poor_rr": 57,
+        "opposing_volume": 223,
+        "macd_conflict": 214,
+        "invalidated": 75,
+        "expired": 125,
+        "level_failed": 23,
+        "target_reached": 49,
+        "no_target": 13,
+        "confirmation_pending": 4,
+        "watch_rr": 10,
+        "overextended": 2
+      },
+      "htfMissing": 0,
+      "gaps": [],
+      "higherGaps": [],
+      "aggregation_ms": {
+        "n": 2160,
+        "min": 0.07666700000117999,
+        "p25": 0.18804100001580082,
+        "median": 0.206291999998939,
+        "p75": 0.35858400000142865,
+        "p90": 0.5570000000006985,
+        "max": 4.069791999994777
+      },
+      "ready_episodes": 1,
+      "ready_long": 1,
+      "ready_short": 0
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "4h",
+      "n": 540,
+      "counts": {
+        "v1": {
+          "LONG_READY": 0,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 0,
+          "WATCH_SHORT": 0,
+          "WAIT": 540,
+          "MISSED": 0
+        },
+        "v12": {
+          "LONG_READY": 2,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 1,
+          "WATCH_SHORT": 0,
+          "WAIT": 531,
+          "MISSED": 6
+        }
+      },
+      "rejected": {
+        "repeated_crosses": 57,
+        "excess_retests": 75,
+        "expired": 46,
+        "trend_conflict": 99,
+        "no_retest": 171,
+        "macd_conflict": 48,
+        "opposing_volume": 65,
+        "invalidated": 8,
+        "level_failed": 5,
+        "target_reached": 25,
+        "poor_rr": 20,
+        "no_target": 1,
+        "overextended": 6,
+        "confirmation_pending": 1
+      },
+      "htfMissing": 0,
+      "gaps": [],
+      "higherGaps": [],
+      "aggregation_ms": {
+        "n": 540,
+        "min": 0.0764999999992142,
+        "p25": 0.1751670000012382,
+        "median": 0.20399999999790452,
+        "p75": 0.46987500000250293,
+        "p90": 0.5454159999935655,
+        "max": 1.341374999999971
+      },
+      "ready_episodes": 2,
+      "ready_long": 2,
+      "ready_short": 0
+    },
+    {
+      "symbol": "ETHUSDT",
+      "interval": "15m",
+      "n": 8640,
+      "counts": {
+        "v1": {
+          "LONG_READY": 0,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 2,
+          "WATCH_SHORT": 0,
+          "WAIT": 8638,
+          "MISSED": 0
+        },
+        "v12": {
+          "LONG_READY": 9,
+          "SHORT_READY": 7,
+          "WATCH_LONG": 27,
+          "WATCH_SHORT": 13,
+          "WAIT": 8578,
+          "MISSED": 6
+        }
+      },
+      "rejected": {
+        "invalidated": 410,
+        "repeated_crosses": 1189,
+        "opposing_volume": 810,
+        "expired": 439,
+        "no_retest": 2825,
+        "poor_rr": 239,
+        "target_reached": 207,
+        "macd_conflict": 833,
+        "level_failed": 75,
+        "trend_conflict": 1717,
+        "excess_retests": 1273,
+        "no_target": 33,
+        "confirmation_pending": 16,
+        "overextended": 6,
+        "watch_rr": 24
+      },
+      "htfMissing": 0,
+      "gaps": [],
+      "higherGaps": [],
+      "aggregation_ms": {
+        "n": 8640,
+        "min": 0.0790839999972377,
+        "p25": 0.17708300007507205,
+        "median": 0.2064160001464188,
+        "p75": 0.4696669999975711,
+        "p90": 0.5639579999260604,
+        "max": 10.428084000013769
+      },
+      "ready_episodes": 16,
+      "ready_long": 9,
+      "ready_short": 7
+    },
+    {
+      "symbol": "ETHUSDT",
+      "interval": "1h",
+      "n": 2160,
+      "counts": {
+        "v1": {
+          "LONG_READY": 0,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 1,
+          "WATCH_SHORT": 0,
+          "WAIT": 2159,
+          "MISSED": 0
+        },
+        "v12": {
+          "LONG_READY": 11,
+          "SHORT_READY": 1,
+          "WATCH_LONG": 20,
+          "WATCH_SHORT": 3,
+          "WAIT": 2118,
+          "MISSED": 7
+        }
+      },
+      "rejected": {
+        "repeated_crosses": 356,
+        "excess_retests": 409,
+        "macd_conflict": 184,
+        "opposing_volume": 216,
+        "trend_conflict": 355,
+        "invalidated": 82,
+        "expired": 83,
+        "no_retest": 743,
+        "target_reached": 42,
+        "poor_rr": 60,
+        "level_failed": 17,
+        "no_target": 13,
+        "watch_rr": 5,
+        "confirmation_pending": 18,
+        "overextended": 7
+      },
+      "htfMissing": 0,
+      "gaps": [],
+      "higherGaps": [],
+      "aggregation_ms": {
+        "n": 2160,
+        "min": 0.08420799998566508,
+        "p25": 0.19337500003166497,
+        "median": 0.2313329998869449,
+        "p75": 0.539833000046201,
+        "p90": 0.6204579999903217,
+        "max": 1.7774590000044554
+      },
+      "ready_episodes": 12,
+      "ready_long": 11,
+      "ready_short": 1
+    },
+    {
+      "symbol": "ETHUSDT",
+      "interval": "4h",
+      "n": 540,
+      "counts": {
+        "v1": {
+          "LONG_READY": 0,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 0,
+          "WATCH_SHORT": 0,
+          "WAIT": 540,
+          "MISSED": 0
+        },
+        "v12": {
+          "LONG_READY": 6,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 12,
+          "WATCH_SHORT": 0,
+          "WAIT": 522,
+          "MISSED": 0
+        }
+      },
+      "rejected": {
+        "excess_retests": 76,
+        "opposing_volume": 64,
+        "no_retest": 176,
+        "repeated_crosses": 51,
+        "macd_conflict": 30,
+        "trend_conflict": 92,
+        "poor_rr": 28,
+        "target_reached": 19,
+        "expired": 44,
+        "watch_rr": 7,
+        "level_failed": 4,
+        "invalidated": 10,
+        "confirmation_pending": 5,
+        "no_target": 1
+      },
+      "htfMissing": 0,
+      "gaps": [],
+      "higherGaps": [],
+      "aggregation_ms": {
+        "n": 540,
+        "min": 0.11729099997319281,
+        "p25": 0.2534999998752028,
+        "median": 0.3089170001912862,
+        "p75": 0.6952909999527037,
+        "p90": 0.8456249999580905,
+        "max": 15.92458400002215
+      },
+      "ready_episodes": 4,
+      "ready_long": 4,
+      "ready_short": 0
+    },
+    {
+      "symbol": "SOLUSDT",
+      "interval": "15m",
+      "n": 8640,
+      "counts": {
+        "v1": {
+          "LONG_READY": 0,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 2,
+          "WATCH_SHORT": 0,
+          "WAIT": 8638,
+          "MISSED": 0
+        },
+        "v12": {
+          "LONG_READY": 14,
+          "SHORT_READY": 11,
+          "WATCH_LONG": 20,
+          "WATCH_SHORT": 18,
+          "WAIT": 8554,
+          "MISSED": 23
+        }
+      },
+      "rejected": {
+        "repeated_crosses": 1076,
+        "opposing_volume": 770,
+        "invalidated": 369,
+        "excess_retests": 1108,
+        "no_retest": 3094,
+        "expired": 502,
+        "target_reached": 249,
+        "macd_conflict": 860,
+        "level_failed": 74,
+        "poor_rr": 230,
+        "trend_conflict": 1498,
+        "no_target": 54,
+        "confirmation_pending": 29,
+        "overextended": 23,
+        "watch_rr": 9
+      },
+      "htfMissing": 0,
+      "gaps": [],
+      "higherGaps": [],
+      "aggregation_ms": {
+        "n": 8640,
+        "min": 0.04454200016334653,
+        "p25": 0.10229199985042214,
+        "median": 0.17666699993424118,
+        "p75": 0.2714169998653233,
+        "p90": 0.4896669997833669,
+        "max": 1.8561249999329448
+      },
+      "ready_episodes": 22,
+      "ready_long": 12,
+      "ready_short": 10
+    },
+    {
+      "symbol": "SOLUSDT",
+      "interval": "1h",
+      "n": 2160,
+      "counts": {
+        "v1": {
+          "LONG_READY": 0,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 0,
+          "WATCH_SHORT": 0,
+          "WAIT": 2160,
+          "MISSED": 0
+        },
+        "v12": {
+          "LONG_READY": 1,
+          "SHORT_READY": 2,
+          "WATCH_LONG": 5,
+          "WATCH_SHORT": 12,
+          "WAIT": 2137,
+          "MISSED": 3
+        }
+      },
+      "rejected": {
+        "no_retest": 729,
+        "expired": 165,
+        "invalidated": 59,
+        "opposing_volume": 188,
+        "macd_conflict": 196,
+        "trend_conflict": 396,
+        "repeated_crosses": 313,
+        "excess_retests": 295,
+        "poor_rr": 62,
+        "no_target": 18,
+        "level_failed": 16,
+        "target_reached": 69,
+        "watch_rr": 3,
+        "confirmation_pending": 14,
+        "overextended": 3
+      },
+      "htfMissing": 0,
+      "gaps": [],
+      "higherGaps": [],
+      "aggregation_ms": {
+        "n": 2160,
+        "min": 0.06362500041723251,
+        "p25": 0.13862500013783574,
+        "median": 0.17937499983236194,
+        "p75": 0.38837500009685755,
+        "p90": 0.5209579998627305,
+        "max": 1.6802910000551492
+      },
+      "ready_episodes": 3,
+      "ready_long": 1,
+      "ready_short": 2
+    },
+    {
+      "symbol": "SOLUSDT",
+      "interval": "4h",
+      "n": 540,
+      "counts": {
+        "v1": {
+          "LONG_READY": 0,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 0,
+          "WATCH_SHORT": 0,
+          "WAIT": 540,
+          "MISSED": 0
+        },
+        "v12": {
+          "LONG_READY": 3,
+          "SHORT_READY": 0,
+          "WATCH_LONG": 11,
+          "WATCH_SHORT": 3,
+          "WAIT": 520,
+          "MISSED": 3
+        }
+      },
+      "rejected": {
+        "expired": 49,
+        "target_reached": 22,
+        "no_retest": 210,
+        "macd_conflict": 39,
+        "invalidated": 9,
+        "trend_conflict": 113,
+        "poor_rr": 21,
+        "opposing_volume": 40,
+        "level_failed": 1,
+        "no_target": 3,
+        "confirmation_pending": 5,
+        "overextended": 3,
+        "repeated_crosses": 18,
+        "excess_retests": 3,
+        "watch_rr": 9
+      },
+      "htfMissing": 0,
+      "gaps": [],
+      "higherGaps": [],
+      "aggregation_ms": {
+        "n": 540,
+        "min": 0.08420799998566508,
+        "p25": 0.18000000016763806,
+        "median": 0.2029160000383854,
+        "p75": 0.4610830000601709,
+        "p90": 0.5547500001266599,
+        "max": 1.733958000317216
+      },
+      "ready_episodes": 3,
+      "ready_long": 3,
+      "ready_short": 0
+    }
+  ]
+}

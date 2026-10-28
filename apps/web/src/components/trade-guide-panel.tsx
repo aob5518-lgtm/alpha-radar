@@ -14,6 +14,12 @@ export function TradeGuidePanel({
     watch = guide.state === "WATCH_LONG" || guide.state === "WATCH_SHORT";
   const number = (value: number | null) =>
     value?.toLocaleString(locale, { maximumFractionDigits: 6 }) ?? "—";
+  const source = (value: TradeGuideV1["tp1_source"]) =>
+    value === "swing-high"
+      ? copy.swingHigh
+      : value === "swing-low"
+        ? copy.swingLow
+        : value;
   return (
     <section
       className="space-y-2 border-t border-white/10 py-3"
@@ -25,6 +31,10 @@ export function TradeGuidePanel({
         className={`inline-block rounded px-3 py-1 text-base ${ready ? "bg-emerald-400/20 text-emerald-300" : "bg-white/10 text-[var(--text)]"}`}
       >
         {copy.states[guide.state]}
+        {(ready || watch) &&
+          guide.quality_grade &&
+          guide.quality_grade !== "none" &&
+          ` · ${guide.quality_grade}`}
       </strong>
       {(ready || watch) && guide.entry_zone_low !== null && (
         <p className="text-sm">
@@ -45,12 +55,14 @@ export function TradeGuidePanel({
             <dd className="font-mono">{number(guide.stop_price)}</dd>
           </div>
           <div>
-            <dt className="text-[var(--muted)]">TP1 · {guide.tp1_source}</dt>
+            <dt className="text-[var(--muted)]">
+              TP1 · {source(guide.tp1_source)}
+            </dt>
             <dd className="font-mono">{number(guide.tp1_price)}</dd>
           </div>
           <div>
             <dt className="text-[var(--muted)]">
-              TP2 {guide.tp2_source && `· ${guide.tp2_source}`}
+              TP2 {guide.tp2_source && `· ${source(guide.tp2_source)}`}
             </dt>
             <dd className="font-mono">{number(guide.tp2_price)}</dd>
           </div>
@@ -68,6 +80,23 @@ export function TradeGuidePanel({
       {watch && (
         <p className="text-xs text-[var(--muted)]">
           {copy.waitCondition}: {copy.actions[guide.next_action]}
+        </p>
+      )}
+      {(ready || watch) && guide.evidence?.length > 0 && (
+        <p
+          className="flex flex-wrap gap-x-3 gap-y-1 text-xs"
+          aria-label={copy.evidenceLabel}
+        >
+          {guide.evidence.map((item) => (
+            <span key={item.key} title={`${item.points}/${item.maximum}`}>
+              {item.tone === "positive"
+                ? "✓"
+                : item.tone === "negative"
+                  ? "−"
+                  : "○"}{" "}
+              {copy.evidence[item.key][item.tone]}
+            </span>
+          ))}
         </p>
       )}
       {ready && guide.stop_reason && (

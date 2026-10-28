@@ -563,6 +563,9 @@ test("Chart workspace keys the client by exact UUID and timeframe", () => {
 
 function withGuide(input) {
   const snapshot = maFixture();
+  // Fixture levels must carry the selected period, like a real accepted Worker result.
+  for (const level of [...snapshot.supports, ...snapshot.resistances])
+    level.timeframe = input.interval;
   const ma = maEntry.calculateMaEntry(
     snapshot,
     input.instrumentId,

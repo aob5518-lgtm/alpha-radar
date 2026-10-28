@@ -8,7 +8,7 @@ import {
   macd,
   maMatchesIdentity,
   validMaSettings,
-} from "../src/lib/market/ma-confluence-entry.ts";
+} from "./fixtures/ma-entry-v1/ma-confluence-entry.ts";
 import { parseOverlayPreferences } from "../src/lib/market/chart-overlay-preferences.ts";
 import { maFixture } from "./helpers/ma-fixtures.mjs";
 import { btcId, ethId } from "./helpers/chart-fixtures.mjs";

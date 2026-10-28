@@ -88,6 +88,8 @@
       "maDetails": "均线证据／高级信息",
       "entry": "入场区间",
       "potentialEntry": "潜在入场区 · 尚未确认",
+      "swingHigh": "已确认前高",
+      "swingLow": "已确认前低",
       "reference": "参考进场价（非成交价）",
       "stop": "止损／失效参考",
       "rr": "盈亏比（TP1）",
@@ -129,10 +131,48 @@
         "invalid_risk": "风险参考无效",
         "poor_rr": "盈亏比不足 1.2",
         "watch_rr": "盈亏比未达 1.5，仅可观察",
-        "confirmation_pending": "等待有效收盘确认",
+        "confirmation_pending": "等待更强证据／收盘确认",
         "confirmed": "收盘确认及质量过滤通过",
         "extended": "价格已离开有效入场区，不追价",
         "target_reached": "原目标已到达，等待新计划"
+      },
+      "evidenceLabel": "依据质量，非胜率",
+      "evidence": {
+        "trend": {
+          "positive": "趋势同向",
+          "neutral": "中性趋势，结构同向",
+          "negative": "趋势偏弱"
+        },
+        "ma": {
+          "positive": "MA 同向／共振",
+          "neutral": "MA 部分共振",
+          "negative": "MA 平坦或反向"
+        },
+        "state": {
+          "positive": "状态支持",
+          "neutral": "状态中性",
+          "negative": "状态反向"
+        },
+        "macd": {
+          "positive": "MACD 支持",
+          "neutral": "MACD 中性／滞后",
+          "negative": "MACD 反向"
+        },
+        "volume": {
+          "positive": "量能支持",
+          "neutral": "量能一般／偏轻",
+          "negative": "量能偏弱／不可用"
+        },
+        "structure": {
+          "positive": "结构确认",
+          "neutral": "结构共振有限",
+          "negative": "结构偏弱"
+        },
+        "price": {
+          "positive": "收盘确认",
+          "neutral": "收盘确认尚可",
+          "negative": "等待收盘确认"
+        }
       }
     },
     "maEntry": {
@@ -171,11 +211,15 @@
       },
       "types": {
         "ma_pullback_long": "顺势回踩均线做多",
-        "ma_rejection_short": "反弹遇压均线做空"
+        "ma_rejection_short": "反弹遇压均线做空",
+        "support_pullback": "支撑回踩",
+        "resistance_rejection": "压力拒绝",
+        "breakout_retest": "突破回测",
+        "breakdown_retest": "跌破回测"
       },
       "reasons": {
         "insufficient_history": "已确认历史／趋势不足",
-        "flat_ma": "均线走平，震荡过滤",
+        "flat_ma": "均线走平，不计斜率分",
         "trend_conflict": "方向背景不一致",
         "repeated_crosses": "反复穿越均线，假突破过滤",
         "excess_retests": "均线反复测试过多",
@@ -186,6 +230,7 @@
         "weak_confirmation": "等待有力度的收盘确认",
         "weak_volume": "确认量能不足",
         "missing_volume": "量能证据缺失",
+        "opposing_volume": "放量反向冲击，尚未收复",
         "macd_conflict": "MACD 与方向冲突",
         "macd_unready": "MACD 历史不足",
         "overextended": "价格已偏离，不追价",

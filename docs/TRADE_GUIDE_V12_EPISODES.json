@@ -1,0 +1,5324 @@
+{
+  "production_base_sha": "69a74425e68157ef634a723309d665b3996d9509",
+  "input_sha256": "ab818b5c304848215f2f82daf4e827b89f4e05f1718c389c6158e0dba4f3d150",
+  "model_sha256": "e8dea0ddb65d652f7b130a986485c22663bab612ae39624a9848b7dbe6463dbf",
+  "requested_start": "2026-07-29T13:11:21.629655+00:00",
+  "exported_at": "2026-10-27T13:11:21.629655+00:00",
+  "reconstruction": "Use the private hash-pinned input. Select exact UUID/interval and close timestamp, latest 800 closed bars, and eligible already-closed higher bars; run unchanged technical engines then V1.2 MA/Guide. No future returns.",
+  "limitation": "Current stored candle vintage, not archived historical arrivals/revisions or proof of actual browser delivery. TSX rendering uses mocked chart/socket dependencies; not a production/browser smoke.",
+  "episodes": [
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-08-03T06:45:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-08-03T06:15:00+00:00",
+      "entry_zone": [
+        62703.3,
+        62782.1
+      ],
+      "entry": 62723,
+      "stop": 62850.97340497797,
+      "TP1": 62452.6,
+      "TP1_source": "S1",
+      "TP2": 62384.9,
+      "TP2_source": "swing-low",
+      "RR": 2.1129390129655756,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-08-03T08:30:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-08-03T08:15:00+00:00",
+      "entry_zone": [
+        62384.9,
+        62452.6
+      ],
+      "entry": 62401.825,
+      "stop": 62484.72985216209,
+      "TP1": 62240,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 1.9519364160206327,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-08-18T16:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-18T16:30:00+00:00",
+      "entry_zone": [
+        64664,
+        64664
+      ],
+      "entry": 64664,
+      "stop": 64628.14783070871,
+      "TP1": 64850,
+      "TP1_source": "swing-high",
+      "TP2": 64924.2,
+      "TP2_source": "R1",
+      "RR": 5.187970593600384,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-08-18T18:30:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-18T17:45:00+00:00",
+      "entry_zone": [
+        64640.4,
+        64664
+      ],
+      "entry": 64658.1,
+      "stop": 64598.29460935184,
+      "TP1": 64850,
+      "TP1_source": "R1",
+      "TP2": 64868.7,
+      "TP2_source": "swing-high",
+      "RR": 3.208740849616226,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-08-28T01:15:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-28T00:15:00+00:00",
+      "entry_zone": [
+        80350,
+        80499
+      ],
+      "entry": 80461.75,
+      "stop": 80245.21491519298,
+      "TP1": 80807,
+      "TP1_source": "R1",
+      "TP2": 80819,
+      "TP2_source": "swing-high",
+      "RR": 1.5944298371217227,
+      "grade": "A",
+      "score": 83,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 6,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-09-15T18:45:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-09-15T18:30:00+00:00",
+      "entry_zone": [
+        75903,
+        76051.1
+      ],
+      "entry": 75940.025,
+      "stop": 76150.91434264868,
+      "TP1": 75559.4,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 1.804856495921009,
+      "grade": "B",
+      "score": 73,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 8,
+          "maximum": 20,
+          "tone": "neutral"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-09-24T09:15:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-09-24T08:15:00+00:00",
+      "entry_zone": [
+        83453.7,
+        83810.4
+      ],
+      "entry": 83542.875,
+      "stop": 84003.80151486723,
+      "TP1": 82080,
+      "TP1_source": "S1",
+      "TP2": 81431.7,
+      "TP2_source": "swing-low",
+      "RR": 3.173770553037916,
+      "grade": "B",
+      "score": 71,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 8,
+          "maximum": 20,
+          "tone": "neutral"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-09-24T11:45:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-09-24T10:45:00+00:00",
+      "entry_zone": [
+        83453.7,
+        83810.4
+      ],
+      "entry": 83542.875,
+      "stop": 83872.3850742132,
+      "TP1": 82800,
+      "TP1_source": "S1",
+      "TP2": 82080,
+      "TP2_source": "S2",
+      "RR": 2.25448342292361,
+      "grade": "B",
+      "score": 75,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-09-28T09:45:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-09-28T09:00:00+00:00",
+      "entry_zone": [
+        82650,
+        82800
+      ],
+      "entry": 82687.5,
+      "stop": 83040.97382832221,
+      "TP1": 82080,
+      "TP1_source": "S1",
+      "TP2": 81353,
+      "TP2_source": "swing-low",
+      "RR": 1.7186562379555608,
+      "grade": "A",
+      "score": 84,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-10-02T03:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-10-02T02:45:00+00:00",
+      "entry_zone": [
+        85095.3,
+        85249.6
+      ],
+      "entry": 85211.02500000001,
+      "stop": 85045.10855230778,
+      "TP1": 85696.2,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 2.9242127995650655,
+      "grade": "A",
+      "score": 88,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-10-08T06:30:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-08T05:45:00+00:00",
+      "entry_zone": [
+        82658.7,
+        82771.1
+      ],
+      "entry": 82686.8,
+      "stop": 82967.76206554825,
+      "TP1": 82152.1,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 1.903103890401124,
+      "grade": "A",
+      "score": 81,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-10-08T15:15:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-08T15:00:00+00:00",
+      "entry_zone": [
+        82152.1,
+        82258.2
+      ],
+      "entry": 82178.625,
+      "stop": 82340.88532259913,
+      "TP1": 81714.6,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 2.859756424535006,
+      "grade": "A",
+      "score": 85,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-10-12T23:00:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-12T22:45:00+00:00",
+      "entry_zone": [
+        82152.1,
+        82360.6
+      ],
+      "entry": 82204.225,
+      "stop": 82415.25659391316,
+      "TP1": 81714.6,
+      "TP1_source": "S1",
+      "TP2": 81651.1,
+      "TP2_source": "swing-low",
+      "RR": 2.3201502245274956,
+      "grade": "A",
+      "score": 80,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 8,
+          "maximum": 20,
+          "tone": "neutral"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "15m",
+      "timestamp": "2026-10-15T05:45:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-15T05:30:00+00:00",
+      "entry_zone": [
+        81000,
+        81000
+      ],
+      "entry": 81000,
+      "stop": 81083.89516749031,
+      "TP1": 80745.5,
+      "TP1_source": "S1",
+      "TP2": 80696.7,
+      "TP2_source": "swing-low",
+      "RR": 3.033547790811707,
+      "grade": "A",
+      "score": 81,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "1h",
+      "timestamp": "2026-08-22T13:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-22T10:00:00+00:00",
+      "entry_zone": [
+        76451.4,
+        76602.8
+      ],
+      "entry": 76564.95,
+      "stop": 76264.9821781989,
+      "TP1": 77896.3,
+      "TP1_source": "R1",
+      "TP2": 78751.9,
+      "TP2_source": "R2",
+      "RR": 4.438309389341114,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "4h",
+      "timestamp": "2026-09-30T12:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-30T04:00:00+00:00",
+      "entry_zone": [
+        82276.6,
+        83106.4
+      ],
+      "entry": 82898.95,
+      "stop": 82063.11843717138,
+      "TP1": 84352.9,
+      "TP1_source": "R1",
+      "TP2": 84556,
+      "TP2_source": "swing-high",
+      "RR": 1.7395251204435715,
+      "grade": "A",
+      "score": 84,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "BTCUSDT",
+      "market_instrument_id": "b211ed53-f2ed-5135-b52e-00217b04afc6",
+      "timeframe": "4h",
+      "timestamp": "2026-10-02T12:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-10-02T04:00:00+00:00",
+      "entry_zone": [
+        85696.2,
+        85696.2
+      ],
+      "entry": 85696.2,
+      "stop": 85185.7653217281,
+      "TP1": 87282.5,
+      "TP1_source": "R1",
+      "TP2": 87383.6,
+      "TP2_source": "swing-high",
+      "RR": 3.1077433950422724,
+      "grade": "B",
+      "score": 76,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 6,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-08-21T03:30:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-21T03:00:00+00:00",
+      "entry_zone": [
+        2332.04,
+        2340.3
+      ],
+      "entry": 2338.235,
+      "stop": 2328.3797093356025,
+      "TP1": 2353.35,
+      "TP1_source": "R1",
+      "TP2": 2359.2,
+      "TP2_source": "swing-high",
+      "RR": 1.5336939837404147,
+      "grade": "B",
+      "score": 75,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-08-21T04:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-21T03:45:00+00:00",
+      "entry_zone": [
+        2332.04,
+        2340.3
+      ],
+      "entry": 2338.235,
+      "stop": 2328.7973536618742,
+      "TP1": 2353.35,
+      "TP1_source": "R1",
+      "TP2": 2359.2,
+      "TP2_source": "swing-high",
+      "RR": 1.601564570070687,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-08-21T13:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-21T13:15:00+00:00",
+      "entry_zone": [
+        2375.29,
+        2381.58
+      ],
+      "entry": 2380.0074999999997,
+      "stop": 2370.5334161199116,
+      "TP1": 2398.9,
+      "TP1_source": "R1",
+      "TP2": 2449.48,
+      "TP2_source": "R2",
+      "RR": 1.9941242065322258,
+      "grade": "A",
+      "score": 81,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-08-24T11:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-24T11:30:00+00:00",
+      "entry_zone": [
+        2484.95,
+        2494.55
+      ],
+      "entry": 2492.15,
+      "stop": 2481.404302450976,
+      "TP1": 2526.58,
+      "TP1_source": "R1",
+      "TP2": 2528.77,
+      "TP2_source": "swing-high",
+      "RR": 3.204073057418862,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-08-25T01:30:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-25T00:30:00+00:00",
+      "entry_zone": [
+        2484.95,
+        2494.55
+      ],
+      "entry": 2492.15,
+      "stop": 2481.988653736184,
+      "TP1": 2509.26,
+      "TP1_source": "R1",
+      "TP2": 2519.74,
+      "TP2_source": "R2",
+      "RR": 1.6838319997939408,
+      "grade": "B",
+      "score": 75,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 8,
+          "maximum": 20,
+          "tone": "neutral"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-09-02T13:00:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-09-02T12:00:00+00:00",
+      "entry_zone": [
+        2381.92,
+        2385.55
+      ],
+      "entry": 2382.8275000000003,
+      "stop": 2391.494419469526,
+      "TP1": 2355,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 3.2107717278148202,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-09-16T17:45:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-09-16T17:30:00+00:00",
+      "entry_zone": [
+        2377.63,
+        2380.45
+      ],
+      "entry": 2378.335,
+      "stop": 2383.010837712682,
+      "TP1": 2356.05,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 4.765990902455211,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-09-18T19:15:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-18T18:15:00+00:00",
+      "entry_zone": [
+        2610,
+        2615
+      ],
+      "entry": 2613.75,
+      "stop": 2602.4919106191737,
+      "TP1": 2670.98,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 5.083455821328688,
+      "grade": "A",
+      "score": 84,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-09-21T10:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-21T10:30:00+00:00",
+      "entry_zone": [
+        2709.71,
+        2709.71
+      ],
+      "entry": 2709.71,
+      "stop": 2705.7029737461166,
+      "TP1": 2749.11,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 9.832728188844712,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-09-21T11:15:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-21T10:30:00+00:00",
+      "entry_zone": [
+        2709.71,
+        2709.71
+      ],
+      "entry": 2709.71,
+      "stop": 2702.6793753219063,
+      "TP1": 2749.11,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 5.6040539502505045,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-09-23T18:15:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-09-23T17:45:00+00:00",
+      "entry_zone": [
+        2668.71,
+        2673.44
+      ],
+      "entry": 2669.8925,
+      "stop": 2677.0912179082784,
+      "TP1": 2652.07,
+      "TP1_source": "swing-low",
+      "TP2": 2646.35,
+      "TP2_source": "swing-low",
+      "RR": 2.4757880815838096,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-10-02T07:15:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-10-02T07:00:00+00:00",
+      "entry_zone": [
+        2726.99,
+        2726.99
+      ],
+      "entry": 2726.99,
+      "stop": 2724.7207552300524,
+      "TP1": 2734.99,
+      "TP1_source": "R1",
+      "TP2": 2737.92,
+      "TP2_source": "swing-high",
+      "RR": 3.525401977762657,
+      "grade": "B",
+      "score": 76,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-10-07T17:30:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-07T17:15:00+00:00",
+      "entry_zone": [
+        2560.31,
+        2560.31
+      ],
+      "entry": 2560.31,
+      "stop": 2562.7713511366746,
+      "TP1": 2547.53,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 5.192270135526309,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-10-08T06:00:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-08T05:45:00+00:00",
+      "entry_zone": [
+        2560.31,
+        2563.05
+      ],
+      "entry": 2560.995,
+      "stop": 2565.367071630428,
+      "TP1": 2547.53,
+      "TP1_source": "S1",
+      "TP2": 2543.97,
+      "TP2_source": "swing-low",
+      "RR": 3.0797757077645582,
+      "grade": "A",
+      "score": 81,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-10-09T02:30:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-09T01:30:00+00:00",
+      "entry_zone": [
+        2482.47,
+        2483.87
+      ],
+      "entry": 2482.8199999999997,
+      "stop": 2488.679947776199,
+      "TP1": 2471.06,
+      "TP1_source": "S1",
+      "TP2": 2470.75,
+      "TP2_source": "swing-low",
+      "RR": 2.0068438233809003,
+      "grade": "A",
+      "score": 81,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "15m",
+      "timestamp": "2026-10-16T17:30:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-16T17:15:00+00:00",
+      "entry_zone": [
+        2402.28,
+        2407
+      ],
+      "entry": 2403.46,
+      "stop": 2410.3502165758528,
+      "TP1": 2380.92,
+      "TP1_source": "S1",
+      "TP2": 2358.66,
+      "TP2_source": "swing-low",
+      "RR": 3.2713050093364386,
+      "grade": "B",
+      "score": 73,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 0,
+          "maximum": 15,
+          "tone": "negative"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 6,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-08-19T15:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-19T14:00:00+00:00",
+      "entry_zone": [
+        1966.8,
+        1966.8
+      ],
+      "entry": 1966.8,
+      "stop": 1963.8794976934205,
+      "TP1": 1977.43,
+      "TP1_source": "R1",
+      "TP2": 1981.29,
+      "TP2_source": "swing-high",
+      "RR": 3.6397848329214715,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-08-25T02:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-24T23:00:00+00:00",
+      "entry_zone": [
+        2484.95,
+        2485.43
+      ],
+      "entry": 2485.31,
+      "stop": 2462.6067052350513,
+      "TP1": 2530,
+      "TP1_source": "R1",
+      "TP2": 2533.91,
+      "TP2_source": "swing-high",
+      "RR": 1.9684367605091606,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 6,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-08-27T06:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-27T04:00:00+00:00",
+      "entry_zone": [
+        2472.96,
+        2485.8
+      ],
+      "entry": 2482.59,
+      "stop": 2468.065990666697,
+      "TP1": 2515,
+      "TP1_source": "R1",
+      "TP2": 2515.4,
+      "TP2_source": "swing-high",
+      "RR": 2.2314774974486244,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-08-27T08:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-27T04:00:00+00:00",
+      "entry_zone": [
+        2472.96,
+        2485.8
+      ],
+      "entry": 2482.59,
+      "stop": 2468.286173074856,
+      "TP1": 2515,
+      "TP1_source": "R1",
+      "TP2": 2515.4,
+      "TP2_source": "swing-high",
+      "RR": 2.2658271922339464,
+      "grade": "B",
+      "score": 75,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-08-27T14:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-27T13:00:00+00:00",
+      "entry_zone": [
+        2472.96,
+        2485.8
+      ],
+      "entry": 2482.59,
+      "stop": 2466.945837389352,
+      "TP1": 2515,
+      "TP1_source": "R1",
+      "TP2": 2515.4,
+      "TP2_source": "swing-high",
+      "RR": 2.071699253364986,
+      "grade": "A",
+      "score": 80,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 6,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-08-28T06:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-28T02:00:00+00:00",
+      "entry_zone": [
+        2472.96,
+        2487.18
+      ],
+      "entry": 2483.625,
+      "stop": 2467.9339234002455,
+      "TP1": 2515,
+      "TP1_source": "R1",
+      "TP2": 2515.4,
+      "TP2_source": "swing-high",
+      "RR": 1.999544123090371,
+      "grade": "B",
+      "score": 78,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-09-18T20:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-18T18:00:00+00:00",
+      "entry_zone": [
+        2615,
+        2615
+      ],
+      "entry": 2615,
+      "stop": 2594.188863506323,
+      "TP1": 2670.98,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 2.6899059557371046,
+      "grade": "A",
+      "score": 88,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-09-19T01:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-18T23:00:00+00:00",
+      "entry_zone": [
+        2615,
+        2615
+      ],
+      "entry": 2615,
+      "stop": 2601.999728285374,
+      "TP1": 2645.93,
+      "TP1_source": "R1",
+      "TP2": 2670.98,
+      "TP2_source": "R2",
+      "RR": 2.3791810416702615,
+      "grade": "B",
+      "score": 75,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-09-19T03:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-18T23:00:00+00:00",
+      "entry_zone": [
+        2615,
+        2615
+      ],
+      "entry": 2615,
+      "stop": 2595.532048878716,
+      "TP1": 2645.93,
+      "TP1_source": "R1",
+      "TP2": 2670.98,
+      "TP2_source": "R2",
+      "RR": 1.5887650327098197,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-09-19T06:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-19T04:00:00+00:00",
+      "entry_zone": [
+        2615,
+        2615
+      ],
+      "entry": 2615,
+      "stop": 2606.364330862441,
+      "TP1": 2645.93,
+      "TP1_source": "R1",
+      "TP2": 2670.98,
+      "TP2_source": "R2",
+      "RR": 3.5816564422872896,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-09-19T23:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-19T21:00:00+00:00",
+      "entry_zone": [
+        2615,
+        2627.98
+      ],
+      "entry": 2624.735,
+      "stop": 2610.794128994968,
+      "TP1": 2645.93,
+      "TP1_source": "R1",
+      "TP2": 2661.83,
+      "TP2_source": "R2",
+      "RR": 1.5203497681277787,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "1h",
+      "timestamp": "2026-10-26T03:00:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-25T23:00:00+00:00",
+      "entry_zone": [
+        2315,
+        2327.09
+      ],
+      "entry": 2318.0225,
+      "stop": 2342.29731209769,
+      "TP1": 2280.46,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 1.5473858190471719,
+      "grade": "A",
+      "score": 83,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "4h",
+      "timestamp": "2026-08-05T20:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-05T16:00:00+00:00",
+      "entry_zone": [
+        1898,
+        1909.41
+      ],
+      "entry": 1906.5575000000001,
+      "stop": 1891.869865198194,
+      "TP1": 1929.94,
+      "TP1_source": "R1",
+      "TP2": 1936.72,
+      "TP2_source": "swing-high",
+      "RR": 1.591985388765566,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 8,
+          "maximum": 20,
+          "tone": "neutral"
+        },
+        {
+          "key": "ma",
+          "points": 0,
+          "maximum": 15,
+          "tone": "negative"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "4h",
+      "timestamp": "2026-08-27T16:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-27T04:00:00+00:00",
+      "entry_zone": [
+        2463.95,
+        2485.43
+      ],
+      "entry": 2480.06,
+      "stop": 2452.2822931491287,
+      "TP1": 2533.91,
+      "TP1_source": "R1",
+      "TP2": 2549.15,
+      "TP2_source": "swing-high",
+      "RR": 1.9386049499730713,
+      "grade": "B",
+      "score": 76,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "4h",
+      "timestamp": "2026-08-28T08:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-28T00:00:00+00:00",
+      "entry_zone": [
+        2463.95,
+        2485.43
+      ],
+      "entry": 2480.06,
+      "stop": 2452.893825154422,
+      "TP1": 2533.91,
+      "TP1_source": "R1",
+      "TP2": 2549.15,
+      "TP2_source": "swing-high",
+      "RR": 1.982244475201307,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "ETHUSDT",
+      "market_instrument_id": "a01580d8-52c9-5721-9214-d3b91654de2d",
+      "timeframe": "4h",
+      "timestamp": "2026-09-20T20:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-20T16:00:00+00:00",
+      "entry_zone": [
+        2615,
+        2615
+      ],
+      "entry": 2615,
+      "stop": 2605.1582384018366,
+      "TP1": 2645.93,
+      "TP1_source": "R1",
+      "TP2": 2668.71,
+      "TP2_source": "swing-high",
+      "RR": 3.142730058181015,
+      "grade": "B",
+      "score": 75,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 6,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-08-11T07:30:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-08-11T06:30:00+00:00",
+      "entry_zone": [
+        75.55,
+        75.78
+      ],
+      "entry": 75.6075,
+      "stop": 75.88329780012245,
+      "TP1": 75.12,
+      "TP1_source": "S1",
+      "TP2": 74.62,
+      "TP2_source": "swing-low",
+      "RR": 1.76759930566364,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-08-20T10:15:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-20T09:30:00+00:00",
+      "entry_zone": [
+        87.34,
+        87.34
+      ],
+      "entry": 87.34,
+      "stop": 86.96488279271614,
+      "TP1": 87.98,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 1.7061334099656227,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-08-21T01:15:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-21T00:15:00+00:00",
+      "entry_zone": [
+        88.09,
+        88.09
+      ],
+      "entry": 88.09,
+      "stop": 87.64697898810226,
+      "TP1": 88.83,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 1.6703496676830367,
+      "grade": "A",
+      "score": 80,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-08-21T03:30:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-21T03:00:00+00:00",
+      "entry_zone": [
+        88.83,
+        88.83
+      ],
+      "entry": 88.83,
+      "stop": 88.56379278934696,
+      "TP1": 90.19,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 5.108802262206827,
+      "grade": "B",
+      "score": 75,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-08-21T04:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-21T04:15:00+00:00",
+      "entry_zone": [
+        88.72,
+        88.83
+      ],
+      "entry": 88.8025,
+      "stop": 88.57865787159926,
+      "TP1": 89.56,
+      "TP1_source": "R1",
+      "TP2": 90.19,
+      "TP2_source": "R2",
+      "RR": 3.3840814747968,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-08-21T07:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-21T06:15:00+00:00",
+      "entry_zone": [
+        90.19,
+        90.19
+      ],
+      "entry": 90.19,
+      "stop": 89.84694089555748,
+      "TP1": 91.34,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 3.3521920424435185,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 6,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-08-21T13:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-21T13:30:00+00:00",
+      "entry_zone": [
+        90.19,
+        90.3
+      ],
+      "entry": 90.2725,
+      "stop": 90.0058613064736,
+      "TP1": 91.14,
+      "TP1_source": "R1",
+      "TP2": 91.21,
+      "TP2_source": "swing-high",
+      "RR": 3.2534662862580825,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 8,
+          "maximum": 20,
+          "tone": "neutral"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-08-25T00:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-24T23:30:00+00:00",
+      "entry_zone": [
+        98.78,
+        98.78
+      ],
+      "entry": 98.78,
+      "stop": 97.84085438266533,
+      "TP1": 102.74,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 4.216598498578531,
+      "grade": "A",
+      "score": 88,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-08-25T17:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-25T17:00:00+00:00",
+      "entry_zone": [
+        97.22,
+        97.64
+      ],
+      "entry": 97.535,
+      "stop": 97.04325914949182,
+      "TP1": 98.36,
+      "TP1_source": "R1",
+      "TP2": 98.64,
+      "TP2_source": "swing-high",
+      "RR": 1.6777129643539346,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 8,
+          "maximum": 20,
+          "tone": "neutral"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-09-06T03:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-06T03:30:00+00:00",
+      "entry_zone": [
+        105.7,
+        105.94
+      ],
+      "entry": 105.88,
+      "stop": 105.57713261132055,
+      "TP1": 106.8,
+      "TP1_source": "R1",
+      "TP2": 107.11,
+      "TP2_source": "swing-high",
+      "RR": 3.037633084272833,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-09-06T13:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-06T13:15:00+00:00",
+      "entry_zone": [
+        105.7,
+        105.94
+      ],
+      "entry": 105.88,
+      "stop": 105.56904436545088,
+      "TP1": 106.8,
+      "TP1_source": "R1",
+      "TP2": 106.83,
+      "TP2_source": "swing-high",
+      "RR": 2.9586214166338984,
+      "grade": "B",
+      "score": 73,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-09-21T18:15:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-21T17:45:00+00:00",
+      "entry_zone": [
+        116.41,
+        117.28
+      ],
+      "entry": 117.0625,
+      "stop": 116.2101255517617,
+      "TP1": 119.17,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 2.472504900112655,
+      "grade": "B",
+      "score": 72,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-10-08T06:00:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-08T05:00:00+00:00",
+      "entry_zone": [
+        115.17,
+        115.69
+      ],
+      "entry": 115.3,
+      "stop": 115.8653421136499,
+      "TP1": 114.1,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 2.1226085427329724,
+      "grade": "A",
+      "score": 88,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-10-09T06:00:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-09T05:15:00+00:00",
+      "entry_zone": [
+        110.62,
+        111.13
+      ],
+      "entry": 110.7475,
+      "stop": 111.2466697884834,
+      "TP1": 109.67,
+      "TP1_source": "S1",
+      "TP2": 108.75,
+      "TP2_source": "S2",
+      "RR": 2.1585841628631215,
+      "grade": "B",
+      "score": 74,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 8,
+          "maximum": 20,
+          "tone": "neutral"
+        },
+        {
+          "key": "ma",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-10-12T04:45:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-10-12T04:30:00+00:00",
+      "entry_zone": [
+        112.32,
+        112.81
+      ],
+      "entry": 112.6875,
+      "stop": 112.2116965764451,
+      "TP1": 114.1,
+      "TP1_source": "R1",
+      "TP2": 115.28,
+      "TP2_source": "swing-high",
+      "RR": 2.9686629605283503,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-10-15T06:00:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-15T05:45:00+00:00",
+      "entry_zone": [
+        101.56,
+        102.01
+      ],
+      "entry": 101.6725,
+      "stop": 102.21486380738382,
+      "TP1": 100.48,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 2.1987086596950647,
+      "grade": "A",
+      "score": 88,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-10-24T09:45:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-24T09:30:00+00:00",
+      "entry_zone": [
+        101.17,
+        101.17
+      ],
+      "entry": 101.17,
+      "stop": 101.24723751726756,
+      "TP1": 100.32,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 11.005014532710588,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-10-24T11:15:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-24T10:30:00+00:00",
+      "entry_zone": [
+        101.64,
+        101.92
+      ],
+      "entry": 101.71000000000001,
+      "stop": 101.99186404792869,
+      "TP1": 101.17,
+      "TP1_source": "S1",
+      "TP2": 101.05,
+      "TP2_source": "swing-low",
+      "RR": 1.9158172316344697,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-10-24T12:45:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-24T12:15:00+00:00",
+      "entry_zone": [
+        101.64,
+        101.92
+      ],
+      "entry": 101.71000000000001,
+      "stop": 101.9879035545243,
+      "TP1": 101.23,
+      "TP1_source": "S1",
+      "TP2": 101.17,
+      "TP2_source": "swing-low",
+      "RR": 1.727217922137287,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-10-24T13:15:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-24T12:15:00+00:00",
+      "entry_zone": [
+        101.64,
+        101.92
+      ],
+      "entry": 101.71000000000001,
+      "stop": 101.98620255466635,
+      "TP1": 101.23,
+      "TP1_source": "S1",
+      "TP2": 101.17,
+      "TP2_source": "swing-low",
+      "RR": 1.7378550338893684,
+      "grade": "B",
+      "score": 75,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-10-24T14:15:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-24T13:30:00+00:00",
+      "entry_zone": [
+        101.05,
+        101.23
+      ],
+      "entry": 101.095,
+      "stop": 101.53055090753398,
+      "TP1": 100.32,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 1.7793557230495354,
+      "grade": "A",
+      "score": 88,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "15m",
+      "timestamp": "2026-10-27T07:00:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-27T06:00:00+00:00",
+      "entry_zone": [
+        99.65,
+        99.93
+      ],
+      "entry": 99.72,
+      "stop": 100.01966168477824,
+      "TP1": 98.56,
+      "TP1_source": "S1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 3.871032096941,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "1h",
+      "timestamp": "2026-08-30T13:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-30T12:00:00+00:00",
+      "entry_zone": [
+        105.39,
+        105.83
+      ],
+      "entry": 105.72,
+      "stop": 105.22086687041381,
+      "TP1": 106.88,
+      "TP1_source": "R1",
+      "TP2": 107.79,
+      "TP2_source": "R2",
+      "RR": 2.32402926442033,
+      "grade": "B",
+      "score": 76,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 8,
+          "maximum": 20,
+          "tone": "neutral"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "1h",
+      "timestamp": "2026-10-15T00:00:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-14T21:00:00+00:00",
+      "entry_zone": [
+        104.78,
+        105.63
+      ],
+      "entry": 104.9925,
+      "stop": 105.89483459585739,
+      "TP1": 103.63,
+      "TP1_source": "swing-low",
+      "TP2": 103.45,
+      "TP2_source": "swing-low",
+      "RR": 1.5099720283975009,
+      "grade": "B",
+      "score": 70,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "1h",
+      "timestamp": "2026-10-15T02:00:00+00:00",
+      "state": "SHORT_READY",
+      "direction": "short",
+      "entry_structure": "resistance_rejection",
+      "structure_origin": "2026-10-15T01:00:00+00:00",
+      "entry_zone": [
+        104.78,
+        105.63
+      ],
+      "entry": 104.9925,
+      "stop": 105.88896452397907,
+      "TP1": 103.63,
+      "TP1_source": "swing-low",
+      "TP2": 103.45,
+      "TP2_source": "swing-low",
+      "RR": 1.5198593625907197,
+      "grade": "B",
+      "score": 76,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 6,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "4h",
+      "timestamp": "2026-08-19T16:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-19T12:00:00+00:00",
+      "entry_zone": [
+        81.34,
+        81.6
+      ],
+      "entry": 81.535,
+      "stop": 81.0733494378041,
+      "TP1": 82.4,
+      "TP1_source": "R1",
+      "TP2": 82.74,
+      "TP2_source": "swing-high",
+      "RR": 1.8737115706856875,
+      "grade": "A",
+      "score": 92,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "volume",
+          "points": 10,
+          "maximum": 10,
+          "tone": "positive"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "4h",
+      "timestamp": "2026-08-29T16:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-08-29T08:00:00+00:00",
+      "entry_zone": [
+        102.17,
+        103.21
+      ],
+      "entry": 102.94999999999999,
+      "stop": 101.55584951703895,
+      "TP1": 110.61,
+      "TP1_source": "R1",
+      "TP2": null,
+      "TP2_source": null,
+      "RR": 5.494385357691751,
+      "grade": "B",
+      "score": 75,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 0,
+          "maximum": 10,
+          "tone": "negative"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "instrument": "SOLUSDT",
+      "market_instrument_id": "185e51ff-848f-539a-90d7-870d9d03c133",
+      "timeframe": "4h",
+      "timestamp": "2026-09-07T20:00:00+00:00",
+      "state": "LONG_READY",
+      "direction": "long",
+      "entry_structure": "support_pullback",
+      "structure_origin": "2026-09-07T12:00:00+00:00",
+      "entry_zone": [
+        102.17,
+        103.21
+      ],
+      "entry": 102.94999999999999,
+      "stop": 101.70587424595445,
+      "TP1": 105.01,
+      "TP1_source": "R1",
+      "TP2": 105.83,
+      "TP2_source": "swing-high",
+      "RR": 1.6557811726841003,
+      "grade": "B",
+      "score": 73,
+      "hard_gate_status": "passed",
+      "hard_failures": [],
+      "evidence": [
+        {
+          "key": "trend",
+          "points": 20,
+          "maximum": 20,
+          "tone": "positive"
+        },
+        {
+          "key": "ma",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        },
+        {
+          "key": "state",
+          "points": 15,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "macd",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "volume",
+          "points": 3,
+          "maximum": 10,
+          "tone": "neutral"
+        },
+        {
+          "key": "structure",
+          "points": 12,
+          "maximum": 15,
+          "tone": "positive"
+        },
+        {
+          "key": "price",
+          "points": 10,
+          "maximum": 15,
+          "tone": "neutral"
+        }
+      ]
+    }
+  ]
+}
