@@ -38,6 +38,8 @@ For the proposed V1.2 model, use the exact private PR #21 export:
 
 ```sh
 node --experimental-strip-types scripts/audit/coverage-v12.mjs INPUT.json /tmp/v12-coverage 3
+node --experimental-strip-types scripts/audit/review-v12.mjs INPUT.json /tmp/v12-coverage/comparison.json docs/TRADE_GUIDE_V12
+node scripts/audit/report-v12.mjs docs/TRADE_GUIDE_V12
 ```
 
 The runner rejects a different input hash, pins model-source hashes across workers,

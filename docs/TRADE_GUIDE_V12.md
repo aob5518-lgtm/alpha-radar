@@ -127,3 +127,33 @@ The same frozen 90-day PR #21 input is pinned by SHA-256. See
 `TRADE_GUIDE_V12_COVERAGE.md` for final counts, READY episodes, rejected examples,
 measurements and limitations. A zero-READY or ≥100 weekly episodes per pair/period
 result stops acceptance for review; the runner never tunes rules to a count.
+
+## Local verification
+
+The completed comparison has 83 READY bars / 77 distinct episodes and 188 WATCH
+bars; both directions occur. Twenty historical READY samples match full and rolling
+Worker contexts/score/plan exactly and pass the real TSX presentation harness;
+twelve rejected records also reconstruct. See the coverage report for attribution.
+
+```sh
+pnpm web:lint
+pnpm web:typecheck
+pnpm web:format:check
+pnpm web:test
+pnpm web:build
+cd apps/api
+../../.venv/bin/ruff check . ../worker
+../../.venv/bin/ruff format --check . ../worker
+../../.venv/bin/pyright --pythonpath ../../.venv/bin/python
+../../.venv/bin/pytest
+```
+
+Local results: frontend 280 tests, lint/format/types/build pass; backend 89 tests
+and lint/format/types pass (one existing Starlette/AnyIO deprecation warning).
+Local Docker is unavailable; the unchanged real Compose integration is executed
+by GitHub Actions. The PR checks remain the authority for each pushed head.
+
+Local standalone synthetic sample after replay: additional MA evaluation (800 bars,
+100 runs) median 0.325ms / P95 0.640ms. Guide only (1,000 runs) median
+0.0038–0.0091ms / P95 0.0039–0.0104ms for 320-bar READY and 800-bar WAIT cases.
+These exclude the already-computed technical engines and are not production P95.

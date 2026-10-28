@@ -372,6 +372,35 @@ test("clearly opposing accelerating MACD and unreclaimed explosive opposing volu
   assert.ok(evaluate(v).ma.hard_failures.includes("opposing_volume"));
   assert.equal(evaluate(v).guide.state, "WAIT");
 });
+
+test("excess low-quality MA touches and absent stops remain hard failures even at 100 evidence points", () => {
+  const noisy = maFixture();
+  for (const c of noisy.closedCandles.slice(-12)) c.low = 110;
+  const bad = evaluate(noisy);
+  assert.ok(bad.ma.hard_failures.includes("excess_retests"));
+  assert.equal(
+    calculateTradeGuide(
+      noisy,
+      { ...bad.ma, confidence_score: 100, quality_tier: "A" },
+      undefined,
+      btcId,
+      "15m",
+    ).state,
+    "WAIT",
+  );
+  const s = structural(),
+    ma = evaluate(s).ma;
+  assert.equal(
+    calculateTradeGuide(
+      s,
+      { ...ma, invalidation_price: null, confidence_score: 100 },
+      undefined,
+      btcId,
+      "15m",
+    ).state,
+    "WAIT",
+  );
+});
 test("confirmed price action is required; light/missing volume loses points without becoming a veto", () => {
   const s = structural();
   s.closedCandles.at(-1).volume = null;

@@ -45,7 +45,14 @@ const modelHash = () =>
         .join("\n"),
     )
     .digest("hex");
-export function coverage(series, higher, start, end, progress = () => {}) {
+export function coverage(
+  series,
+  higher,
+  start,
+  end,
+  progress = () => {},
+  onBar,
+) {
   const gaps = validateSeries(series, end),
     higherGaps = validateSeries(higher, end);
   assert.equal(gaps.length, 0);
@@ -103,6 +110,7 @@ export function coverage(series, higher, start, end, progress = () => {}) {
     counts.v1[baseline.state]++;
     counts.v12[guide.state]++;
     n++;
+    onBar?.({ ma, guide, baseline });
     const failures = guide.hard_failures.length
       ? guide.hard_failures
       : guide.reason_codes;
