@@ -524,3 +524,10 @@ risk concentration
 portfolio alerts
 
 Automated trade execution is NOT part of this sprint.
+
+## Event Contract Simulator V1
+
+The opt-in `/event-contracts` research page uses frozen Event Signal V1 records to
+track automated paper bets under explicit settlement and payout assumptions.
+The ledger, risk controls and limitations are documented in
+[Event Contract Simulator V1](EVENT_CONTRACT_SIMULATOR_V1.md).

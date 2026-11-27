@@ -64,6 +64,15 @@ jobs:
         run: python scripts/verify-core-3.py
       - name: Verify bilingual persisted Source Intelligence
         run: python scripts/verify-sources-ui.py
+      - name: Verify simulator ledger and bilingual paper UI
+        env:
+          EVENT_SIGNAL_SHADOW_ENABLED: "true"
+          EVENT_SIMULATOR_ENABLED: "true"
+          EVENT_SIMULATOR_ADMIN_TOKEN: "disposable-compose-test-operator-token"
+        run: |
+          docker compose up --no-build --detach --wait --no-deps api web
+          docker compose exec -T api python -m alpha_radar.event_simulator.integration_verify
+          python scripts/verify-event-simulator.py
       - name: Show Compose logs on failure
         if: failure()
         run: docker compose logs

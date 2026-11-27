@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 CRYPTO_EVENT_TYPES = (
@@ -128,6 +128,8 @@ class Settings(BaseSettings):
     market_data_ingestion_enabled: bool = False
     event_contracts_enabled: bool = False
     event_signal_shadow_enabled: bool = False
+    event_simulator_enabled: bool = False
+    event_simulator_admin_token: SecretStr = SecretStr("")
     market_data_quote_freshness_seconds: int = Field(default=90, ge=1)
     market_data_future_tolerance_seconds: int = Field(default=30, ge=0)
     coinbase_exchange_api_url: str = "https://api.exchange.coinbase.com"

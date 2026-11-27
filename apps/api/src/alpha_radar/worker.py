@@ -17,6 +17,7 @@ app.conf.update(  # pyright: ignore[reportUnknownMemberType]
         "alpha_radar.events.tasks",
         "alpha_radar.event_contracts.tasks",
         "alpha_radar.event_contracts.shadow_tasks",
+        "alpha_radar.event_simulator.tasks",
         "alpha_radar.market_data.tasks",
         "alpha_radar.sources.tasks",
     ),
@@ -81,6 +82,13 @@ if settings.event_signal_shadow_enabled:
         "task": "alpha_radar.event_contracts.shadow",
         "schedule": 20.0,
         "options": {"expires": 19},
+    }
+
+if settings.event_simulator_enabled and settings.event_signal_shadow_enabled:
+    app.conf.beat_schedule["event-paper-simulator"] = {  # pyright: ignore[reportUnknownMemberType]
+        "task": "alpha_radar.event_simulator.tick",
+        "schedule": 10.0,
+        "options": {"expires": 9},
     }
 
 if settings.source_ingestion_enabled:

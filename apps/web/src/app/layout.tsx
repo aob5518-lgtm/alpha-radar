@@ -20,7 +20,11 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body>
-        <AppShell locale={locale} messages={messages}>
+        <AppShell
+          locale={locale}
+          messages={messages}
+          simulatorEnabled={process.env.EVENT_SIMULATOR_ENABLED === "true"}
+        >
           {children}
         </AppShell>
       </body>
