@@ -104,6 +104,45 @@ const compiled = ts.transpileModule(
   },
 ).outputText;
 
+test("horizon switches retain the open disclosure without remounting its native details", () => {
+  const values = [];
+  let cursor = 0;
+  const exports = {};
+  runInNewContext(compiled, {
+    exports,
+    require: (name) =>
+      ({
+        "react/jsx-runtime": jsx,
+        react: {
+          useState: (initial) => {
+            const slot = cursor++;
+            if (!(slot in values)) values[slot] = initial;
+            return [values[slot], (next) => (values[slot] = next)];
+          },
+          useEffect: () => {},
+        },
+        "@/lib/i18n/format": {},
+        "@/lib/market/event-contract-research": {},
+      })[name],
+  });
+  const render = (assetId = btc) => {
+    cursor = 0;
+    return exports.EventContractPanel({ assetId });
+  };
+  const initial = render();
+  assert.equal(initial.props.expanded, false);
+  initial.props.onExpandedChange(true);
+  for (const horizon of [30, 10, 30, 10]) {
+    render().props.onHorizonChange(horizon);
+    const next = render();
+    assert.equal(next.props.expanded, true);
+    assert.equal(next.props.horizon, horizon);
+    assert.equal(next.type, initial.type);
+    assert.equal(next.key, initial.key);
+  }
+  assert.notEqual(render(eth).key, initial.key);
+});
+
 for (const locale of ["en", "zh-CN"])
   test(`${locale} compact research UI is folded, honest and detached from the Chart interval`, () => {
     const copy = JSON.parse(
