@@ -649,6 +649,102 @@ export function StructuralMarketChart(props: Props) {
     )
       ? props.tradeSetup
       : null;
+  const guide =
+    props.tradeGuide &&
+    guideMatchesIdentity(
+      props.tradeGuide,
+      props.instrumentId,
+      props.interval,
+    ) &&
+    props.tradeGuide.confirmed_at === props.marketState?.confirmed_at
+      ? props.tradeGuide
+      : null;
+  const technicalDetails = props.marketState && (
+    <>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+        <strong className="text-emerald-300">
+          {
+            props.chartMessages.marketState.directions[
+              props.marketState.direction
+            ]
+          }{" "}
+          {props.marketState.direction_strength}
+        </strong>
+        {!isNeutralMarketStateFallback(props.marketState) && (
+          <span>
+            {props.chartMessages.marketState.phase}:{" "}
+            {props.chartMessages.marketState.phases[props.marketState.phase]}
+          </span>
+        )}
+        <span className="text-[var(--muted)]">
+          {props.chartMessages.marketState.nextWait}:{" "}
+          {formatMarketStateWait(props.marketState, props.chartMessages)}
+        </span>
+        {!setup && props.marketState.reference_level && (
+          <span className="font-mono text-[var(--muted)]">
+            {props.chartMessages.marketState.keyZone}:{" "}
+            {formatZone(
+              props.marketState.reference_level.zone_low,
+              props.marketState.reference_level.zone_high,
+              props.locale,
+            )}
+          </span>
+        )}
+        <span
+          className={
+            (
+              setup
+                ? setup.status === "candidate"
+                : props.marketState.entry_window_candidate
+            )
+              ? "text-emerald-300"
+              : "text-[var(--muted)]"
+          }
+        >
+          {props.chartMessages.marketState.entryWindow}:{" "}
+          {setup
+            ? props.chartMessages.tradeSetup[setup.status]
+            : props.marketState.entry_window_candidate
+              ? props.chartMessages.marketState.established
+              : props.chartMessages.marketState.waiting}
+        </span>
+        {setup && (
+          <>
+            <span>
+              {props.chartMessages.tradeSetup.direction}:{" "}
+              {props.chartMessages.tradeSetup[setup.direction]}
+            </span>
+            {setup.reference_level && (
+              <span className="font-mono text-[var(--muted)]">
+                {setup.direction === "wait"
+                  ? props.chartMessages.tradeSetup.watchZone
+                  : props.chartMessages.tradeSetup.entryZone}
+                : {setup.reference_level.level_label}{" "}
+                {formatZone(
+                  setup.reference_level.zone_low,
+                  setup.reference_level.zone_high,
+                  props.locale,
+                )}
+              </span>
+            )}
+            {setup.preferred_entry_price !== null && (
+              <span className="font-mono text-[var(--muted)]">
+                {props.chartMessages.tradeSetup.referencePrice}:{" "}
+                {setup.preferred_entry_price.toLocaleString(props.locale, {
+                  maximumFractionDigits: 6,
+                })}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+      {setup && (
+        <p className="text-[10px] text-[var(--muted)]">
+          {props.chartMessages.tradeSetup.disclaimer}
+        </p>
+      )}
+    </>
+  );
 
   return (
     <div
@@ -676,119 +772,22 @@ export function StructuralMarketChart(props: Props) {
               · {props.providerLabel}
             </span>
           </div>
-          {props.tradeGuide &&
-            guideMatchesIdentity(
-              props.tradeGuide,
-              props.instrumentId,
-              props.interval,
-            ) &&
-            props.tradeGuide.confirmed_at ===
-              props.marketState?.confirmed_at && (
-              <TradeGuidePanel
-                guide={props.tradeGuide}
-                analysis={props.maAnalysis}
-                copy={props.chartMessages.tradeGuide}
-                locale={props.locale}
-              />
-            )}
-          {props.marketState && (
+          {guide && (
+            <TradeGuidePanel
+              guide={guide}
+              analysis={props.maAnalysis}
+              copy={props.chartMessages.tradeGuide}
+              locale={props.locale}
+              technicalDetails={technicalDetails}
+            />
+          )}
+          {!guide && technicalDetails && (
             <details open={!props.guideMode}>
               <summary className="cursor-pointer text-[11px] text-[var(--muted)]">
                 {props.chartMessages.tradeGuide.technicalDetails}
               </summary>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-                <strong className="text-emerald-300">
-                  {
-                    props.chartMessages.marketState.directions[
-                      props.marketState.direction
-                    ]
-                  }{" "}
-                  {props.marketState.direction_strength}
-                </strong>
-                {!isNeutralMarketStateFallback(props.marketState) && (
-                  <span>
-                    {props.chartMessages.marketState.phase}:{" "}
-                    {
-                      props.chartMessages.marketState.phases[
-                        props.marketState.phase
-                      ]
-                    }
-                  </span>
-                )}
-                <span className="text-[var(--muted)]">
-                  {props.chartMessages.marketState.nextWait}:{" "}
-                  {formatMarketStateWait(
-                    props.marketState,
-                    props.chartMessages,
-                  )}
-                </span>
-                {!setup && props.marketState.reference_level && (
-                  <span className="font-mono text-[var(--muted)]">
-                    {props.chartMessages.marketState.keyZone}:{" "}
-                    {formatZone(
-                      props.marketState.reference_level.zone_low,
-                      props.marketState.reference_level.zone_high,
-                      props.locale,
-                    )}
-                  </span>
-                )}
-                <span
-                  className={
-                    (
-                      setup
-                        ? setup.status === "candidate"
-                        : props.marketState.entry_window_candidate
-                    )
-                      ? "text-emerald-300"
-                      : "text-[var(--muted)]"
-                  }
-                >
-                  {props.chartMessages.marketState.entryWindow}:{" "}
-                  {setup
-                    ? props.chartMessages.tradeSetup[setup.status]
-                    : props.marketState.entry_window_candidate
-                      ? props.chartMessages.marketState.established
-                      : props.chartMessages.marketState.waiting}
-                </span>
-                {setup && (
-                  <>
-                    <span>
-                      {props.chartMessages.tradeSetup.direction}:{" "}
-                      {props.chartMessages.tradeSetup[setup.direction]}
-                    </span>
-                    {setup.reference_level && (
-                      <span className="font-mono text-[var(--muted)]">
-                        {setup.direction === "wait"
-                          ? props.chartMessages.tradeSetup.watchZone
-                          : props.chartMessages.tradeSetup.entryZone}
-                        : {setup.reference_level.level_label}{" "}
-                        {formatZone(
-                          setup.reference_level.zone_low,
-                          setup.reference_level.zone_high,
-                          props.locale,
-                        )}
-                      </span>
-                    )}
-                    {setup.preferred_entry_price !== null && (
-                      <span className="font-mono text-[var(--muted)]">
-                        {props.chartMessages.tradeSetup.referencePrice}:{" "}
-                        {setup.preferred_entry_price.toLocaleString(
-                          props.locale,
-                          {
-                            maximumFractionDigits: 6,
-                          },
-                        )}
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
+              {technicalDetails}
             </details>
-          )}
-          {setup && (
-            <p className="text-[10px] text-[var(--muted)]">
-              {props.chartMessages.tradeSetup.disclaimer}
-            </p>
           )}
         </div>
         <div className="flex gap-2">

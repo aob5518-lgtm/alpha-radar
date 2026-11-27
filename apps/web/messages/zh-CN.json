@@ -114,6 +114,7 @@
         "closedOnly": "仅依据当前周期已收盘 K 线；触及关注区不代表完成确认。"
       },
       "close": "关闭交易指引详情",
+      "explanation": "说明",
       "technicalDetails": "技术输入详情 · 非第二条操作建议",
       "maDetails": "均线证据／高级信息",
       "entry": "入场区间",

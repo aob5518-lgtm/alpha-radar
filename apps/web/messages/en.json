@@ -114,6 +114,7 @@
         "closedOnly": "Current timeframe, closed candles only. Touching an area is not confirmation."
       },
       "close": "Close Trade Guide details",
+      "explanation": "About",
       "technicalDetails": "Technical inputs · not a second recommendation",
       "maDetails": "MA evidence / advanced",
       "entry": "Entry area",

@@ -166,3 +166,62 @@ for (const locale of ["en", "zh-CN"])
         assert.ok(!output.includes("undefined"));
       }
     });
+
+for (const locale of ["en", "zh-CN"])
+  test(`${locale}: secondary explanations share one closed disclosure without hiding decisions or READY prices`, () => {
+    const chart = JSON.parse(
+        readFileSync(
+          new URL(`../messages/${locale}.json`, import.meta.url),
+          "utf8",
+        ),
+      ).chart,
+      copy = chart.tradeGuide,
+      snapshot = maFixture(),
+      analysis = calculateMaEntry(snapshot, btcId, "15m"),
+      result = guide.calculateTradeGuide(
+        snapshot,
+        analysis,
+        undefined,
+        btcId,
+        "15m",
+      );
+    for (const state of ["LONG_READY", "WATCH_LONG", "WAIT", "MISSED"]) {
+      const output = renderToStaticMarkup(
+        exports.TradeGuidePanel({
+          guide: { ...result, state },
+          analysis,
+          copy,
+          locale,
+          technicalDetails: jsx.jsx("p", {
+            children: chart.tradeSetup.disclaimer,
+          }),
+        }),
+      );
+      const disclosure = output.match(/<details\b[^>]*>[\s\S]*?<\/details>/g);
+      assert.equal(disclosure?.length, 1);
+      assert.doesNotMatch(disclosure[0], /<details[^>]*\bopen\b/);
+      for (const text of [
+        copy.explanation,
+        copy.decision.closedOnly,
+        copy.disclaimer,
+        copy.technicalDetails,
+        chart.tradeSetup.disclaimer,
+      ])
+        assert.ok(disclosure[0].includes(text), text);
+      const visible = output.replace(disclosure[0], "");
+      for (const text of [
+        copy.states[state],
+        copy.decision.label,
+        copy.nextAction,
+        ...result.reason_codes.map((reason) => copy.reasons[reason]),
+      ])
+        assert.ok(visible.includes(text), text);
+      if (state === "LONG_READY") {
+        assert.ok(visible.includes(copy.reference));
+        assert.ok(visible.includes(copy.stop));
+        assert.ok(visible.includes(copy.rr));
+        assert.match(visible, /TP1/);
+        assert.match(visible, /TP2/);
+      }
+    }
+  });
