@@ -344,6 +344,7 @@ export function ChartWorkspace(props: Props) {
           <EventContractPanel
             key={instrument.asset_id}
             assetId={instrument.asset_id}
+            instrumentId={instrument.id}
             symbol={instrument.symbol}
             copy={messages.chart.eventContracts}
             locale={locale}

@@ -8,6 +8,8 @@ import ts from "typescript";
 import {
   researchIdentityMatches,
   researchPresentation,
+  shadowIdentityMatches,
+  shadowIsCurrent,
 } from "../src/lib/market/event-contract-research.ts";
 import { GET } from "../src/app/api/v1/event-contracts/[assetId]/route.ts";
 
@@ -42,6 +44,63 @@ const fixture = () => ({
     trigger_interval: "1m",
   },
   observations: [],
+});
+
+test("shadow observations require exact instrument, asset, horizon and freshness", () => {
+  const instrument = "bybit-btc-instrument";
+  const payload = {
+    version: "event-signal-v1",
+    settlement_version: "event-shadow-v1",
+    mode: "shadow",
+    validation_status: "unvalidated",
+    asset_id: btc,
+    market_instrument_id: instrument,
+    reference_instrument_id: "binance-index",
+    symbol: "BTC",
+    horizon_minutes: 10,
+    signal_source: "bybit",
+    reference_source: "binance_index_minute_close_proxy",
+    settlement_source: "binance_index_minute_close_proxy",
+    settlement_basis_verified: false,
+    probability: null,
+    expected_value: null,
+    generated_at: new Date(at).toISOString(),
+    valid_until: new Date(at + 90_000).toISOString(),
+    assessment: {
+      state: "STRONG_HIGHER",
+      direction: "higher",
+      score: 87,
+      as_of: new Date(at).toISOString(),
+    },
+    signal: {
+      direction: "higher",
+      score: 87,
+      expires_at: new Date(at + 600_000).toISOString(),
+    },
+  };
+  assert.ok(shadowIdentityMatches(payload, btc, instrument, "BTC", 10));
+  assert.ok(shadowIsCurrent(payload, at + 1000));
+  assert.equal(shadowIdentityMatches(payload, btc, "other", "BTC", 10), false);
+  assert.equal(
+    shadowIdentityMatches(payload, eth, instrument, "ETH", 10),
+    false,
+  );
+  assert.equal(
+    shadowIdentityMatches(payload, btc, instrument, "BTC", 30),
+    false,
+  );
+  assert.equal(
+    shadowIdentityMatches(
+      { ...payload, probability: 0.87 },
+      btc,
+      instrument,
+      "BTC",
+      10,
+    ),
+    false,
+  );
+  assert.equal(shadowIsCurrent(payload, at + 90_000), false);
+  assert.equal(shadowIsCurrent(payload, at - 1000), false);
 });
 
 test("exact BTC/ETH and 10/30 horizon identities never leak direction", () => {

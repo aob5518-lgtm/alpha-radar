@@ -3,6 +3,7 @@ import type {
   EventContractHorizon,
   EventContractReason,
   EventContractResearch,
+  EventSignalShadow,
 } from "@alpha-radar/types/event-contracts";
 
 export function researchIdentityMatches(
@@ -59,4 +60,53 @@ export function researchPresentation(
     direction: data.assessment.direction,
     reason: data.assessment.reasons[0] ?? "provider_unavailable",
   };
+}
+export function shadowIdentityMatches(
+  data: EventSignalShadow,
+  assetId: string,
+  instrumentId: string,
+  symbol: string,
+  horizon: 10 | 30,
+): boolean {
+  return (
+    data?.version === "event-signal-v1" &&
+    data.settlement_version === "event-shadow-v1" &&
+    data.mode === "shadow" &&
+    data.asset_id === assetId &&
+    data.market_instrument_id === instrumentId &&
+    data.symbol === symbol &&
+    data.horizon_minutes === horizon &&
+    data.signal_source === "bybit" &&
+    data.reference_source === "binance_index_minute_close_proxy" &&
+    data.settlement_source === data.reference_source &&
+    data.reference_instrument_id !== instrumentId &&
+    data.settlement_basis_verified === false &&
+    data.validation_status === "unvalidated" &&
+    data.probability === null &&
+    data.expected_value === null
+  );
+}
+
+export function shadowIsCurrent(data: EventSignalShadow, now: number): boolean {
+  const generated = Date.parse(data.generated_at ?? "");
+  const valid = Date.parse(data.valid_until ?? "");
+  if (data.assessment.state === "WAIT" && !data.generated_at)
+    return (
+      data.assessment.reason === "warming_up" ||
+      data.assessment.reason === "disabled"
+    );
+  if (!(generated <= now && now < valid)) return false;
+  if (data.assessment.state === "WAIT") return true;
+  const confirmed = Date.parse(data.assessment.as_of ?? "");
+  return (
+    !!data.reference_instrument_id &&
+    !!data.signal &&
+    data.signal.direction === data.assessment.direction &&
+    data.signal.score === data.assessment.score &&
+    data.assessment.state.toLowerCase().endsWith(data.signal.direction) &&
+    confirmed <= generated &&
+    now - confirmed < 90_000 &&
+    Date.parse(data.signal.expires_at) ===
+      confirmed + data.horizon_minutes * 60_000
+  );
 }

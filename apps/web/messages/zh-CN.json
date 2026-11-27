@@ -83,6 +83,61 @@
   },
   "chart": {
     "eventContracts": {
+      "shadow": {
+        "title": "事件信号",
+        "mode": "影子观察 · 研究",
+        "evidenceScore": "证据分",
+        "reference": "指数参考价",
+        "expiry": "到期",
+        "basis": "信号以 Bybit 已收盘 K 线计算。影子结果采用币安指数分钟收盘价作为研究代理。实际事件合约结算口径尚未核实。",
+        "observations": "近期影子观察",
+        "states": {
+          "STRONG_HIGHER": "强偏涨",
+          "HIGHER": "偏涨",
+          "WAIT": "等待",
+          "LOWER": "偏跌",
+          "STRONG_LOWER": "强偏跌"
+        },
+        "results": {
+          "pending": "观察中",
+          "win": "代理方向命中",
+          "loss": "代理方向未命中",
+          "missing": "缺少到期指数"
+        },
+        "reasons": {
+          "identity_mismatch": "合约或周期身份不匹配。",
+          "insufficient_history": "等待足够的已收盘历史。",
+          "history_gap": "已收盘历史存在缺口。",
+          "stale_data": "等待新鲜的已收盘数据。",
+          "reference_unavailable": "等待对应的指数收盘价和 Bybit 当前报价。",
+          "volume_unavailable": "已收盘成交量不完整。",
+          "macro_event": "处于重大宏观数据发布窗口。",
+          "no_extreme": "多个指标尚未共同确认极端偏离。",
+          "no_rejection": "价格已偏离，但尚无收盘拒绝证据。",
+          "trend_conflict": "原趋势仍有延续证据。",
+          "insufficient_score": "反转证据尚未达到候选门槛。",
+          "observation_only": "已有早期方向证据，等待进一步确认。",
+          "episode_unanchored": "等待行情归中后形成新的独立形态。",
+          "episode_already_seen": "本次形态已记录影子观察。",
+          "signal_recorded": "已记录通过收盘确认的反转候选。",
+          "warming_up": "等待首次影子评估。",
+          "disabled": "影子观察未启用。"
+        },
+        "evidence": {
+          "rsi_extreme": "RSI 极端",
+          "bollinger_extreme": "布林带偏离",
+          "vwap_extension": "显著偏离 VWAP",
+          "atr_impulse": "价格脉冲扩张",
+          "rsi_divergence": "RSI 背离",
+          "momentum_deceleration": "动量放缓",
+          "volume_exhaustion": "放量后跟随减弱",
+          "wick_rejection": "影线拒绝",
+          "band_reentry": "收盘回到布林带内",
+          "failed_breakout": "突破失败",
+          "near_structure": "接近先前区间边界",
+          "volume_climax": "成交量突增"
+        }
+      },
       "title": "事件合约",
       "unvalidated": "研究 · 未验证",
       "loading": "加载中",

@@ -17,8 +17,10 @@ export async function GET(
       { status: 422 },
     );
   try {
+    const model =
+      process.env.EVENT_SIGNAL_SHADOW_ENABLED === "true" ? "/shadow" : "";
     const target = new URL(
-      `/api/v1/event-contracts/${encodeURIComponent(assetId)}?horizon=${horizon}`,
+      `/api/v1/event-contracts/${encodeURIComponent(assetId)}${model}?horizon=${horizon}`,
       process.env.API_URL ?? "http://localhost:8000",
     );
     const response = await fetch(target, {
