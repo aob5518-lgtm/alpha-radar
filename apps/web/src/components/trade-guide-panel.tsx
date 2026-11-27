@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { Messages } from "@/lib/i18n/messages";
 import type { MaEntryAnalysis } from "@/lib/market/ma-confluence-entry";
 import { guideReady, type TradeGuideV1 } from "@/lib/market/trade-guide";
@@ -8,11 +10,13 @@ export function TradeGuidePanel({
   analysis,
   copy,
   locale,
+  technicalDetails,
 }: {
   guide: TradeGuideV1;
   analysis?: MaEntryAnalysis;
   copy: Messages["chart"]["tradeGuide"];
   locale: "en" | "zh-CN";
+  technicalDetails?: ReactNode;
 }) {
   const ready = guideReady(guide),
     watch = guide.state === "WATCH_LONG" || guide.state === "WATCH_SHORT",
@@ -27,20 +31,37 @@ export function TradeGuidePanel({
         : value;
   return (
     <section
-      className="space-y-2 border-t border-white/10 py-3"
+      className="relative space-y-2 border-t border-white/10 py-3"
       data-trade-guide-state={guide.state}
       data-guide-instrument={guide.market_instrument_id}
       data-guide-timeframe={guide.timeframe}
     >
-      <strong
-        className={`inline-block rounded px-3 py-1 text-base ${ready ? "bg-emerald-400/20 text-emerald-300" : "bg-white/10 text-[var(--text)]"}`}
-      >
-        {copy.states[guide.state]}
-        {(ready || watch) &&
-          guide.quality_grade &&
-          guide.quality_grade !== "none" &&
-          ` · ${guide.quality_grade}`}
-      </strong>
+      <div className="flex items-center justify-between gap-2">
+        <strong
+          className={`inline-block rounded px-3 py-1 text-base ${ready ? "bg-emerald-400/20 text-emerald-300" : "bg-white/10 text-[var(--text)]"}`}
+        >
+          {copy.states[guide.state]}
+          {(ready || watch) &&
+            guide.quality_grade &&
+            guide.quality_grade !== "none" &&
+            ` · ${guide.quality_grade}`}
+        </strong>
+        <details>
+          <summary className="cursor-pointer rounded px-2 py-1 text-xs text-[var(--muted)]">
+            {copy.explanation}
+          </summary>
+          <div className="absolute inset-x-0 top-12 z-30 max-h-[50vh] space-y-3 overflow-y-auto rounded border bg-[var(--panel)] p-3 text-xs text-[var(--muted)] shadow-xl">
+            <p>{copy.decision.closedOnly}</p>
+            <p>{copy.disclaimer}</p>
+            {technicalDetails && (
+              <section className="space-y-2 border-t pt-3">
+                <h3 className="font-semibold">{copy.technicalDetails}</h3>
+                {technicalDetails}
+              </section>
+            )}
+          </div>
+        </details>
+      </div>
       <ol
         aria-label={copy.decision.label}
         className="grid gap-2 text-xs sm:grid-cols-3"
@@ -79,9 +100,6 @@ export function TradeGuidePanel({
           </p>
         </li>
       </ol>
-      <p className="text-[10px] text-[var(--muted)]">
-        {copy.decision.closedOnly}
-      </p>
       {ready && (
         <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
           <div>
@@ -153,7 +171,6 @@ export function TradeGuidePanel({
           )
           .join(" · ")}
       </p>
-      <p className="text-[10px] text-[var(--muted)]">{copy.disclaimer}</p>
     </section>
   );
 }

@@ -15,6 +15,7 @@ import * as tradeSetup from "../src/lib/market/trade-setup.ts";
 import * as marketStream from "../src/lib/market/market-stream.ts";
 import * as maEntry from "../src/lib/market/ma-confluence-entry.ts";
 import * as tradeGuide from "../src/lib/market/trade-guide.ts";
+import * as guideDecision from "../src/lib/market/trade-guide-decision.ts";
 import { maFixture } from "./helpers/ma-fixtures.mjs";
 import {
   btcId,
@@ -40,6 +41,31 @@ const compiled = ts.transpileModule(source, {
     target: ts.ScriptTarget.ES2022,
   },
 }).outputText;
+const guidePanel = {};
+runInNewContext(
+  ts.transpileModule(
+    readFileSync(
+      new URL("../src/components/trade-guide-panel.tsx", import.meta.url),
+      "utf8",
+    ),
+    {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        jsx: ts.JsxEmit.ReactJSX,
+        target: ts.ScriptTarget.ES2022,
+      },
+    },
+  ).outputText,
+  {
+    exports: guidePanel,
+    require: (name) =>
+      ({
+        "react/jsx-runtime": jsxRuntime,
+        "@/lib/market/trade-guide": tradeGuide,
+        "@/lib/market/trade-guide-decision": guideDecision,
+      })[name],
+  },
+);
 
 function marker(id, interval, zone = 82000) {
   return {
@@ -231,10 +257,11 @@ function harness() {
     "@/lib/market/ma-confluence-entry": maEntry,
     "@/lib/market/trade-guide": tradeGuide,
     "@/components/trade-guide-panel": {
-      TradeGuidePanel: ({ guide }) =>
+      TradeGuidePanel: (props) =>
         jsxRuntime.jsx("div", {
-          "data-guide-test": guide.market_instrument_id + ":" + guide.timeframe,
-          children: `${guide.state} stop=${guide.stop_price} tp1=${guide.tp1_price}`,
+          "data-guide-test":
+            props.guide.market_instrument_id + ":" + props.guide.timeframe,
+          children: jsxRuntime.jsx(guidePanel.TradeGuidePanel, props),
         }),
     },
     "@/lib/market/market-state-presentation": {
@@ -585,6 +612,33 @@ function withGuide(input) {
     ),
   };
 }
+test("Chart puts technical inputs and disclaimers inside the Guide disclosure instead of separate header rows", () => {
+  const h = harness(),
+    input = withGuide(props());
+  input.tradeSetup = {
+    market_instrument_id: input.instrumentId,
+    timeframe: input.interval,
+    direction: "wait",
+    status: "waiting",
+    preferred_entry_price: null,
+    reference_level: null,
+  };
+  const output = h.render(input),
+    disclosures = output.match(/<details\b[^>]*>[\s\S]*?<\/details>/g);
+  assert.equal(disclosures?.length, 1);
+  assert.doesNotMatch(disclosures[0], /<details[^>]*\bopen\b/);
+  for (const text of [
+    chartMessages.tradeGuide.technicalDetails,
+    chartMessages.tradeSetup.disclaimer,
+    chartMessages.tradeGuide.disclaimer,
+    chartMessages.tradeGuide.decision.closedOnly,
+  ]) {
+    assert.ok(disclosures[0].includes(text));
+    assert.ok(!output.replace(disclosures[0], "").includes(text));
+  }
+  assert.ok(output.includes(chartMessages.tradeGuide.states.LONG_READY));
+  assert.ok(output.includes(chartMessages.tradeGuide.nextAction));
+});
 test("one primary Guide marker replaces redundant MA signal; click opens plan; toggles retain chart/socket and hide independent overlays", () => {
   const h = harness(),
     input = withGuide(props());

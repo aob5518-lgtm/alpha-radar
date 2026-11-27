@@ -42,6 +42,16 @@ unverified; it is never borrowed from another instrument, period or setting. REA
 can still be explained from the authoritative Guide contract when optional MA
 evidence is absent. Both languages share identical presentation keys.
 
+## Compact Chart header
+
+Secondary closed-candle explanations, disclaimers and technical input details
+share one default-closed About / 说明 disclosure beside the Guide status. Opening
+it overlays a bounded, scrollable panel rather than pushing the candles down.
+The same disclosure works in the Guide marker tooltip. The primary status, three
+decision steps, next action, blocking reasons and valid READY plan values remain
+visible. Without a current Guide, the existing technical-input fallback remains.
+This changes presentation only; it adds no new state, calculation or data contract.
+
 ## Validation and boundaries
 
 Tests cover mirrored long/short READY and WATCH, separate price/evidence/R:R waits,
