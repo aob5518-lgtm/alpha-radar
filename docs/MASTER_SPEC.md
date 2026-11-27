@@ -5,9 +5,10 @@ Status: Active Development
 
 ## 1. Product Vision
 
-Alpha Radar is a focused financial intelligence product with exactly three primary user-facing
+Alpha Radar is a focused financial intelligence product with three core user-facing
 functions: Important Financial Events, a professional Crypto Chart with deterministic structural
-levels and trend regime, and a platform-grounded AI Analyst.
+levels and trend regime, and a platform-grounded AI Analyst. An opt-in Event Contract Simulator
+provides paper-only evaluation of the Chart's Event Signal as a separate research page.
 
 It continuously monitors:
 
@@ -98,7 +99,7 @@ US10Y
 
 ## 3. Current Core 3 Product
 
-Primary navigation contains only:
+Core primary navigation contains:
 
 1. **Events** (`/events`) — a compact calendar of validated, important market-moving Events.
 2. **Chart** (`/chart`) — provider-provenanced crypto candles, deterministic S1–S3/R1–R3 and one
@@ -106,6 +107,9 @@ Primary navigation contains only:
 3. **AI Analyst** (`/analyst`) — structured interpretation grounded in computed market context,
    validated Events and evidence. It remains disabled until a schema-validated model integration is
    implemented.
+
+The feature-flagged Event Contract Simulator (`/event-contracts`) adds a research
+entry to this navigation. See [Event Contract Simulator V1](EVENT_CONTRACT_SIMULATOR_V1.md).
 
 The root route redirects to Events. English and Simplified Chinese remain supported. The product
 optimizes for usefulness, accuracy, speed and clarity rather than surface count. Missing data is

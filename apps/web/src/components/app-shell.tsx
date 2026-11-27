@@ -1,6 +1,12 @@
 "use client";
 
-import { Bot, CalendarDays, LineChart, Radar } from "lucide-react";
+import {
+  Bot,
+  CalendarDays,
+  FlaskConical,
+  LineChart,
+  Radar,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -15,14 +21,27 @@ const routes = [
   { href: "/analyst", key: "analyst", icon: Bot },
 ] as const;
 
+const simulatorRoute = {
+  href: "/event-contracts",
+  key: "eventSimulator",
+  icon: FlaskConical,
+} as const;
+
 interface AppShellProps {
   children: React.ReactNode;
   locale: Locale;
   messages: Messages;
+  simulatorEnabled: boolean;
 }
 
-export function AppShell({ children, locale, messages }: AppShellProps) {
+export function AppShell({
+  children,
+  locale,
+  messages,
+  simulatorEnabled,
+}: AppShellProps) {
   const pathname = usePathname();
+  const navRoutes = simulatorEnabled ? [...routes, simulatorRoute] : routes;
 
   return (
     <div className="min-h-screen">
@@ -36,19 +55,28 @@ export function AppShell({ children, locale, messages }: AppShellProps) {
             <span className="grid size-8 place-items-center rounded-md bg-emerald-400 text-zinc-950">
               <Radar className="size-4" aria-hidden="true" />
             </span>
-            <span className="hidden sm:inline">{messages.common.appName}</span>
+            <span
+              className={cn(
+                "hidden",
+                simulatorEnabled ? "lg:inline" : "sm:inline",
+              )}
+            >
+              {messages.common.appName}
+            </span>
           </Link>
 
           <nav
             aria-label={messages.nav.primaryLabel}
             className="flex min-w-0 items-center gap-1"
           >
-            {routes.map(({ href, key, icon: Icon }) => {
+            {navRoutes.map(({ href, key, icon: Icon }) => {
               const active = pathname === href;
               return (
                 <Link
                   key={href}
                   href={href}
+                  aria-label={messages.nav[key]}
+                  title={messages.nav[key]}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "core-nav-link",
@@ -56,7 +84,13 @@ export function AppShell({ children, locale, messages }: AppShellProps) {
                   )}
                 >
                   <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  <span>{messages.nav[key]}</span>
+                  <span
+                    className={
+                      simulatorEnabled ? "hidden sm:inline" : undefined
+                    }
+                  >
+                    {messages.nav[key]}
+                  </span>
                 </Link>
               );
             })}

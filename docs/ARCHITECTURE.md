@@ -26,7 +26,8 @@ without network boundaries.
 
 ## Core 3 product boundary
 
-The web product exposes only `/events`, `/chart` and `/analyst` in primary navigation. `/` redirects
+The web product exposes `/events`, `/chart` and `/analyst` in primary navigation. The opt-in
+paper simulator adds `/event-contracts` when enabled. `/` redirects
 to Events. Historical demo routes redirect to the closest Core 3 surface; `/radar/sources` remains
 directly reachable as an internal provenance/debug surface but is not primary navigation.
 
@@ -124,6 +125,11 @@ Event Signal V1 adds a worker-owned mean-reversion evaluator using confirmed,
 volume-bearing Bybit candles and separate Binance index close proxy observations.
 An opt-in flag selects its display. Frozen signal evidence and asynchronous
 settlement live in a new additive table. See [Event Signal V1](EVENT_SIGNAL_V1.md).
+
+The paper simulator is a second consumer of these frozen signals. The existing
+Celery worker settles a separate PostgreSQL ledger and applies session-scoped risk
+settings. Simulation reads are public and controls are operator-authorized. See
+[Event Contract Simulator V1](EVENT_CONTRACT_SIMULATOR_V1.md).
 
 ## Sources domain
 
