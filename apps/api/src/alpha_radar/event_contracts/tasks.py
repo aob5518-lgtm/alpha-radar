@@ -48,8 +48,9 @@ async def sync(provider: IndexProvider, *, now: datetime | None = None) -> dict[
                     await ingest_bars(repository, instrument, older)
                 # No network work occurs in an API handler. Each asset commits independently.
                 await observe(repository, instrument, now=at)
-                await publish(repository, instrument, 10, now=at)
-                await publish(repository, instrument, 30, now=at)
+                if not get_settings().event_signal_shadow_enabled:
+                    await publish(repository, instrument, 10, now=at)
+                    await publish(repository, instrument, 30, now=at)
                 refreshed = await repository.history(instrument, limit=1)
                 if not refreshed or at - refreshed[-1].close_time > timedelta(seconds=90):
                     raise ValueError("Stale Binance index response")
@@ -73,7 +74,7 @@ async def sync(provider: IndexProvider, *, now: datetime | None = None) -> dict[
 
 async def run_sync() -> dict[str, object]:
     settings = get_settings()
-    if not settings.event_contracts_enabled:
+    if not (settings.event_contracts_enabled or settings.event_signal_shadow_enabled):
         return {"status": "disabled"}
     redis = Redis.from_url(settings.redis_url, decode_responses=True)  # pyright: ignore[reportUnknownMemberType]
     token = str(uuid4())

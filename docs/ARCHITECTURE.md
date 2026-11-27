@@ -120,6 +120,11 @@ observed minute-open proxy outcomes. It does not call or modify the Chart engine
 or place orders. See `EVENT_CONTRACT_RESEARCH.md` for identity, freshness, timing,
 unvalidated settlement boundaries, migration and operational controls.
 
+Event Signal V1 adds a worker-owned mean-reversion evaluator using confirmed,
+volume-bearing Bybit candles and separate Binance index close proxy observations.
+An opt-in flag selects its display. Frozen signal evidence and asynchronous
+settlement live in a new additive table. See [Event Signal V1](EVENT_SIGNAL_V1.md).
+
 ## Sources domain
 
 `alpha_radar.sources` is the first real-intelligence ingestion boundary. Typed adapters normalize

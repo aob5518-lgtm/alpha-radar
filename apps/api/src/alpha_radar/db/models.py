@@ -2,6 +2,7 @@
 
 from alpha_radar.assets.models import Asset, AssetAlias, AssetProviderMapping
 from alpha_radar.event_contracts.models import EventContractDecision
+from alpha_radar.event_contracts.shadow_models import EventShadowSignal
 from alpha_radar.events.models import Event, EventAsset, EventSourceReference
 from alpha_radar.market_data.models import MarketCandle, MarketInstrument, MarketQuote
 from alpha_radar.sources.models import Source, SourceDocument, SourceDocumentVersion
@@ -14,6 +15,7 @@ __all__ = [
     "EventAsset",
     "EventSourceReference",
     "EventContractDecision",
+    "EventShadowSignal",
     "MarketCandle",
     "MarketInstrument",
     "MarketQuote",

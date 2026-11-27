@@ -1,4 +1,51 @@
 export type EventContractHorizon = 10 | 30;
+export type EventSignalState =
+  | "STRONG_HIGHER"
+  | "HIGHER"
+  | "WAIT"
+  | "LOWER"
+  | "STRONG_LOWER";
+
+export interface EventShadowObservation {
+  id: string;
+  direction: "higher" | "lower";
+  score: number;
+  generated_at: string;
+  expires_at: string;
+  reference_price: string;
+  settled_price: string | null;
+  result: "pending" | "win" | "loss" | "missing";
+}
+
+export interface EventSignalShadow {
+  version: "event-signal-v1";
+  settlement_version: "event-shadow-v1";
+  mode: "shadow";
+  validation_status: "unvalidated";
+  asset_id: string;
+  market_instrument_id: string;
+  reference_instrument_id: string | null;
+  symbol: string;
+  horizon_minutes: EventContractHorizon;
+  signal_source: "bybit";
+  reference_source: "binance_index_minute_close_proxy";
+  settlement_source: "binance_index_minute_close_proxy";
+  settlement_basis_verified: false;
+  probability: null;
+  expected_value: null;
+  generated_at: string | null;
+  valid_until: string | null;
+  assessment: {
+    state: EventSignalState;
+    reason: string;
+    direction: "higher" | "lower" | null;
+    score: number | null;
+    evidence: Record<string, boolean>;
+    as_of: string | null;
+  };
+  signal: EventShadowObservation | null;
+  observations: EventShadowObservation[];
+}
 export type EventContractDirection = "up" | "down" | "wait" | "unavailable";
 export type EventContractReason =
   | "trend_pullback_confirmed"

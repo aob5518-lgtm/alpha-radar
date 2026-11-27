@@ -20,6 +20,8 @@ from alpha_radar.event_contracts.service import (
     read_research,
     seed_indices,
 )
+from alpha_radar.event_contracts.shadow_repository import ShadowRepository
+from alpha_radar.event_contracts.shadow_schemas import ShadowAssessment
 from alpha_radar.event_contracts.strategy import Bar
 
 
@@ -77,6 +79,43 @@ async def verify() -> None:
                 assert response.observations[0].outcome == "up"
                 assert response.probability is None and not response.settlement_basis_verified
                 assert response.market_instrument_id == instrument.id
+            shadow_repository = ShadowRepository(session)
+            bybit = await shadow_repository.instrument(symbol="BTCUSDT")
+            assert bybit is not None
+            reference = await shadow_repository.reference_instrument(bybit)
+            assert reference is not None and reference.id != bybit.id
+            setup = ShadowAssessment(
+                state="STRONG_HIGHER",
+                direction="higher",
+                reason="signal_recorded",
+                score=86,
+                as_of=now,
+                episode_at=now - timedelta(minutes=6),
+            )
+            row = await shadow_repository.record(
+                instrument=bybit,
+                reference=reference,
+                horizon=10,
+                assessment=setup,
+                strike=Decimal(100),
+                now=now,
+            )
+            assert row is not None
+            duplicate = await shadow_repository.record(
+                instrument=bybit,
+                reference=reference,
+                horizon=10,
+                assessment=setup,
+                strike=Decimal(102),
+                now=now,
+            )
+            assert (
+                duplicate and duplicate.id == row.id and duplicate.reference_price == Decimal(100)
+            )
+            assert await shadow_repository.settle(reference.id, now) == 0
+            assert await shadow_repository.settle(reference.id, now + timedelta(minutes=10)) == 1
+            assert row.result == "win" and row.assessment == setup.model_dump(mode="json")
+            await session.commit()
             # Real HTTP serialization and validation with the default disabled flag.
             async with httpx.AsyncClient(base_url="http://api:8000", timeout=10) as client:
                 response = await client.get(
@@ -90,6 +129,14 @@ async def verify() -> None:
                         f"/api/v1/event-contracts/{instruments[0].asset_id}?horizon=15"
                     )
                 ).status_code == 422
+                shadow = await client.get(
+                    f"/api/v1/event-contracts/{bybit.asset_id}/shadow?horizon=30"
+                )
+                assert shadow.status_code == 200
+                payload = shadow.json()
+                assert payload["market_instrument_id"] == str(bybit.id)
+                assert payload["assessment"]["reason"] == "disabled"
+                assert payload["probability"] is None and payload["expected_value"] is None
         print(
             "Event-contract PostgreSQL integration passed: canonical indices, upsert, "
             "immutable/idempotent signal, proxy observation, HTTP and unavailable boundaries."

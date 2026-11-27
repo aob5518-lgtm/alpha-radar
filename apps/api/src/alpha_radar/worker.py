@@ -16,6 +16,7 @@ app.conf.update(  # pyright: ignore[reportUnknownMemberType]
     imports=(
         "alpha_radar.events.tasks",
         "alpha_radar.event_contracts.tasks",
+        "alpha_radar.event_contracts.shadow_tasks",
         "alpha_radar.market_data.tasks",
         "alpha_radar.sources.tasks",
     ),
@@ -68,11 +69,18 @@ app.conf.update(  # pyright: ignore[reportUnknownMemberType]
     },
 )
 
-if settings.event_contracts_enabled:
+if settings.event_contracts_enabled or settings.event_signal_shadow_enabled:
     app.conf.beat_schedule["event-contract-index-research"] = {  # pyright: ignore[reportUnknownMemberType]
         "task": "alpha_radar.event_contracts.sync",
         "schedule": crontab(minute="*"),
         "options": {"expires": 55},
+    }
+
+if settings.event_signal_shadow_enabled:
+    app.conf.beat_schedule["event-signal-shadow"] = {  # pyright: ignore[reportUnknownMemberType]
+        "task": "alpha_radar.event_contracts.shadow",
+        "schedule": 20.0,
+        "options": {"expires": 19},
     }
 
 if settings.source_ingestion_enabled:

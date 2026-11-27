@@ -83,6 +83,61 @@
   },
   "chart": {
     "eventContracts": {
+      "shadow": {
+        "title": "Event Signal",
+        "mode": "Shadow · research",
+        "evidenceScore": "Evidence score",
+        "reference": "Index reference",
+        "expiry": "Expiry",
+        "basis": "Signals use confirmed Bybit candles. Outcomes use Binance index minute closes as a research proxy. Exchange settlement is unverified.",
+        "observations": "Recent shadow observations",
+        "states": {
+          "STRONG_HIGHER": "Strong higher",
+          "HIGHER": "Higher",
+          "WAIT": "Wait",
+          "LOWER": "Lower",
+          "STRONG_LOWER": "Strong lower"
+        },
+        "results": {
+          "pending": "Observing",
+          "win": "Proxy match",
+          "loss": "Proxy miss",
+          "missing": "Missing index close"
+        },
+        "reasons": {
+          "identity_mismatch": "Market or timeframe identity is unavailable.",
+          "insufficient_history": "Waiting for enough confirmed history.",
+          "history_gap": "Confirmed history has a gap.",
+          "stale_data": "Waiting for fresh confirmed data.",
+          "reference_unavailable": "Waiting for the matching index close and current Bybit quote.",
+          "volume_unavailable": "Confirmed volume is incomplete.",
+          "macro_event": "A major macro release is within the exclusion window.",
+          "no_extreme": "No multi-feature price extreme has formed.",
+          "no_rejection": "The extreme lacks a confirmed price rejection.",
+          "trend_conflict": "The prevailing trend still supports continuation.",
+          "insufficient_score": "The reversal evidence is below the candidate threshold.",
+          "observation_only": "Early directional evidence. Wait for stronger confirmation.",
+          "episode_unanchored": "Waiting for a fresh setup after normalization.",
+          "episode_already_seen": "This setup already has a shadow observation.",
+          "signal_recorded": "Confirmed reversal candidate recorded for shadow observation.",
+          "warming_up": "Waiting for the first shadow assessment.",
+          "disabled": "Shadow research is disabled."
+        },
+        "evidence": {
+          "rsi_extreme": "RSI extreme",
+          "bollinger_extreme": "Bollinger deviation",
+          "vwap_extension": "Distance from VWAP",
+          "atr_impulse": "Extended price impulse",
+          "rsi_divergence": "RSI divergence",
+          "momentum_deceleration": "Momentum deceleration",
+          "volume_exhaustion": "Volume climax with weak follow-through",
+          "wick_rejection": "Rejection wick",
+          "band_reentry": "Close back inside the band",
+          "failed_breakout": "Failed breakout",
+          "near_structure": "Near prior range boundary",
+          "volume_climax": "Volume climax"
+        }
+      },
       "title": "Event Contracts",
       "unvalidated": "Research · unvalidated",
       "loading": "Loading",

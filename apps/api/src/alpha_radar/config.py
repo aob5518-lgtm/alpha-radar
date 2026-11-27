@@ -127,6 +127,7 @@ class Settings(BaseSettings):
     market_data_provider: Literal["mock", "coinbase", "bybit"] = "mock"
     market_data_ingestion_enabled: bool = False
     event_contracts_enabled: bool = False
+    event_signal_shadow_enabled: bool = False
     market_data_quote_freshness_seconds: int = Field(default=90, ge=1)
     market_data_future_tolerance_seconds: int = Field(default=30, ge=0)
     coinbase_exchange_api_url: str = "https://api.exchange.coinbase.com"
