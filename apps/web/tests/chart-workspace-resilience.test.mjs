@@ -167,6 +167,9 @@ async function harness(locale = "zh-CN", asynchronous = false) {
     "@/lib/utils": { cn: (...values) => values.filter(Boolean).join(" ") },
   };
   const exports = {};
+  modules["@/components/event-contract-panel"] = {
+    EventContractPanel: () => null,
+  };
   runInNewContext(compiled, {
     exports,
     require: (name) => {

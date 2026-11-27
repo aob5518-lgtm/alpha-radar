@@ -111,6 +111,15 @@ The Coinbase adapter remains an optional spot adapter, not a commercial data ent
 3 Chart selects canonical Bybit USDT-linear perpetual MarketInstrument IDs; provider payloads are
 normalized before reaching services or technical calculations.
 
+## Event-contract research
+
+`alpha_radar.event_contracts` is an opt-in research domain in the same monolith.
+Existing Celery, Redis and PostgreSQL collect reviewed public Binance index minutes;
+read-only APIs serve immutable fixed-horizon candidate evidence and separately
+observed minute-open proxy outcomes. It does not call or modify the Chart engines
+or place orders. See `EVENT_CONTRACT_RESEARCH.md` for identity, freshness, timing,
+unvalidated settlement boundaries, migration and operational controls.
+
 ## Sources domain
 
 `alpha_radar.sources` is the first real-intelligence ingestion boundary. Typed adapters normalize

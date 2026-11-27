@@ -63,6 +63,7 @@ class MarketDataRepository:
             select(MarketInstrument)
             .where(
                 MarketInstrument.asset_id == asset_id,
+                MarketInstrument.provider != "binance_index",
                 MarketInstrument.status == InstrumentStatus.ACTIVE,
             )
             .order_by(
@@ -85,6 +86,7 @@ class MarketDataRepository:
             )
             .where(
                 MarketInstrument.asset_id == asset_id,
+                MarketInstrument.provider != "binance_index",
                 MarketInstrument.status == InstrumentStatus.ACTIVE,
                 MarketCandle.interval == interval,
             )

@@ -82,6 +82,53 @@
     }
   },
   "chart": {
+    "eventContracts": {
+      "title": "Event Contracts",
+      "unvalidated": "Research · unvalidated",
+      "loading": "Loading",
+      "horizon": "Forecast horizon",
+      "tenMinutes": "10 minutes",
+      "thirtyMinutes": "30 minutes",
+      "reference": "Closed index reference",
+      "confirmed": "Data confirmed through",
+      "disclaimer": "Unvalidated direction research. No calibrated win probability, live payout or order instruction is available.",
+      "basis": "Paper observations compare Binance index minute opens, starting the next full minute after publication. Actual Event Contract opening/settlement equivalence is unverified; these are proxy observations, not real fills or wins.",
+      "independent": "The 10/30-minute horizon is independent of the Chart timeframe. The Bybit Chart and its indicators are unchanged.",
+      "observations": "Recent paper observations",
+      "empty": "No qualifying paper signals yet. Waiting is a valid result.",
+      "directions": {
+        "up": "Up bias",
+        "down": "Down bias",
+        "wait": "Wait",
+        "unavailable": "Unavailable"
+      },
+      "outcomes": {
+        "pending": "Observing",
+        "up": "Index ended higher",
+        "down": "Index ended lower",
+        "tie": "Unchanged index",
+        "missing": "Missing observation data"
+      },
+      "reasons": {
+        "trend_pullback_confirmed": "Trend-aligned pullback has closed confirmation; research candidate only.",
+        "insufficient_history": "Waiting for sufficient Binance index history.",
+        "history_gap": "Index history has a gap; direction withheld.",
+        "stale_data": "Index data is stale; direction withheld.",
+        "mixed_trend": "Trend evidence is mixed; wait.",
+        "choppy": "Repeated crossings or retests; wait.",
+        "no_retest": "Waiting for a fresh trend-aligned pullback.",
+        "no_confirmation": "Pullback lacks closed-candle confirmation.",
+        "overextended": "Sharp or extended move; avoid a late research signal.",
+        "opposing_barrier": "A nearby confirmed swing obstructs the direction.",
+        "macro_event": "An important scheduled Macro Event overlaps this horizon.",
+        "macro_date_uncertain": "An important Macro Event has no precise time today; wait.",
+        "episode_already_seen": "This interaction has already produced a paper signal.",
+        "disabled": "Event Contract research is disabled.",
+        "provider_unavailable": "Binance index research is temporarily unavailable.",
+        "signal_expired": "This signal has expired; wait for fresh confirmation.",
+        "observation_in_progress": "A prior signal is still being observed; no overlapping signal."
+      }
+    },
     "tradeGuide": {
       "decision": {
         "label": "Direction, location and confirmation",

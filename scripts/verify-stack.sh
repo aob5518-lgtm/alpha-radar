@@ -252,3 +252,5 @@ if detail["id"] != document["id"] or "metadata" in detail:
     raise SystemExit(f"unexpected source detail contract: {detail}")
 print("Source list/detail API and revision verification passed.")
 PY
+
+docker compose run --rm api python -m alpha_radar.event_contracts.integration_verify

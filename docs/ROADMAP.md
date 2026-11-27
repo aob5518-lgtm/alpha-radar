@@ -40,6 +40,13 @@ The Core 3 redesign PR delivers the final product shell, Events information arch
 professional persisted-data Chart, Structural Level Engine V1, Trend Regime V1 and Analyst context
 handoff. See `CORE_3_PRODUCT.md`.
 
+The user-authorized Event Contract Direction Research V1 extension adds a folded
+BTC/ETH 10/30-minute Chart control, separate Binance index ingestion, versioned
+candidate/observation persistence and historical audit. It remains unvalidated and
+does not expand primary navigation or introduce execution. Verified settlement
+labels, calibrated probability and profitability acceptance remain future evidence
+gates. See `EVENT_CONTRACT_RESEARCH.md`.
+
 ---
 
 # Sprint 0 — Engineering Foundation

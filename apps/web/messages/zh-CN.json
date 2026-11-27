@@ -82,6 +82,53 @@
     }
   },
   "chart": {
+    "eventContracts": {
+      "title": "事件合约",
+      "unvalidated": "研究 · 未验证",
+      "loading": "加载中",
+      "horizon": "预测期限",
+      "tenMinutes": "10分钟",
+      "thirtyMinutes": "30分钟",
+      "reference": "已收盘指数参考价",
+      "confirmed": "数据确认至",
+      "disclaimer": "未验证的方向研究，尚无校准胜率、实时支付比率或下单指令。",
+      "basis": "模拟观察从信号发布后的下一个完整分钟开始，比较币安指数分钟开盘价。与实际事件合约开仓／结算是否一致尚未证实；代理观察不代表真实成交或胜负。",
+      "independent": "10／30分钟预测期限独立于图表周期。Bybit 主图与现有指标保持不变。",
+      "observations": "近期模拟观察",
+      "empty": "暂无符合条件的模拟信号，等待也是有效结果。",
+      "directions": {
+        "up": "偏涨",
+        "down": "偏跌",
+        "wait": "等待",
+        "unavailable": "数据不可用"
+      },
+      "outcomes": {
+        "pending": "观察中",
+        "up": "到期指数较高",
+        "down": "到期指数较低",
+        "tie": "指数持平",
+        "missing": "观察数据缺失"
+      },
+      "reasons": {
+        "trend_pullback_confirmed": "顺势回踩已收盘确认，仅为研究候选。",
+        "insufficient_history": "等待足够的币安指数历史数据。",
+        "history_gap": "指数历史存在缺口，暂停方向判断。",
+        "stale_data": "指数数据已过期，暂停方向判断。",
+        "mixed_trend": "趋势证据不一致，等待。",
+        "choppy": "反复穿越或测试，等待更清楚的结构。",
+        "no_retest": "等待新的顺势回踩。",
+        "no_confirmation": "回踩尚未获得收盘确认。",
+        "overextended": "行情急变或已延伸，等待新位置。",
+        "opposing_barrier": "附近已确认摆动高低点阻挡方向。",
+        "macro_event": "预测期间存在重要宏观数据发布，等待。",
+        "macro_date_uncertain": "今日重要宏观事件缺少精确时间，等待。",
+        "episode_already_seen": "本次互动已产生模拟信号，不重复提示。",
+        "disabled": "事件合约研究尚未启用。",
+        "provider_unavailable": "币安指数研究暂时不可用。",
+        "signal_expired": "信号已过期，等待新的确认。",
+        "observation_in_progress": "上一个信号仍在观察中，暂不产生重叠信号。"
+      }
+    },
     "tradeGuide": {
       "decision": {
         "label": "定方向、找位置、等确认",
