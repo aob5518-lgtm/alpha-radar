@@ -25,7 +25,7 @@ export function EventContractPanel(props: Props) {
   const [expanded, setExpanded] = useState(false);
   return (
     <EventContractView
-      key={`${props.assetId}:${horizon}`}
+      key={props.assetId}
       {...props}
       horizon={horizon}
       onHorizonChange={setHorizon}
@@ -54,6 +54,8 @@ function EventContractView({
   const [loading, setLoading] = useState(true);
   const [clock, setClock] = useState<number | null>(null);
   useEffect(() => {
+    setData(null);
+    setLoading(true);
     let disposed = false;
     let active: AbortController | null = null;
     let pending = false;
