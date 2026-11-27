@@ -131,6 +131,12 @@ closed-candle confirmation separately, including distinct WATCH waiting reasons.
 It consumes existing outputs without changing trading rules; see
 `TRADE_GUIDE_DECISION_UX.md`.
 
+The authorized Event Contract Direction Research V1 Chart disclosure covers BTC/ETH
+at fixed 10/30-minute horizons using separate Binance index data, immutable candidate
+records and minute-open proxy observations. It is unvalidated; no calibrated probability,
+actual settlement equivalence, execution or profitability is claimed. Existing Chart
+engines remain unchanged. See `EVENT_CONTRACT_RESEARCH.md`.
+
 ## 4. Archived Product Surfaces
 
 The following sections describe historical prototypes and are **archived / not current product

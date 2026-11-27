@@ -10,6 +10,7 @@ import { Activity, DatabaseZap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { ChartAssetSelector } from "@/components/chart-asset-selector";
+import { EventContractPanel } from "@/components/event-contract-panel";
 import { MaChartLayer } from "@/components/ma-chart-layer";
 import { formatDateTime, formatMarketPrice } from "@/lib/i18n/format";
 import type { Messages } from "@/lib/i18n/messages";
@@ -339,6 +340,15 @@ export function ChartWorkspace(props: Props) {
             {value}
           </a>
         ))}
+        {["BTC", "ETH"].includes(instrument.symbol) && (
+          <EventContractPanel
+            key={instrument.asset_id}
+            assetId={instrument.asset_id}
+            symbol={instrument.symbol}
+            copy={messages.chart.eventContracts}
+            locale={locale}
+          />
+        )}
       </nav>
       <p className="mt-2 text-[10px] text-[var(--muted)]">
         {messages.chart.closedOnly}
