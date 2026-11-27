@@ -126,6 +126,11 @@ ordinal evidence quality and deterministic plan generation. It adds no underlyin
 technical engine or execution system; see `TRADE_GUIDE_V12.md` and its frozen-input
 coverage comparison. V1 fixtures remain immutable.
 
+The Guide presentation explains current-timeframe direction, valid location and
+closed-candle confirmation separately, including distinct WATCH waiting reasons.
+It consumes existing outputs without changing trading rules; see
+`TRADE_GUIDE_DECISION_UX.md`.
+
 ## 4. Archived Product Surfaces
 
 The following sections describe historical prototypes and are **archived / not current product

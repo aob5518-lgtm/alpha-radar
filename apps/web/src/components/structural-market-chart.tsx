@@ -686,6 +686,7 @@ export function StructuralMarketChart(props: Props) {
               props.marketState?.confirmed_at && (
               <TradeGuidePanel
                 guide={props.tradeGuide}
+                analysis={props.maAnalysis}
                 copy={props.chartMessages.tradeGuide}
                 locale={props.locale}
               />
@@ -834,6 +835,7 @@ export function StructuralMarketChart(props: Props) {
             </button>
             <TradeGuidePanel
               guide={guideDetail.guide}
+              analysis={props.maAnalysis}
               copy={props.chartMessages.tradeGuide}
               locale={props.locale}
             />

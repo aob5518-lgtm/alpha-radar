@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { runInNewContext } from "node:vm";
 import * as guideModule from "../../apps/web/src/lib/market/trade-guide.ts";
+import * as decisionModule from "../../apps/web/src/lib/market/trade-guide-decision.ts";
 const testUrl = new URL(
   "../../apps/web/tests/chart-marker-identity.test.mjs",
   import.meta.url,
@@ -36,7 +37,11 @@ runInNewContext(
   {
     exports: panelExports,
     require: (name) =>
-      name === "@/lib/market/trade-guide" ? guideModule : require(name),
+      name === "@/lib/market/trade-guide"
+        ? guideModule
+        : name === "@/lib/market/trade-guide-decision"
+          ? decisionModule
+          : require(name),
   },
 );
 const source = readFileSync(testUrl, "utf8"),

@@ -83,6 +83,36 @@
   },
   "chart": {
     "tradeGuide": {
+      "decision": {
+        "label": "定方向、找位置、等确认",
+        "direction": "定方向",
+        "location": "找位置",
+        "confirmation": "等确认",
+        "directions": {
+          "long": "方向偏多 · 不等于入场确认",
+          "short": "方向偏空 · 不等于入场确认",
+          "none": "尚未形成一致的计划方向"
+        },
+        "noLocation": "暂无当前有效入场区",
+        "missedLocation": "已错过入场窗口，等待新计划",
+        "evidencePending": "收盘价格行为已确认，支持证据质量仍不足",
+        "confirmations": {
+          "confirmed": "收盘确认及安全过滤已通过",
+          "price_pending": "等待收盘收回／受压确认",
+          "price_observed": "价格已确认，其他条件尚未齐备",
+          "unknown": "尚未核对收盘确认依据",
+          "blocked": "计划条件未通过，原因见下方",
+          "missed": "暂无新的确认机会，不追价"
+        },
+        "actions": {
+          "wait_price_long": "等待收盘收回关注区上沿，确认回踩有效",
+          "wait_price_short": "等待收盘回到关注区下沿，确认反弹受压",
+          "wait_evidence": "价格已确认，继续等待更强的支持证据",
+          "wait_rr": "价格已确认，但盈亏比仍未达到可开仓条件",
+          "wait_confirmation": "等待当前合约及周期一致的收盘确认依据"
+        },
+        "closedOnly": "仅依据当前周期已收盘 K 线；触及关注区不代表完成确认。"
+      },
       "close": "关闭交易指引详情",
       "technicalDetails": "技术输入详情 · 非第二条操作建议",
       "maDetails": "均线证据／高级信息",

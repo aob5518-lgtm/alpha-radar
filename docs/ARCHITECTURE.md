@@ -67,6 +67,11 @@ confirmation, observed targets, structural invalidation, R:R and bounded no-chas
 evidence. The existing four overlays remain presentation-only. See `TRADE_GUIDE.md`
 for precedence, prior-evidence/reload boundaries and non-execution semantics.
 
+The same Guide surface explains direction, location and confirmation using a pure
+presentation mapping of accepted Guide/MA outputs. Exact UUID/timeframe, closed
+timestamps and MA settings scope supplemental evidence. It adds no calculation or
+state pipeline; see `TRADE_GUIDE_DECISION_UX.md`.
+
 Interactive technical calculation is delegated to a browser module Web Worker,
 not the Python ingestion worker or a new service. It uses generation-scoped result
 application, a bounded replay cache and output-equivalent prefix intermediates.
