@@ -83,6 +83,36 @@
   },
   "chart": {
     "tradeGuide": {
+      "decision": {
+        "label": "Direction, location and confirmation",
+        "direction": "Direction",
+        "location": "Location",
+        "confirmation": "Confirmation",
+        "directions": {
+          "long": "Long bias · not entry confirmation",
+          "short": "Short bias · not entry confirmation",
+          "none": "No consistent setup direction"
+        },
+        "noLocation": "No valid current entry area",
+        "missedLocation": "Entry window missed · wait for a new setup",
+        "evidencePending": "Closed price action confirmed; evidence quality is still insufficient",
+        "confirmations": {
+          "confirmed": "Closed confirmation and safety filters passed",
+          "price_pending": "Wait for closed-candle reclaim / rejection",
+          "price_observed": "Price confirmed · other conditions still pending",
+          "unknown": "Closed confirmation not verified",
+          "blocked": "Setup conditions failed · see reasons below",
+          "missed": "No fresh confirmation · do not chase"
+        },
+        "actions": {
+          "wait_price_long": "Wait for a closed-candle reclaim of the area",
+          "wait_price_short": "Wait for a closed-candle rejection of the area",
+          "wait_evidence": "Price confirmed; wait for stronger supporting evidence",
+          "wait_rr": "Price confirmed; reward/risk remains below the ready threshold",
+          "wait_confirmation": "Wait for matching closed-candle confirmation evidence"
+        },
+        "closedOnly": "Current timeframe, closed candles only. Touching an area is not confirmation."
+      },
       "close": "Close Trade Guide details",
       "technicalDetails": "Technical inputs · not a second recommendation",
       "maDetails": "MA evidence / advanced",

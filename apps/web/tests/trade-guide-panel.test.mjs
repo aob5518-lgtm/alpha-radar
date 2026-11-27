@@ -6,6 +6,7 @@ import * as jsx from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import * as guide from "../src/lib/market/trade-guide.ts";
+import * as decision from "../src/lib/market/trade-guide-decision.ts";
 import { maFixture } from "./helpers/ma-fixtures.mjs";
 import { calculateMaEntry } from "../src/lib/market/ma-confluence-entry.ts";
 import { btcId } from "./helpers/chart-fixtures.mjs";
@@ -26,7 +27,11 @@ const exports = {};
 runInNewContext(compiled, {
   exports,
   require: (name) =>
-    ({ "react/jsx-runtime": jsx, "@/lib/market/trade-guide": guide })[name],
+    ({
+      "react/jsx-runtime": jsx,
+      "@/lib/market/trade-guide": guide,
+      "@/lib/market/trade-guide-decision": decision,
+    })[name],
 });
 for (const locale of ["en", "zh-CN"])
   test(`${locale} primary UI has exactly one state; WATCH/WAIT/MISSED do not expose a confirmed executable plan`, () => {
@@ -77,3 +82,87 @@ for (const locale of ["en", "zh-CN"])
     assert.equal(Object.keys(copy.states).length, 6);
     for (const reason of result.reason_codes) assert.ok(copy.reasons[reason]);
   });
+
+for (const locale of ["en", "zh-CN"])
+  for (const direction of ["long", "short"])
+    test(`${locale} ${direction}: three decision steps distinguish price, evidence and R:R waits`, () => {
+      const copy = JSON.parse(
+          readFileSync(
+            new URL(`../messages/${locale}.json`, import.meta.url),
+            "utf8",
+          ),
+        ).chart.tradeGuide,
+        snapshot = maFixture(direction),
+        analysis = calculateMaEntry(snapshot, btcId, "15m");
+      const render = (ma) => {
+        const value = guide.calculateTradeGuide(
+          snapshot,
+          ma,
+          undefined,
+          btcId,
+          "15m",
+        );
+        return renderToStaticMarkup(
+          exports.TradeGuidePanel({ guide: value, analysis: ma, copy, locale }),
+        );
+      };
+      const ready = render(analysis);
+      assert.ok(ready.includes(copy.decision.label));
+      const directionStep = ready.indexOf(`1 · ${copy.decision.direction}`),
+        locationStep = ready.indexOf(`2 · ${copy.decision.location}`),
+        confirmationStep = ready.indexOf(`3 · ${copy.decision.confirmation}`);
+      assert.ok(directionStep >= 0);
+      assert.ok(locationStep > directionStep);
+      assert.ok(confirmationStep > locationStep);
+      assert.ok(ready.includes(copy.decision.directions[direction]));
+      assert.match(ready, /15m/);
+      assert.match(ready, /data-guide-confirmation="confirmed"/);
+      assert.equal((ready.match(/data-trade-guide-state=/g) ?? []).length, 1);
+
+      const pending = render({ ...analysis, price_confirmed: false });
+      assert.ok(pending.includes(copy.potentialEntry));
+      assert.ok(
+        pending.includes(copy.decision.actions[`wait_price_${direction}`]),
+      );
+      assert.match(pending, /data-guide-confirmation="price_pending"/);
+
+      const evidence = render({
+        ...analysis,
+        confidence_score: 69,
+        quality_tier: "C",
+      });
+      assert.ok(evidence.includes(copy.decision.actions.wait_evidence));
+      assert.ok(evidence.includes(copy.decision.evidencePending));
+      assert.ok(!evidence.includes(copy.reasons.confirmation_pending));
+      assert.match(evidence, /data-guide-confirmation="price_observed"/);
+      assert.ok(
+        !evidence.includes(
+          copy.actions[
+            direction === "long" ? "wait_pullback" : "wait_rejection"
+          ],
+        ),
+      );
+
+      const risk = Math.abs(
+          analysis.trigger_price - analysis.invalidation_price,
+        ),
+        rr = render({
+          ...analysis,
+          observed_targets: [
+            {
+              price:
+                analysis.trigger_price +
+                (direction === "long" ? 1 : -1) * risk * 1.3,
+              source: direction === "long" ? "R1" : "S1",
+            },
+          ],
+        });
+      assert.ok(rr.includes(copy.decision.actions.wait_rr));
+      for (const output of [pending, evidence, rr]) {
+        assert.doesNotMatch(output, /TP1|TP2/);
+        assert.ok(!output.includes(copy.stop));
+        assert.ok(!output.includes(copy.reference));
+        assert.ok(output.includes(copy.decision.closedOnly));
+        assert.ok(!output.includes("undefined"));
+      }
+    });

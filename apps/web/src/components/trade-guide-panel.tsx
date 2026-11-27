@@ -1,17 +1,22 @@
 import type { Messages } from "@/lib/i18n/messages";
+import type { MaEntryAnalysis } from "@/lib/market/ma-confluence-entry";
 import { guideReady, type TradeGuideV1 } from "@/lib/market/trade-guide";
+import { describeGuideDecision } from "@/lib/market/trade-guide-decision";
 
 export function TradeGuidePanel({
   guide,
+  analysis,
   copy,
   locale,
 }: {
   guide: TradeGuideV1;
+  analysis?: MaEntryAnalysis;
   copy: Messages["chart"]["tradeGuide"];
   locale: "en" | "zh-CN";
 }) {
   const ready = guideReady(guide),
-    watch = guide.state === "WATCH_LONG" || guide.state === "WATCH_SHORT";
+    watch = guide.state === "WATCH_LONG" || guide.state === "WATCH_SHORT",
+    decision = describeGuideDecision(guide, analysis);
   const number = (value: number | null) =>
     value?.toLocaleString(locale, { maximumFractionDigits: 6 }) ?? "—";
   const source = (value: TradeGuideV1["tp1_source"]) =>
@@ -36,14 +41,47 @@ export function TradeGuidePanel({
           guide.quality_grade !== "none" &&
           ` · ${guide.quality_grade}`}
       </strong>
-      {(ready || watch) && guide.entry_zone_low !== null && (
-        <p className="text-sm">
-          {ready ? copy.entry : copy.potentialEntry}:{" "}
-          <span className="font-mono">
-            {number(guide.entry_zone_low)} – {number(guide.entry_zone_high)}
-          </span>
-        </p>
-      )}
+      <ol
+        aria-label={copy.decision.label}
+        className="grid gap-2 text-xs sm:grid-cols-3"
+      >
+        <li className="min-w-0 rounded border border-white/10 p-2">
+          <p className="text-[var(--muted)]">
+            1 · {copy.decision.direction} · {guide.timeframe}
+          </p>
+          <p className="mt-1" data-guide-direction={decision.direction}>
+            {copy.decision.directions[decision.direction]}
+          </p>
+        </li>
+        <li className="min-w-0 rounded border border-white/10 p-2">
+          <p className="text-[var(--muted)]">2 · {copy.decision.location}</p>
+          {decision.zone ? (
+            <p className="mt-1">
+              {ready ? copy.entry : copy.potentialEntry}:{" "}
+              <span className="font-mono">
+                {number(decision.zone.low)} – {number(decision.zone.high)}
+              </span>
+            </p>
+          ) : (
+            <p className="mt-1">
+              {guide.state === "MISSED"
+                ? copy.decision.missedLocation
+                : copy.decision.noLocation}
+            </p>
+          )}
+        </li>
+        <li className="min-w-0 rounded border border-white/10 p-2">
+          <p className="text-[var(--muted)]">
+            3 · {copy.decision.confirmation}
+          </p>
+          <p className="mt-1" data-guide-confirmation={decision.confirmation}>
+            {copy.decision.confirmations[decision.confirmation]}
+          </p>
+        </li>
+      </ol>
+      <p className="text-[10px] text-[var(--muted)]">
+        {copy.decision.closedOnly}
+      </p>
       {ready && (
         <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
           <div>
@@ -77,11 +115,6 @@ export function TradeGuidePanel({
           </div>
         </dl>
       )}
-      {watch && (
-        <p className="text-xs text-[var(--muted)]">
-          {copy.waitCondition}: {copy.actions[guide.next_action]}
-        </p>
-      )}
       {(ready || watch) && guide.evidence?.length > 0 && (
         <p
           className="flex flex-wrap gap-x-3 gap-y-1 text-xs"
@@ -105,10 +138,20 @@ export function TradeGuidePanel({
         </p>
       )}
       <p className="text-sm font-semibold">
-        {copy.nextAction}: {copy.actions[guide.next_action]}
+        {copy.nextAction}:{" "}
+        {decision.waitingAction
+          ? copy.decision.actions[decision.waitingAction]
+          : copy.actions[guide.next_action]}
       </p>
       <p className="text-xs text-[var(--muted)]">
-        {guide.reason_codes.map((reason) => copy.reasons[reason]).join(" · ")}
+        {guide.reason_codes
+          .map((reason) =>
+            reason === "confirmation_pending" &&
+            decision.confirmation === "price_observed"
+              ? copy.decision.evidencePending
+              : copy.reasons[reason],
+          )
+          .join(" · ")}
       </p>
       <p className="text-[10px] text-[var(--muted)]">{copy.disclaimer}</p>
     </section>
