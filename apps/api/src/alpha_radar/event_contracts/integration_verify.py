@@ -26,7 +26,7 @@ from alpha_radar.event_contracts.strategy import Bar
 async def verify() -> None:
     if get_settings().app_env == "production":
         raise RuntimeError("Synthetic integration verification must never run in production")
-    now = datetime.now(UTC).replace(second=0, microsecond=0)
+    now = datetime(2026, 11, 1, 20, 0, tzinfo=UTC)
     start = now - timedelta(minutes=1200)
     bars: list[Bar] = []
     for index in range(1230):

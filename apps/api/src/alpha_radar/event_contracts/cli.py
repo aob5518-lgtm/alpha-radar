@@ -101,31 +101,36 @@ async def run(args: argparse.Namespace) -> None:
                     windows.append((at, at + timedelta(days=1)))
             results: list[dict[str, object]] = []
             for instrument in selected:
-                values = list(
-                    (
-                        await session.scalars(
-                            select(MarketCandle)
-                            .where(
-                                MarketCandle.market_instrument_id == instrument.id,
-                                MarketCandle.interval == MarketInterval.ONE_MINUTE,
-                                MarketCandle.open_time >= start,
-                                MarketCandle.is_closed.is_(True),
-                            )
-                            .order_by(MarketCandle.open_time)
-                        )
-                    ).all()
-                )
-                bars = [
-                    Bar(
-                        open_time=utc(bar.open_time),
-                        close_time=utc(bar.close_time),
-                        open=bar.open,
-                        high=bar.high,
-                        low=bar.low,
-                        close=bar.close,
+                bars: list[Bar] = []
+                values = await session.stream(
+                    select(
+                        MarketCandle.open_time,
+                        MarketCandle.close_time,
+                        MarketCandle.open,
+                        MarketCandle.high,
+                        MarketCandle.low,
+                        MarketCandle.close,
                     )
-                    for bar in values
-                ]
+                    .where(
+                        MarketCandle.market_instrument_id == instrument.id,
+                        MarketCandle.interval == MarketInterval.ONE_MINUTE,
+                        MarketCandle.open_time >= start,
+                        MarketCandle.is_closed.is_(True),
+                    )
+                    .order_by(MarketCandle.open_time)
+                    .execution_options(yield_per=5000)
+                )
+                async for opened, closed, opening, high, low, closing in values.tuples():
+                    bars.append(
+                        Bar(
+                            open_time=utc(opened),
+                            close_time=utc(closed),
+                            open=opening,
+                            high=high,
+                            low=low,
+                            close=closing,
+                        )
+                    )
                 for horizon in (10, 30):
                     print(
                         f"Auditing {instrument.provider_instrument_id} {horizon}m: "

@@ -150,9 +150,12 @@ def replay(
             "hypothetical_net_units": str(balance) if payout is not None else None,
             "hypothetical_max_drawdown_units": str(drawdown) if payout is not None else None,
         }
-    fingerprint = hashlib.sha256(
-        json.dumps([bar.model_dump(mode="json") for bar in bars], separators=(",", ":")).encode()
-    ).hexdigest()
+    # Bound peak memory for six-month minute histories; hash one canonical JSON line at a time.
+    digest = hashlib.sha256()
+    for bar in bars:
+        digest.update(json.dumps(bar.model_dump(mode="json"), separators=(",", ":")).encode())
+        digest.update(b"\n")
+    fingerprint = digest.hexdigest()
     return {
         "version": VERSION,
         "horizon_minutes": horizon,
