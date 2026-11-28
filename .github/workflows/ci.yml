@@ -73,6 +73,17 @@ jobs:
           docker compose up --no-build --detach --wait --no-deps api web
           docker compose exec -T api python -m alpha_radar.event_simulator.integration_verify
           python scripts/verify-event-simulator.py
+      - name: Verify Semi-Auto privacy, defaults, and PostgreSQL lifecycle
+        env:
+          EVENT_SIGNAL_SHADOW_ENABLED: "true"
+          EVENT_SIMULATOR_ENABLED: "true"
+          EVENT_SIMULATOR_ADMIN_TOKEN: "disposable-compose-test-operator-token"
+          EVENT_SEMI_AUTO_AVAILABLE: "true"
+          EVENT_SEMI_AUTO_OPERATOR_TOKEN: "disposable-compose-semi-auto-test-token"
+        run: |
+          docker compose up --no-build --detach --wait --no-deps api web
+          python scripts/verify-event-semi-auto.py
+          docker compose exec -T api python -m alpha_radar.event_semi_auto.integration_verify
       - name: Show Compose logs on failure
         if: failure()
         run: docker compose logs
