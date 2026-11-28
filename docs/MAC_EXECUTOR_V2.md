@@ -9,7 +9,10 @@ observation endpoint. A cloud intent cannot invoke the GUI driver. ASSISTED and 
 1. Install the app using `tools/mac-companion/package-app.sh` and keep the previous app for rollback.
    Open V2 with the exact path of the installed app.
 2. In macOS Privacy & Security, grant the installed app Accessibility and Screen & System Audio
-   Recording. Follow the macOS relaunch prompt if shown. Check both statuses in the companion.
+   Recording. On newer macOS versions, the Accessibility control may appear as **Device Control
+   and Data Access**. If an ad hoc build was replaced and the companion still reports a missing
+   permission, remove its old entry and add the current app in that pane. Follow the macOS
+   relaunch prompt if shown and check both statuses in the companion.
 3. Serve `tools/mac-companion/device-test/` on a trusted local network and open it in iPhone
    Safari. Keep the phone in portrait. For example, with both devices on the same Wi-Fi:
 
@@ -28,12 +31,17 @@ observation endpoint. A cloud intent cannot invoke the GUI driver. ASSISTED and 
 5. Repeat with the mirror unavailable or another non-financial screen visible. The driver must
    stop. Verify the local Emergency Stop with the network disconnected.
 
-The driver matches the Apple mirror process and checks the exact window, PID, bounds, foreground
-app and unobstructed click position. Two separately captured frames must agree on the fixture
-and button location before the PID-targeted Core Graphics click. The post-action capture must
-read the independent result marker. Capture-to-use freshness is bounded to one second. Unknown
-state, changed target, missing permission or absent acknowledgement stops the attempt. There is
-no automatic retry. Screenshots and OCR text remain in memory. Logs contain status and timing.
+The driver matches the Apple mirror process and checks the exact window, PID, bounds and foreground
+app. Two separately captured frames must agree on the fixture and button location. AppKit must
+identify the exact mirror window as the mouse-down recipient before the Core Graphics session
+click. The post-action capture must read the independent result marker. Capture-to-use freshness
+is bounded to one second. Unknown state, changed target, missing permission or absent
+acknowledgement stops the attempt. There is no automatic retry. Screenshots and OCR text remain
+in memory. Logs contain status and timing.
+
+The packaged app passed the iPhone Safari fixture on November 29, 2026. One click produced the
+independently observed `IPHONE INPUT RECEIVED` marker after 295 ms. The app refused input on the
+iPhone Home Screen (`unexpectedScreen`) and after mirroring was closed (`unavailable`).
 
 ## Production OBSERVE pairing
 

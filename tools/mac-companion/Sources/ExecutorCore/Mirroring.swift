@@ -49,7 +49,7 @@ public struct Mirroring {
 public enum MirrorTestError: String, Error {
   case unavailable, ambiguousWindow, notForeground, missingCapturePermission
   case missingInputPermission, captureFailed, unexpectedScreen, staleFrame
-  case targetChanged, inputUnavailable, readbackUnconfirmed
+  case targetChanged, targetObscured, targetGeometryMismatch, inputUnavailable, readbackUnconfirmed
 }
 
 public struct MirrorTestResult: Sendable {
@@ -116,7 +116,7 @@ public struct NativeMirroring {
     )
     try validateClick(point, in: fresh)
     let inputTime = clock.now
-    try click(point, pid: fresh.pid)
+    try click(point)
 
     // Observe only. A delayed or missing acknowledgement never triggers another click.
     while inputTime.duration(to: clock.now) < .seconds(3) {
@@ -224,22 +224,27 @@ public struct NativeMirroring {
   }
 
   private static func validateClick(_ point: CGPoint, in frame: Frame) throws {
-    guard foreground(frame.pid),
+    guard foreground(frame.pid) else { throw MirrorTestError.notForeground }
+    // Core Graphics counts click-through overlays in z-order. Ask AppKit which window
+    // would receive mouse-down, using the primary screen to convert Quartz coordinates.
+    guard let primary = NSScreen.screens.first else { throw MirrorTestError.inputUnavailable }
+    let appKitPoint = NSPoint(x: point.x, y: primary.frame.maxY - point.y)
+    guard NSWindow.windowNumber(at: appKitPoint, belowWindowWithWindowNumber: 0) == Int(frame.id)
+    else { throw MirrorTestError.targetObscured }
+
+    guard
       let windows = CGWindowListCopyWindowInfo(
         [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
         as? [[String: Any]],
-      let front = windows.first(where: { window in
-        guard (window[kCGWindowAlpha as String] as? Double ?? 0) > 0,
-          let raw = window[kCGWindowBounds as String] as? [String: Any],
-          let bounds = CGRect(dictionaryRepresentation: raw as CFDictionary)
-        else { return false }
-        return bounds.contains(point)
-      }),
-      front[kCGWindowNumber as String] as? CGWindowID == frame.id,
-      front[kCGWindowOwnerPID as String] as? pid_t == frame.pid,
-      let raw = front[kCGWindowBounds as String] as? [String: Any],
-      let bounds = CGRect(dictionaryRepresentation: raw as CFDictionary), bounds == frame.frame
+      let target = windows.first(where: { $0[kCGWindowNumber as String] as? CGWindowID == frame.id }
+      ),
+      target[kCGWindowOwnerPID as String] as? pid_t == frame.pid,
+      (target[kCGWindowAlpha as String] as? Double ?? 0) > 0
     else { throw MirrorTestError.targetChanged }
+    guard let raw = target[kCGWindowBounds as String] as? [String: Any],
+      let bounds = CGRect(dictionaryRepresentation: raw as CFDictionary),
+      bounds == frame.frame, bounds.contains(point)
+    else { throw MirrorTestError.targetGeometryMismatch }
   }
 
   private static func foreground(_ pid: pid_t) -> Bool {
@@ -247,7 +252,7 @@ public struct NativeMirroring {
     return front?.processIdentifier == pid && front?.bundleIdentifier == Mirroring.bundleID
   }
 
-  private static func click(_ point: CGPoint, pid: pid_t) throws {
+  private static func click(_ point: CGPoint) throws {
     guard
       let down = CGEvent(
         mouseEventSource: nil, mouseType: .leftMouseDown,
@@ -256,8 +261,11 @@ public struct NativeMirroring {
         mouseEventSource: nil, mouseType: .leftMouseUp,
         mouseCursorPosition: point, mouseButton: .left)
     else { throw MirrorTestError.inputUnavailable }
-    down.postToPid(pid)
-    up.postToPid(pid)
+    // Let WindowServer route the test click to the verified hit window.
+    down.setIntegerValueField(.mouseEventClickState, value: 1)
+    up.setIntegerValueField(.mouseEventClickState, value: 1)
+    down.post(tap: .cgSessionEventTap)
+    up.post(tap: .cgSessionEventTap)
   }
 
   private static func milliseconds(_ value: Duration) -> Int {
