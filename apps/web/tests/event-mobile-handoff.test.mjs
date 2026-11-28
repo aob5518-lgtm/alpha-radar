@@ -53,6 +53,25 @@ test("return keeps the exact persisted intent after expiry", () => {
   );
 });
 
+test("an execution claim cannot relaunch and the frozen deadline takes priority", () => {
+  assert.equal(
+    actionable(
+      { ...intent, execution_started_at: new Date(now).toISOString() },
+      true,
+      now,
+    ),
+    false,
+  );
+  assert.equal(
+    actionable(
+      { ...intent, execution_deadline: new Date(now).toISOString() },
+      true,
+      now,
+    ),
+    false,
+  );
+});
+
 test("clipboard allowlist and official destination exclude credentials", () => {
   const token = "private-test-token";
   assert.equal(

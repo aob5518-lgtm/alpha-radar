@@ -25,6 +25,11 @@ with urlopen(request, timeout=20) as response:
     state = json.load(response)
     assert "no-store" in response.headers["Cache-Control"]
 assert state["enabled"] is False and state["acknowledged"] is False
+assert state["live_execution_enabled"] is False
+health = {adapter["adapter"]: adapter for adapter in state["execution_adapters"]}
+assert set(health) == {"MANUAL", "MOBILE_HANDOFF", "RESEARCH_DISABLED"}
+assert health["MANUAL"]["healthy"] and health["MOBILE_HANDOFF"]["healthy"]
+assert not health["RESEARCH_DISABLED"]["available"]
 assert not state["intents"] and not state["active"] and not state["history"]
 assert state["real"]["bets"] == 0
 settings = state["settings"]

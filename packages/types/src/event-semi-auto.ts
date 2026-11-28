@@ -35,6 +35,20 @@ export type IntentStatus =
   | "CANCELLED_BY_RISK"
   | "SETTLED";
 
+export type ExecutionAdapter = "MANUAL" | "MOBILE_HANDOFF" | "RESEARCH_DISABLED";
+export type ExecutionStatus =
+  | "CREATED"
+  | "RISK_APPROVED"
+  | "READY_FOR_EXECUTION"
+  | "HANDOFF_STARTED"
+  | "EXECUTING"
+  | "EXECUTED"
+  | "FAILED"
+  | "EXPIRED"
+  | "CANCELLED"
+  | "RECONCILIATION_REQUIRED"
+  | "SETTLED";
+
 export type SemiIntent = Identity & {
   signal_state: "STRONG_HIGHER" | "STRONG_LOWER" | "HIGHER" | "LOWER";
   generated_at: string;
@@ -51,6 +65,10 @@ export type SemiIntent = Identity & {
   returned_at: string | null;
   drift_atr: string | null;
   drift_warning: boolean;
+  execution_adapter: ExecutionAdapter | null;
+  execution_status: ExecutionStatus | null;
+  execution_deadline: string | null;
+  execution_started_at: string | null;
 };
 
 export type RealBet = Identity & {
@@ -97,6 +115,12 @@ export interface SemiState {
   enabled: boolean;
   acknowledged: boolean;
   killed: boolean;
+  live_execution_enabled: boolean;
+  execution_adapters: {
+    adapter: ExecutionAdapter;
+    available: boolean;
+    healthy: boolean;
+  }[];
   revision: string | null;
   settings: SemiRiskSettings;
   cooldown_until: string | null;

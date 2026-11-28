@@ -15,7 +15,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { executionTime } from "@/lib/event-semi-auto";
+import { executionTime, validPayout } from "@/lib/event-semi-auto";
 import {
   actionable,
   binanceAppEntry,
@@ -49,6 +49,8 @@ function statusLabel(status: string, t: T): string {
     EXECUTED_MANUALLY: t("已记录手动执行", "Manual execution recorded"),
     CANCELLED_BY_RISK: t("风控拦截", "Blocked by risk"),
     SETTLED: t("已结算", "Settled"),
+    RECONCILIATION_REQUIRED: t("待核对订单", "Reconciliation required"),
+    FAILED: t("执行失败", "Execution failed"),
     OPEN: t("等待结算确认", "Awaiting settlement confirmation"),
     WIN: t("赢", "Win"),
     LOSS: t("亏", "Loss"),
@@ -64,6 +66,7 @@ function statusLabel(status: string, t: T): string {
 
 function reasonLabel(reason: string, t: T): string {
   switch (reason) {
+    case "BLOCKED_PAYOUT":
     case "payout_low":
       return t(
         "赔率低于策略最低要求，建议不要下注。",
@@ -106,6 +109,27 @@ function reasonLabel(reason: string, t: T): string {
       );
     case "disabled":
       return t("半自动已关闭", "Semi-Auto is disabled");
+    case "live_execution_disabled":
+      return t(
+        "服务器已暂停发起新订单。",
+        "The server has paused new execution starts.",
+      );
+    case "execution_outcome_unknown":
+    case "reconciliation_pending":
+      return t(
+        "请先核对交易所订单记录，避免重复下注。",
+        "Check your exchange order history before placing another order.",
+      );
+    case "execution_evidence_required":
+      return t(
+        "请核实订单是否存在。若已成交，请填写订单编号。",
+        "Verify whether the order exists. Enter its reference if it was placed.",
+      );
+    case "adapter_unavailable":
+      return t(
+        "当前执行方式不可用。",
+        "The selected execution adapter is unavailable.",
+      );
     case "operator_required":
       return t("请检查操作者令牌。", "Check your operator token.");
     case "stale_settings":
@@ -191,7 +215,11 @@ function IntentReview({
   intent: SemiIntent;
   disabled: boolean;
   send: Send;
-  start: (intent: SemiIntent, driftAcknowledged: boolean) => Promise<void>;
+  start: (
+    intent: SemiIntent,
+    driftAcknowledged: boolean,
+    payout: string,
+  ) => Promise<void>;
   t: T;
   fmt: Format;
   close: () => void;
@@ -205,8 +233,14 @@ function IntentReview({
   const [horizon, setHorizon] = useState(intent.horizon_minutes);
   const [mismatchAcknowledged, setMismatchAcknowledged] = useState(false);
   const url = "/intents/" + intent.id;
-  const recovery = Boolean(intent.handoff_started_at);
-  const expired = Date.parse(intent.expires_at) <= now;
+  const recovery = Boolean(
+    intent.handoff_started_at || intent.execution_started_at,
+  );
+  const uncertain = intent.execution_status === "RECONCILIATION_REQUIRED";
+  const manual = intent.execution_adapter === "MANUAL";
+  const expired =
+    Date.parse(intent.execution_deadline ?? intent.expires_at) <= now;
+  const [verifiedNoOrder, setVerifiedNoOrder] = useState(false);
   const mismatch =
     direction !== intent.direction || horizon !== intent.horizon_minutes;
 
@@ -267,6 +301,9 @@ function IntentReview({
       </p>
       {recovery ? (
         <>
+          {uncertain && (
+            <p role="status">{reasonLabel("execution_outcome_unknown", t)}</p>
+          )}
           <p>
             {t(
               "你是否已经在 Binance 完成下注？",
@@ -285,18 +322,39 @@ function IntentReview({
             <button
               type="button"
               className={button}
-              disabled={disabled}
+              disabled={
+                disabled ||
+                (Boolean(intent.execution_adapter) && !verifiedNoOrder)
+              }
               onClick={() =>
-                void send(url + "/decision", { action: "reject" }).then(
-                  (ok) => {
-                    if (ok) close();
-                  },
-                )
+                void send(url + "/decision", {
+                  action: intent.execution_adapter
+                    ? "reconcile_no_order"
+                    : "reject",
+                  acknowledged: verifiedNoOrder,
+                }).then((ok) => {
+                  if (ok) close();
+                })
               }
             >
               {t("未下注", "I did not place it")}
             </button>
           </div>
+          {intent.execution_adapter && (
+            <Field
+              label={t(
+                "我已核对交易所订单记录，确认没有下单",
+                "I checked the exchange order history and confirmed no order was placed",
+              )}
+            >
+              <input
+                type="checkbox"
+                className="size-5"
+                checked={verifiedNoOrder}
+                onChange={(event) => setVerifiedNoOrder(event.target.checked)}
+              />
+            </Field>
+          )}
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -322,6 +380,19 @@ function IntentReview({
                   "Check payout and open price in Binance. Skip if payout is below the minimum.",
                 )}
               </p>
+              <Field
+                label={t(
+                  "币安当前显示的赔率",
+                  "Payout currently shown in Binance",
+                )}
+              >
+                <input
+                  className={input}
+                  inputMode="decimal"
+                  value={payout}
+                  onChange={(event) => setPayout(event.target.value)}
+                />
+              </Field>
               {intent.drift_warning && (
                 <Field label={reasonLabel("price_drift", t)}>
                   <input
@@ -341,12 +412,15 @@ function IntentReview({
                 disabled={
                   disabled ||
                   expired ||
+                  !validPayout(payout, intent.minimum_payout) ||
                   Boolean(intent.risk_reason) ||
                   (intent.drift_warning && !driftAcknowledged)
                 }
-                onClick={() => void start(intent, driftAcknowledged)}
+                onClick={() => void start(intent, driftAcknowledged, payout)}
               >
-                {t("前往 Binance", "Continue to Binance")}
+                {manual
+                  ? t("开始手动下单记录", "Start manual execution record")
+                  : t("前往 Binance", "Continue to Binance")}
               </button>
             </section>
           ) : (
@@ -357,7 +431,9 @@ function IntentReview({
               disabled={disabled || expired}
               onClick={() => setSheet(true)}
             >
-              {t("前往 Binance 下单", "Open Binance to place order")}
+              {manual
+                ? t("审核手动下单", "Review manual execution")
+                : t("前往 Binance 下单", "Open Binance to place order")}
             </button>
           )}
           <button
@@ -479,7 +555,12 @@ function IntentReview({
               </select>
             </Field>
             <Field label={t("订单编号（选填）", "Order reference (optional)")}>
-              <input className={input} name="reference" maxLength={128} />
+              <input
+                className={input}
+                name="reference"
+                maxLength={128}
+                required={uncertain}
+              />
             </Field>
           </div>
           {payout && Number(payout) < Number(intent.minimum_payout) && (
@@ -1016,9 +1097,14 @@ export function EventSemiAuto({
       setBusy(false);
     }
   };
-  async function start(intent: SemiIntent, driftAcknowledged: boolean) {
+  async function start(
+    intent: SemiIntent,
+    driftAcknowledged: boolean,
+    payout: string,
+  ) {
     if (writing.current) return;
-    const tab = window.open("about:blank", "_blank");
+    const manual = intent.execution_adapter === "MANUAL";
+    const tab = manual ? null : window.open("about:blank", "_blank");
     if (tab) tab.opener = null;
     resume.current = false;
     writing.current = true;
@@ -1027,21 +1113,23 @@ export function EventSemiAuto({
     const saved = request(token, "/intents/" + intent.id + "/decision", {
       method: "POST",
       body: JSON.stringify({
-        action: "handoff",
+        action: manual ? "execute" : "handoff",
         acknowledged: true,
         drift_acknowledged: driftAcknowledged,
+        payout,
       }),
     }) as Promise<SemiIntent>;
     const ready = saved.then(
       (result) =>
         result.id === intent.id &&
-        result.status === "APPROVED_BY_USER" &&
-        Boolean(result.handoff_started_at) &&
+        result.execution_status ===
+          (manual ? "EXECUTING" : "HANDOFF_STARTED") &&
+        Boolean(result.execution_started_at) &&
         !result.returned_at &&
         Date.parse(result.expires_at) > Date.now(),
       () => false,
     );
-    void copyInstruction(intent, ready);
+    if (!manual) void copyInstruction(intent, ready);
     try {
       const result = await saved;
       if (!(await ready)) {
@@ -1050,8 +1138,10 @@ export function EventSemiAuto({
       }
       setReviewId(result.id);
       setIntentPage(null);
-      if (tab && !tab.closed) tab.location.replace(binanceAppEntry);
-      else window.location.assign(binanceAppEntry);
+      if (!manual) {
+        if (tab && !tab.closed) tab.location.replace(binanceAppEntry);
+        else window.location.assign(binanceAppEntry);
+      }
     } catch (failure) {
       tab?.close();
       setError(
@@ -1116,7 +1206,20 @@ export function EventSemiAuto({
   }
   const eligible =
     state?.signals.flatMap(({ intent }) =>
-      intent && actionable(intent, state.enabled, now) ? [intent] : [],
+      intent &&
+      actionable(
+        intent,
+        state.enabled && state.live_execution_enabled && !state.killed,
+        now,
+      ) &&
+      state.execution_adapters.some(
+        (adapter) =>
+          adapter.adapter === intent.execution_adapter &&
+          adapter.available &&
+          adapter.healthy,
+      )
+        ? [intent]
+        : [],
     ) ?? [];
   const selected =
     eligible.find((intent) => intent.id === reviewId) ?? eligible[0];
@@ -1144,16 +1247,22 @@ export function EventSemiAuto({
         </p>
         {state && (
           <p
-            data-semi-enabled={state.enabled}
+            data-semi-enabled={
+              state.enabled && state.live_execution_enabled && !state.killed
+            }
             className={
-              state.enabled ? "text-emerald-300" : "text-[var(--muted)]"
+              state.enabled && state.live_execution_enabled && !state.killed
+                ? "text-emerald-300"
+                : "text-[var(--muted)]"
             }
           >
-            {state.enabled
-              ? t("半自动实盘已启用", "Live Semi-Auto enabled")
-              : state.killed
-                ? t("停止开关已启动", "Kill switch active")
-                : t("半自动实盘已关闭", "Live Semi-Auto disabled")}
+            {state.killed
+              ? t("停止开关已启动", "Kill switch active")
+              : !state.live_execution_enabled
+                ? reasonLabel("live_execution_disabled", t)
+                : state.enabled
+                  ? t("半自动实盘已启用", "Live Semi-Auto enabled")
+                  : t("半自动实盘已关闭", "Live Semi-Auto disabled")}
           </p>
         )}
       </header>
@@ -1245,7 +1354,8 @@ export function EventSemiAuto({
               {state.signals.map((card) => {
                 const assessment = card.assessment;
                 const canReview =
-                  card.intent && actionable(card.intent, state.enabled, now);
+                  card.intent &&
+                  eligible.some((intent) => intent.id === card.intent?.id);
                 const reason = Object.entries(shadow.reasons).find(
                   ([key]) => key === assessment?.reason,
                 )?.[1];
@@ -1451,7 +1561,13 @@ export function EventSemiAuto({
                   <p>
                     {fmt.cash(item.suggested_stake)} · ≥
                     {fmt.payout(item.minimum_payout)} ·{" "}
-                    {statusLabel(item.status, t)}
+                    {statusLabel(
+                      item.execution_status === "FAILED" ||
+                        item.execution_status === "RECONCILIATION_REQUIRED"
+                        ? item.execution_status
+                        : item.status,
+                      t,
+                    )}
                   </p>
                   {(item.risk_reason || item.reject_reason) && (
                     <p>

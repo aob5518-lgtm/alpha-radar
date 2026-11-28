@@ -8,6 +8,13 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 from alpha_radar.event_contracts.shadow_rules import Direction
 from alpha_radar.event_contracts.shadow_schemas import ShadowAssessment
 from alpha_radar.event_contracts.strategy import Horizon
+from alpha_radar.event_semi_auto.execution_contract import (
+    AdapterHealth,
+    AdapterKind,
+    ExecutionError,
+    ExecutionResult,
+    ExecutionStatus,
+)
 from alpha_radar.event_simulator.schemas import Market
 
 VERSION = "event-semi-auto-v1"
@@ -71,7 +78,7 @@ class Control(Input):
 
 
 class IntentAction(Input):
-    action: Literal["approve", "reject", "handoff", "return"]
+    action: Literal["approve", "reject", "handoff", "execute", "return", "reconcile_no_order"]
     acknowledged: bool = False
     drift_acknowledged: bool = False
     payout: Payout | None = None
@@ -134,6 +141,19 @@ class IntentView(View):
     drift_atr: Decimal | None = None
     drift_warning: bool = False
     settings_snapshot: RiskSettings
+    execution_adapter: AdapterKind | None
+    execution_status: ExecutionStatus | None
+    execution_deadline: datetime | None
+    execution_id: UUID | None
+    execution_started_at: datetime | None
+    execution_completed_at: datetime | None
+    adapter_error: ExecutionError | None
+    pre_execution_drift_absolute: Decimal | None
+    pre_execution_drift_percent: Decimal | None
+    pre_execution_drift_atr: Decimal | None
+    signal_to_intent_ms: int | None = None
+    intent_to_execution_ms: int | None = None
+    execution: ExecutionResult | None = None
 
 
 class BetView(View):
@@ -172,6 +192,9 @@ class BetView(View):
     signal_to_handoff_ms: int | None
     handoff_to_execution_ms: int | None
     signal_to_execution_ms: int | None
+    execution: ExecutionResult | None = None
+    signal_to_intent_ms: int | None = None
+    intent_to_execution_ms: int | None = None
 
 
 class HandoffMetrics(BaseModel):
@@ -207,6 +230,8 @@ class Metrics(BaseModel):
     max_losing_streak: int = 0
     average_payout: Decimal | None = None
     average_premium: Decimal | None = None
+    median_signal_to_execution_ms: int | None = None
+    average_price_drift_atr: Decimal | None = None
 
 
 class ComparisonRow(BaseModel):
@@ -220,6 +245,8 @@ class State(BaseModel):
     enabled: bool
     acknowledged: bool
     killed: bool
+    live_execution_enabled: bool
+    execution_adapters: list[AdapterHealth]
     revision: UUID | None
     settings: RiskSettings
     cooldown_until: datetime | None

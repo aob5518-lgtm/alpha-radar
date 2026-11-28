@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from math import ceil
 from statistics import median
 from uuid import UUID
@@ -14,6 +15,9 @@ from alpha_radar.event_contracts.shadow_repository import ShadowRepository
 from alpha_radar.event_contracts.shadow_rules import snapshot_key
 from alpha_radar.event_contracts.shadow_schemas import ShadowResponse
 from alpha_radar.event_contracts.strategy import utc
+from alpha_radar.event_semi_auto.execution_adapters import ADAPTER_KINDS
+from alpha_radar.event_semi_auto.execution_contract import AdapterHealth, ExecutionResult
+from alpha_radar.event_semi_auto.execution_lifecycle import STARTED, elapsed_ms
 from alpha_radar.event_semi_auto.models import LiveIntent, RealBet
 from alpha_radar.event_semi_auto.repository import Repository
 from alpha_radar.event_semi_auto.rules import PENDING, drift, performance
@@ -31,10 +35,36 @@ from alpha_radar.event_simulator.models import SimulationBet, SimulationSession
 
 async def intent_view(repo: Repository, intent: LiveIntent, now: datetime) -> IntentView:
     view = IntentView.model_validate(intent)
-    if intent.status not in PENDING:
+    if intent.execution_adapter is not None:
+        view.signal_to_intent_ms = elapsed_ms(intent.generated_at, intent.created_at)
+        if intent.execution_started_at is not None:
+            view.intent_to_execution_ms = elapsed_ms(intent.created_at, intent.execution_started_at)
+        if intent.execution_id is not None and intent.execution_status in (
+            "FAILED",
+            "RECONCILIATION_REQUIRED",
+        ):
+            view.execution = ExecutionResult(
+                execution_id=intent.execution_id,
+                intent_id=intent.id,
+                provider="operator_reported",
+                status=intent.execution_status,
+                error_code=intent.adapter_error or "execution_outcome_unknown",
+                error_message_safe=(
+                    "The execution adapter failed before producing a usable result."
+                    if intent.execution_status == "FAILED"
+                    else "Verify the exchange order history before resolving this intent."
+                ),
+            )
+    if intent.status not in PENDING or intent.execution_status in STARTED:
         return view
     if utc(intent.expires_at) <= now:
-        return view.model_copy(update={"status": "EXPIRED", "risk_reason": "signal_expired"})
+        return view.model_copy(
+            update={
+                "status": "EXPIRED",
+                "risk_reason": "signal_expired",
+                "execution_status": "EXPIRED" if intent.execution_status is not None else None,
+            }
+        )
     signal = await repo.db.get(EventShadowSignal, intent.event_signal_id)
     price = await repo.index_price(signal.reference_instrument_id, now) if signal else None
     distance = drift(intent, price)
@@ -53,7 +83,7 @@ async def cards(repo: Repository, settings: RiskSettings, now: datetime) -> list
     pending = {
         (item.market_instrument_id, item.horizon_minutes): item
         for item in await repo.pending()
-        if utc(item.expires_at) > now
+        if utc(item.expires_at) > now and item.execution_status not in STARTED
     }
     values: list[SignalCard] = []
     redis = Redis.from_url(get_settings().redis_url)  # pyright: ignore[reportUnknownMemberType]
@@ -145,6 +175,69 @@ async def handoff_metrics(repo: Repository, now: datetime) -> HandoffMetrics:
     )
 
 
+def bet_view(bet: RealBet, intent: LiveIntent | None) -> BetView:
+    view = BetView.model_validate(bet)
+    if intent is not None and intent.execution_id is not None:
+        view.execution = ExecutionResult(
+            execution_id=intent.execution_id,
+            intent_id=intent.id,
+            provider="operator_reported",
+            status="EXECUTED",
+            actual_premium=bet.actual_premium,
+            actual_payout=bet.actual_payout,
+            actual_open_price=bet.actual_open_price,
+            actual_open_time=bet.actual_open_at,
+            external_reference=bet.order_reference,
+        )
+        view.signal_to_intent_ms = elapsed_ms(intent.generated_at, intent.created_at)
+        view.intent_to_execution_ms = elapsed_ms(intent.created_at, bet.actual_open_at)
+    return view
+
+
+async def adapter_health(repo: Repository) -> list[AdapterHealth]:
+    i = LiveIntent
+    rows = (
+        (
+            await repo.db.execute(
+                select(
+                    i.execution_adapter,
+                    func.max(i.adapter_completed_at).filter(i.adapter_error.is_(None)),
+                    func.max(i.adapter_completed_at).filter(i.adapter_error.is_not(None)),
+                    func.count(),
+                    func.count(i.adapter_error),
+                    func.max(i.adapter_completed_at),
+                )
+                .where(i.adapter_completed_at.is_not(None))
+                .group_by(i.execution_adapter)
+            )
+        )
+        .tuples()
+        .all()
+    )
+    summaries = {
+        kind: (success, failure, total, errors, last)
+        for kind, success, failure, total, errors, last in rows
+    }
+    health: list[AdapterHealth] = []
+    for kind in ADAPTER_KINDS:
+        status = repo.execution_adapter(kind).health()
+        summary = summaries.get(kind)
+        if summary:
+            success, failure, total, errors, last = summary
+            latest = await repo.db.scalar(
+                select(i.execution_started_at)
+                .where(i.execution_adapter == kind, i.adapter_completed_at == last)
+                .order_by(i.id)
+                .limit(1)
+            )
+            status.last_success = success
+            status.last_failure = failure
+            status.error_rate = errors / total
+            status.latency_ms = elapsed_ms(latest, last) if latest and last else None
+        health.append(status)
+    return health
+
+
 async def read_state(
     repo: Repository, now: datetime, intent_before: UUID | None, bet_before: UUID | None
 ) -> State:
@@ -163,6 +256,8 @@ async def read_state(
                     RealBet.actual_premium,
                     RealBet.actual_payout,
                     RealBet.net_pnl,
+                    RealBet.signal_to_execution_ms,
+                    RealBet.price_drift_atr,
                 ).order_by(RealBet.settled_at.asc().nulls_last(), RealBet.id)
             )
         )
@@ -170,8 +265,12 @@ async def read_state(
         .all()
     )
     real = performance(
-        [(status, stake, payout, net) for _, _, _, status, stake, payout, net in real_rows]
+        [(status, stake, payout, net) for _, _, _, status, stake, payout, net, _, _ in real_rows]
     )
+    latency = [ms for *_, ms, _ in real_rows if ms is not None]
+    drifts = [atr for *_, atr in real_rows if atr is not None]
+    real.median_signal_to_execution_ms = int(median(latency)) if latency else None
+    real.average_price_drift_atr = sum(drifts, Decimal(0)) / len(drifts) if drifts else None
     counts = dict(
         (await repo.db.execute(select(LiveIntent.status, func.count()).group_by(LiveIntent.status)))
         .tuples()
@@ -223,16 +322,30 @@ async def read_state(
                             real=performance(
                                 [
                                     (status, stake, payout, net)
-                                    for sym, term, at, status, stake, payout, net in real_rows
+                                    for sym, term, at, status, stake, payout, net, _, _ in real_rows
                                     if sym == symbol and term == horizon and start <= utc(at) <= end
                                 ]
                             ),
                         )
                     )
+    active = await repo.active()
+    bet_intent_ids = {bet.intent_id for bet in (*active, *history)}
+    bet_intents = (
+        {
+            item.id: item
+            for item in await repo.db.scalars(
+                select(LiveIntent).where(LiveIntent.id.in_(bet_intent_ids))
+            )
+        }
+        if bet_intent_ids
+        else {}
+    )
     return State(
         enabled=bool(config and config.enabled),
         acknowledged=bool(config and config.acknowledged_at),
         killed=bool(config and config.killed),
+        live_execution_enabled=repo.execution_enabled,
+        execution_adapters=await adapter_health(repo),
         revision=config.revision if config else None,
         settings=settings,
         cooldown_until=config.cooldown_until if config else None,
@@ -241,8 +354,8 @@ async def read_state(
         intents=[await intent_view(repo, item, now) for item in intents],
         handoffs=[await intent_view(repo, item, now) for item in await repo.handoffs()],
         handoff_metrics=await handoff_metrics(repo, now),
-        active=[BetView.model_validate(item) for item in await repo.active()],
-        history=[BetView.model_validate(item) for item in history],
+        active=[bet_view(item, bet_intents.get(item.intent_id)) for item in active],
+        history=[bet_view(item, bet_intents.get(item.intent_id)) for item in history],
         next_intent_before=next_intent,
         next_bet_before=next_bet,
         real=real,
