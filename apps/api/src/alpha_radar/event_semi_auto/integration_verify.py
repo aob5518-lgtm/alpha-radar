@@ -25,6 +25,7 @@ from alpha_radar.event_semi_auto.execution_contract import (
     ExecutionRequest,
     ExecutionResult,
 )
+from alpha_radar.event_semi_auto.mac_observe import observe
 from alpha_radar.event_semi_auto.models import ExecutionAudit, LiveIntent, RealBet
 from alpha_radar.event_semi_auto.repository import Repository
 from alpha_radar.event_semi_auto.schemas import Confirm, Control, IntentAction, RiskSettings, Settle
@@ -214,6 +215,11 @@ async def verify() -> None:
         assert btc.expires_at == AT + timedelta(seconds=60)
         assert eth.expires_at == AT + timedelta(seconds=120)
         assert btc.signal_atr is not None and btc.signal_atr > 0
+        observation = await observe(repo, AT)
+        assert observation.status == "review" and observation.intent is not None
+        assert observation.intent.id in (btc.id, eth.id)
+        assert observation.intent.execution_deadline > AT
+        assert (await observe(repo, AT + timedelta(seconds=120))).status == "waiting"
         if settings.event_alerts_enabled:
             assert await db.scalar(select(func.count()).select_from(IntentAlert)) == 2
             alerts = await alert_feed(repo, AT, False)
@@ -274,6 +280,7 @@ async def verify() -> None:
         config = await repo.configuration()
         assert config is not None
         await control(repo, Control(revision=config.revision, action="kill"), AT)
+        assert (await observe(repo, AT)).status == "stopped"
         assert await tick(repo, AT) == {"opened": 0, "blocked": 0}
         if settings.event_alerts_enabled:
             assert await alert_feed(repo, AT, False) == []

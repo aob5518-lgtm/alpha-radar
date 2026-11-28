@@ -133,6 +133,8 @@ class Settings(BaseSettings):
     event_semi_auto_available: bool = False
     event_semi_auto_operator_token: SecretStr = SecretStr("")
     event_alerts_enabled: bool = False
+    mac_executor_observe_enabled: bool = False
+    mac_executor_device_token_sha256: SecretStr = SecretStr("")
     event_push_enabled: bool = False
     web_push_vapid_public_key: str = ""
     web_push_vapid_private_key: SecretStr = SecretStr("")
