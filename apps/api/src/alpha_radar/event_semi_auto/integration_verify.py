@@ -278,6 +278,7 @@ async def verify() -> None:
         confirmed = late.model_copy(update={"mismatch_acknowledged": True})
         recorded = await confirm(repo, issued.id, confirmed, returned)
         assert (await confirm(repo, issued.id, confirmed, returned)).id == recorded.id
+        await db.refresh(recorded)
         assert recorded.payout_below_policy and recorded.late_execution_confirmation
         assert recorded.direction_mismatch and recorded.horizon_mismatch
         assert recorded.price_drift_absolute == 2 and recorded.price_drift_percent == 2
