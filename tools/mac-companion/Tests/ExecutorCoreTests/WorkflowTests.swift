@@ -35,7 +35,32 @@ private enum Verification {
     }
     try await atomicClaimAllowsOneOutcomeAcrossExecutors()
     try interruptedClaimRequiresReconciliationAfterRestart()
-    print("11 Mac Executor workflow scenarios passed")
+    try recognizesOnlyIndependentFixtureEvidence()
+    print("Mac Executor workflow and native fixture recognition checks passed")
+  }
+}
+
+private func recognizesOnlyIndependentFixtureEvidence() throws {
+  let title = MirrorFixture.Line(
+    text: "ALPHA RADAR MIRROR TEST", confidence: 0.95,
+    bounds: CGRect(x: 0.1, y: 0.6, width: 0.8, height: 0.04))
+  let label = CGRect(x: 0.2, y: 0.5, width: 0.6, height: 0.04)
+  let start = MirrorFixture.Line(text: "TAP TEST BUTTON", confidence: 0.9, bounds: label)
+  let passed = MirrorFixture.Line(text: "IPHONE INPUT RECEIVED", confidence: 0.9, bounds: label)
+  let uncertain = MirrorFixture.Line(text: "TAP TEST BUTTON", confidence: 0.4, bounds: label)
+  let misplaced = MirrorFixture.Line(
+    text: "TAP TEST BUTTON", confidence: 0.9,
+    bounds: CGRect(x: 0.05, y: 0.1, width: 0.2, height: 0.04))
+  try expect(MirrorFixture([title, start]).state == .ready)
+  try expect(MirrorFixture([title, start]).button == label)
+  try expect(MirrorFixture([title, passed]).state == .passed)
+  try expect(MirrorFixture([title, passed]).button == nil)
+  for invalid in [
+    [], [start], [passed], [title, uncertain], [title, misplaced],
+    [title, start, start], [title, start, passed],
+  ] {
+    try expect(MirrorFixture(invalid).state == .unknown)
+    try expect(MirrorFixture(invalid).button == nil)
   }
 }
 
