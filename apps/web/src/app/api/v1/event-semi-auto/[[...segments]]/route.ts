@@ -28,6 +28,7 @@ async function proxy(request: Request, context: Context): Promise<Response> {
     !(
       alerts ||
       (method === "GET" && !path) ||
+      (method === "GET" && path === "mac-executor/observation") ||
       (method === "PATCH" && path === "settings") ||
       (method === "POST" &&
         new RegExp(

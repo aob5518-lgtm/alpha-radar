@@ -8,6 +8,15 @@ permissions:
   contents: read
 
 jobs:
+  mac-companion:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift format lint --recursive --strict Package.swift Sources Tests
+        working-directory: tools/mac-companion
+      - run: swift run --package-path tools/mac-companion ExecutorCoreChecks
+      - run: swift build --package-path tools/mac-companion -c release
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -85,6 +94,16 @@ jobs:
           docker compose up --no-build --detach --wait --no-deps api web
           python scripts/verify-event-semi-auto.py
           docker compose exec -T -e LIVE_EXECUTION_ENABLED=true api python -m alpha_radar.event_semi_auto.integration_verify
+      - name: Verify Mac observation through the web proxy
+        env:
+          EVENT_SIGNAL_SHADOW_ENABLED: "true"
+          EVENT_SEMI_AUTO_AVAILABLE: "true"
+          MAC_EXECUTOR_OBSERVE_ENABLED: "true"
+        run: |
+          export MAC_EXECUTOR_CI_TOKEN="$(python -c 'from secrets import token_hex; print(token_hex(32))')"
+          export MAC_EXECUTOR_DEVICE_TOKEN_SHA256="$(printf %s "$MAC_EXECUTOR_CI_TOKEN" | sha256sum | cut -d ' ' -f 1)"
+          docker compose up --no-build --detach --wait --no-deps api web
+          python scripts/verify-mac-executor.py
       - name: Show Compose logs on failure
         if: failure()
         run: docker compose logs
