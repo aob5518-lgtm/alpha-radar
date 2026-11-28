@@ -62,7 +62,7 @@ public struct MirrorTestResult: Sendable {
 /// This driver accepts one local, non-financial action. An `Intent` is never an input here.
 @MainActor
 public struct NativeMirroring {
-  private static let clock = ContinuousClock()
+  private nonisolated static let clock = ContinuousClock()
 
   public static func activate() async throws -> Int {
     let start = clock.now
@@ -156,7 +156,9 @@ public struct NativeMirroring {
     let fixture: MirrorFixture
   }
 
-  private static func capture() async throws -> Frame {
+  // Keep ScreenCaptureKit objects on one side of the actor boundary. The macOS 15 SDK
+  // does not mark SCShareableContent as Sendable.
+  private nonisolated static func capture() async throws -> Frame {
     guard CGPreflightScreenCaptureAccess() else { throw MirrorTestError.missingCapturePermission }
     let content = try await SCShareableContent.excludingDesktopWindows(
       true, onScreenWindowsOnly: true)
@@ -168,7 +170,7 @@ public struct NativeMirroring {
       throw MirrorTestError.ambiguousWindow
     }
     let pid = app.processID
-    guard foreground(pid) else { throw MirrorTestError.notForeground }
+    guard await foreground(pid) else { throw MirrorTestError.notForeground }
     let filter = SCContentFilter(desktopIndependentWindow: window)
     let options = SCStreamConfiguration()
     options.ignoreShadowsSingleWindow = true
@@ -185,7 +187,7 @@ public struct NativeMirroring {
       contentFilter: filter, configuration: options)
     let fixture = try await read(image)
     try Task.checkCancellation()
-    guard foreground(pid) else { throw MirrorTestError.notForeground }
+    guard await foreground(pid) else { throw MirrorTestError.notForeground }
     return Frame(
       id: window.windowID, pid: pid, frame: frame, captured: captured, date: date, fixture: fixture)
   }
