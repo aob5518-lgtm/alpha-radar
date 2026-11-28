@@ -13,9 +13,13 @@ Apple documents manual click, scroll, and typing through [iPhone Mirroring](http
 and general window enumeration through
 [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit/scshareablecontent).
 The Binance [Event Contracts FAQ](https://www.binance.com/en/support/faq/detail/172247f1c4b8401ab106fb63900f3825)
-documents manual app use. Direct requests to that FAQ and the
-[Binance Terms of Use](https://www.binance.com/en/terms) timed out from the test Mac.
-Applicable account and product authorization for programmatic GUI input remains unresolved.
+documents manual app use and lists the Android and iOS apps as the available interfaces
+in its API section. The [Event Contracts Terms](https://www.binance.com/en/about-legal/terms-event-contracts)
+incorporate the [Binance Terms of Use](https://www.binance.com/en/terms). The published
+[Prohibited Use Policy, section I](https://bin.bnbstatic.com/static/cms/cg08ou2ak0tn7mcplvfg/file/3c287bd60863eccef6a16b8580190c96d4c9414931928d7fafdb227bf967cd63.pdf)
+restricts automated access or monitoring unless expressly permitted. No applicable express
+permission for programmatic access via iPhone Mirroring was established. Requests from the
+test Mac to the Binance FAQ and Terms timed out. The public documents were reviewed separately.
 This release keeps ASSISTED disabled.
 
 ## Install and observe
@@ -80,6 +84,10 @@ payout/drift, expiry, permissions, modal, disconnect, stop controls, duplicate a
 claims, interrupted-claim recovery, simulated rejection and uncertain outcomes.
 Backend checks cover credential scope and revocation. Disposable PostgreSQL integration exercises
 reused intent eligibility, expiry, the kill switch and existing ledger behavior.
+
+The SHA-256 of the Git tree listing for Event Signal, Paper, and the existing Semi-Auto rules,
+schemas, service, adapter, execution contract, lifecycle, models, and repository was
+`ea0b1768ef599d5ca386c486190e1c74e93d49d6a1f649b93056a54d5e2f584a` at both the base and PR.
 
 The panel reports observed signal-to-Mac receipt latency when a paired server delivers an intent.
 The local mock reports elapsed time through order-review readiness, including operator interaction.
