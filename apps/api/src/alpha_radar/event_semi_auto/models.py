@@ -49,6 +49,7 @@ class LiveIntent(FrozenIdentity, Base):
         sa.UniqueConstraint("event_signal_id", name="uq_live_intent_signal"),
         sa.Index("ix_live_intent_history", "created_at", "id"),
         sa.Index("ix_live_intent_expiry", "status", "expires_at"),
+        sa.Index("ix_live_intent_handoff", "handoff_started_at"),
         sa.CheckConstraint(
             "horizon_minutes IN (10,30) AND direction IN ('higher','lower')",
             name="ck_live_intent_identity",
@@ -76,6 +77,8 @@ class LiveIntent(FrozenIdentity, Base):
     risk_reason: Mapped[str | None] = mapped_column(sa.String(40))
     reject_reason: Mapped[str | None] = mapped_column(sa.String(24))
     approved_payout: Mapped[Decimal | None] = mapped_column(number)
+    handoff_started_at: Mapped[datetime | None] = mapped_column(timestamp)
+    returned_at: Mapped[datetime | None] = mapped_column(timestamp)
 
 
 class RealBet(FrozenIdentity, Base):
@@ -124,6 +127,16 @@ class RealBet(FrozenIdentity, Base):
     settled_at: Mapped[datetime | None] = mapped_column(timestamp)
     gross_return: Mapped[Decimal | None] = mapped_column(number)
     net_pnl: Mapped[Decimal | None] = mapped_column(number)
+    late_execution_confirmation: Mapped[bool] = mapped_column(server_default=sa.false())
+    payout_below_policy: Mapped[bool] = mapped_column(server_default=sa.false())
+    direction_mismatch: Mapped[bool] = mapped_column(server_default=sa.false())
+    horizon_mismatch: Mapped[bool] = mapped_column(server_default=sa.false())
+    price_drift_absolute: Mapped[Decimal | None] = mapped_column(number)
+    price_drift_percent: Mapped[Decimal | None] = mapped_column(number)
+    price_drift_atr: Mapped[Decimal | None] = mapped_column(number)
+    signal_to_handoff_ms: Mapped[int | None] = mapped_column(sa.BigInteger())
+    handoff_to_execution_ms: Mapped[int | None] = mapped_column(sa.BigInteger())
+    signal_to_execution_ms: Mapped[int | None] = mapped_column(sa.BigInteger())
 
 
 class ExecutionAudit(Base):

@@ -30,16 +30,17 @@ normalized by the stored Bybit ATR14. A drift above 0.25 ATR requires explicit
 acknowledgement. Stale data and the existing macro exclusion window block
 actions. Settings changes invalidate the previous revision's pending intents.
 
-The operator reviews the intent and opens the official Binance homepage. All
+The operator reviews the intent and opens the official Binance app entry. All
 contract selection and order placement take place manually in the Binance App.
 The operator enters the actual payout to approve the intent and checks the
 exchange's direction, horizon, premium, open price, open time and expiry.
 Below-minimum payout is blocked, including on a direct confirmation request.
-The user records the order while the intent is actionable. A lapse closes that
-workflow, so Alpha Radar cannot reconcile an order entered outside its window.
+The user records the order while the intent is actionable in this original
+workflow. The [mobile handoff](EVENT_CONTRACT_MOBILE_HANDOFF_V1.md) accepts
+audited historical reports for already-executed orders after a timely handoff.
 The optional exchange order reference helps detect accidental duplicates.
 Binance login credentials, session tokens and private execution adapters are
-outside the ledger. The only Binance handoff is the official homepage link.
+outside the ledger.
 
 ## Risk and accounting
 

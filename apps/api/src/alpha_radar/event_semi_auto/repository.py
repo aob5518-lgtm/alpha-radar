@@ -14,6 +14,7 @@ from alpha_radar.market_data.constants import MarketInterval
 from alpha_radar.market_data.models import MarketCandle
 
 PAGE_SIZE = 25
+RECOVERABLE_HANDOFF = ("APPROVED_BY_USER", "EXPIRED", "CANCELLED_BY_RISK")
 
 
 class Repository:
@@ -31,6 +32,19 @@ class Repository:
 
     async def active(self) -> list[RealBet]:
         return list(await self.db.scalars(select(RealBet).where(RealBet.status == "OPEN")))
+
+    async def handoffs(self) -> list[LiveIntent]:
+        return list(
+            await self.db.scalars(
+                select(LiveIntent)
+                .where(
+                    LiveIntent.handoff_started_at.is_not(None),
+                    LiveIntent.status.in_(RECOVERABLE_HANDOFF),
+                )
+                .order_by(LiveIntent.handoff_started_at.desc(), LiveIntent.id)
+                .limit(PAGE_SIZE)
+            )
+        )
 
     async def daily_pnl(self, now: datetime) -> Decimal:
         start = datetime.combine(now.date(), datetime.min.time(), tzinfo=UTC)

@@ -47,6 +47,8 @@ export type SemiIntent = Identity & {
   risk_reason: string | null;
   reject_reason: string | null;
   approved_payout: string | null;
+  handoff_started_at: string | null;
+  returned_at: string | null;
   drift_atr: string | null;
   drift_warning: boolean;
 };
@@ -66,6 +68,16 @@ export type RealBet = Identity & {
   net_pnl: string | null;
   order_reference: string | null;
   notes: string | null;
+  late_execution_confirmation: boolean;
+  payout_below_policy: boolean;
+  direction_mismatch: boolean;
+  horizon_mismatch: boolean;
+  price_drift_absolute: string | null;
+  price_drift_percent: string | null;
+  price_drift_atr: string | null;
+  signal_to_handoff_ms: number | null;
+  handoff_to_execution_ms: number | null;
+  signal_to_execution_ms: number | null;
 };
 
 export interface SemiMetrics {
@@ -98,6 +110,19 @@ export interface SemiState {
     suggested_stake: string;
   }[];
   intents: SemiIntent[];
+  handoffs: SemiIntent[];
+  handoff_metrics: {
+    opened: number;
+    executed: number;
+    skipped: number;
+    expired_during_handoff: number;
+    payout_below_policy: number;
+    median_signal_to_execution_ms: number | null;
+    p90_signal_to_execution_ms: number | null;
+    drift_within_limit: number;
+    drift_above_limit: number;
+    drift_unavailable: number;
+  };
   active: RealBet[];
   history: RealBet[];
   next_intent_before: string | null;

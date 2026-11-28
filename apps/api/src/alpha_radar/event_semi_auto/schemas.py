@@ -71,8 +71,9 @@ class Control(Input):
 
 
 class IntentAction(Input):
-    action: Literal["approve", "reject", "handoff"]
+    action: Literal["approve", "reject", "handoff", "return"]
     acknowledged: bool = False
+    drift_acknowledged: bool = False
     payout: Payout | None = None
     reason: Literal["payout_low", "location", "discretion", "other"] | None = None
 
@@ -80,6 +81,8 @@ class IntentAction(Input):
 class Confirm(Input):
     acknowledged: Literal[True]
     drift_acknowledged: bool = False
+    record_handoff: bool = False
+    mismatch_acknowledged: bool = False
     actual_premium: Premium
     actual_payout: Payout
     actual_open_at: AwareDatetime
@@ -126,6 +129,8 @@ class IntentView(View):
     risk_reason: str | None
     reject_reason: str | None
     approved_payout: Decimal | None
+    handoff_started_at: datetime | None
+    returned_at: datetime | None
     drift_atr: Decimal | None = None
     drift_warning: bool = False
     settings_snapshot: RiskSettings
@@ -157,6 +162,29 @@ class BetView(View):
     gross_return: Decimal | None
     net_pnl: Decimal | None
     created_at: datetime
+    late_execution_confirmation: bool
+    payout_below_policy: bool
+    direction_mismatch: bool
+    horizon_mismatch: bool
+    price_drift_absolute: Decimal | None
+    price_drift_percent: Decimal | None
+    price_drift_atr: Decimal | None
+    signal_to_handoff_ms: int | None
+    handoff_to_execution_ms: int | None
+    signal_to_execution_ms: int | None
+
+
+class HandoffMetrics(BaseModel):
+    opened: int
+    executed: int
+    skipped: int
+    expired_during_handoff: int
+    payout_below_policy: int
+    median_signal_to_execution_ms: int | None
+    p90_signal_to_execution_ms: int | None
+    drift_within_limit: int
+    drift_above_limit: int
+    drift_unavailable: int
 
 
 class SignalCard(BaseModel):
@@ -198,6 +226,8 @@ class State(BaseModel):
     daily_pnl: Decimal
     signals: list[SignalCard]
     intents: list[IntentView]
+    handoffs: list[IntentView]
+    handoff_metrics: HandoffMetrics
     active: list[BetView]
     history: list[BetView]
     next_intent_before: UUID | None

@@ -11,7 +11,7 @@ from alpha_radar.event_contracts.shadow_repository import ShadowRepository
 from alpha_radar.event_contracts.shadow_rules import FRESHNESS
 from alpha_radar.event_contracts.strategy import utc
 from alpha_radar.event_semi_auto.models import LiveIntent, RealBet, SemiAutoSettings
-from alpha_radar.event_semi_auto.repository import Repository
+from alpha_radar.event_semi_auto.repository import RECOVERABLE_HANDOFF, Repository
 from alpha_radar.event_semi_auto.rules import (
     PENDING,
     TTL,
@@ -220,17 +220,26 @@ async def decide(
     await repo.lock()
     now = at or datetime.now(UTC)
     intent = await get_intent(repo, intent_id)
-    if payload.action == "reject":
+    if payload.action == "return":
+        if intent.handoff_started_at is None:
+            raise problem("handoff_required")
+        mark_return(repo, intent, now)
+    elif payload.action == "reject":
         if intent.status == "REJECTED_BY_USER":
             return intent
-        await valid_pending(repo, intent, now)
+        if intent.handoff_started_at and intent.status in RECOVERABLE_HANDOFF:
+            mark_return(repo, intent, now)
+        else:
+            await valid_pending(repo, intent, now)
         intent.status = "REJECTED_BY_USER"
         intent.reject_reason = payload.reason
         repo.audit("intent_rejected", now, intent, payload.reason)
     else:
         if not payload.acknowledged:
             raise problem("acknowledgement_required")
-        await review_risk(repo, intent, intent.suggested_stake, now)
+        if payload.action == "handoff" and intent.handoff_started_at is not None:
+            return intent
+        distance = await review_risk(repo, intent, intent.suggested_stake, now)
         if payload.action == "approve":
             if payload.payout is None or payload.payout < intent.minimum_payout:
                 await reject_attempt(repo, intent, "payout_low", now)
@@ -238,9 +247,22 @@ async def decide(
             intent.approved_payout = payload.payout
             repo.audit("intent_approved", now, intent)
         else:
+            limit = RiskSettings.model_validate(intent.settings_snapshot).max_drift_atr
+            if distance > limit:
+                if not payload.drift_acknowledged:
+                    await reject_attempt(repo, intent, "price_drift", now)
+                repo.audit("drift_acknowledged", now, intent, "price_drift")
+            intent.handoff_started_at = now
+            intent.status = "APPROVED_BY_USER"
             repo.audit("binance_handoff", now, intent)
     await repo.db.commit()
     return intent
+
+
+def mark_return(repo: Repository, intent: LiveIntent, now: datetime) -> None:
+    if intent.returned_at is None:
+        intent.returned_at = now
+        repo.audit("binance_returned", now, intent)
 
 
 async def confirm(
@@ -266,45 +288,81 @@ async def confirm(
         ):
             return existing
         raise problem("already_executed")
-    await valid_pending(repo, intent, now)
-    if intent.status != "APPROVED_BY_USER":
-        raise problem("approval_required")
-    if payload.direction != intent.direction or payload.horizon_minutes != intent.horizon_minutes:
-        raise problem("identity_mismatch")
-    if payload.actual_payout < intent.minimum_payout:
-        await reject_attempt(repo, intent, "payout_low", now)
+    direction_mismatch = payload.direction != intent.direction
+    horizon_mismatch = payload.horizon_minutes != intent.horizon_minutes
+    payout_below = payload.actual_payout < intent.minimum_payout
+    earliest = utc(intent.generated_at)
+    if payload.record_handoff:
+        if intent.handoff_started_at is None or intent.status not in RECOVERABLE_HANDOFF:
+            raise problem("handoff_required")
+        earliest = utc(intent.handoff_started_at).replace(microsecond=0)
+        if utc(intent.handoff_started_at) >= utc(intent.expires_at):
+            raise problem("handoff_required")
+        if (direction_mismatch or horizon_mismatch) and not payload.mismatch_acknowledged:
+            raise problem("identity_mismatch")
+    else:
+        await valid_pending(repo, intent, now)
+        if intent.status != "APPROVED_BY_USER" or intent.approved_payout is None:
+            raise problem("approval_required")
+        if direction_mismatch or horizon_mismatch:
+            raise problem("identity_mismatch")
+        if payout_below:
+            await reject_attempt(repo, intent, "payout_low", now)
+    opened = utc(payload.actual_open_at)
+    expiry = utc(payload.actual_expiry_at)
     if not (
-        utc(intent.generated_at)
-        <= utc(payload.actual_open_at)
-        <= now
-        < utc(payload.actual_expiry_at)
-        <= utc(payload.actual_open_at) + timedelta(minutes=intent.horizon_minutes + 1)
-        and utc(payload.actual_expiry_at)
-        >= utc(payload.actual_open_at) + timedelta(minutes=intent.horizon_minutes - 1)
+        earliest <= opened <= now
+        and (payload.record_handoff or now < expiry)
+        and opened + timedelta(minutes=payload.horizon_minutes - 1)
+        <= expiry
+        <= opened + timedelta(minutes=payload.horizon_minutes + 1)
     ):
         raise problem("invalid_execution_times", status=422)
-    distance = await review_risk(repo, intent, payload.actual_premium, now)
-    if distance > RiskSettings.model_validate(intent.settings_snapshot).max_drift_atr:
-        if not payload.drift_acknowledged:
-            await reject_attempt(repo, intent, "price_drift", now)
-        repo.audit("drift_acknowledged", now, intent, "price_drift")
+    if payload.record_handoff:
+        if any(
+            bet.market_instrument_id == intent.market_instrument_id
+            and bet.horizon_minutes == payload.horizon_minutes
+            for bet in await repo.active()
+        ):
+            raise problem("existing_active_bet")
+    else:
+        distance = await review_risk(repo, intent, payload.actual_premium, now)
+        if distance > RiskSettings.model_validate(intent.settings_snapshot).max_drift_atr:
+            if not payload.drift_acknowledged:
+                await reject_attempt(repo, intent, "price_drift", now)
+            repo.audit("drift_acknowledged", now, intent, "price_drift")
     if reference and await repo.db.scalar(
         select(RealBet.id).where(RealBet.order_reference == reference)
     ):
         await reject_attempt(repo, intent, "duplicate_order_reference", now)
+    late = payload.record_handoff and now >= utc(intent.expires_at)
+    absolute_drift = abs(payload.actual_open_price - intent.signal_reference_price)
+    handed_at = (
+        utc(intent.handoff_started_at)
+        if payload.record_handoff and intent.handoff_started_at
+        else None
+    )
+    if payload.record_handoff:
+        mark_return(repo, intent, now)
+        if late:
+            repo.audit("late_execution_confirmation", now, intent)
+        if payout_below:
+            repo.audit("payout_below_policy", now, intent)
+        if direction_mismatch or horizon_mismatch:
+            repo.audit("execution_identity_mismatch", now, intent)
     bet = RealBet(
         id=uuid4(),
         intent_id=intent.id,
         event_signal_id=intent.event_signal_id,
         market_instrument_id=intent.market_instrument_id,
         symbol=intent.symbol,
-        horizon_minutes=intent.horizon_minutes,
-        direction=intent.direction,
+        horizon_minutes=payload.horizon_minutes,
+        direction=payload.direction,
         signal_score=intent.signal_score,
         signal_reference_price=intent.signal_reference_price,
         actual_open_price=payload.actual_open_price,
-        actual_open_at=utc(payload.actual_open_at),
-        expiry_at=utc(payload.actual_expiry_at),
+        actual_open_at=opened,
+        expiry_at=expiry,
         actual_premium=payload.actual_premium,
         actual_payout=payload.actual_payout,
         breakeven_probability=breakeven(payload.actual_payout),
@@ -314,6 +372,30 @@ async def confirm(
         status="OPEN",
         settlement_source="UNKNOWN",
         created_at=now,
+        late_execution_confirmation=late,
+        payout_below_policy=payout_below,
+        direction_mismatch=direction_mismatch,
+        horizon_mismatch=horizon_mismatch,
+        price_drift_absolute=absolute_drift,
+        price_drift_percent=(
+            absolute_drift * 100 / intent.signal_reference_price
+            if intent.signal_reference_price > 0
+            else None
+        ),
+        price_drift_atr=absolute_drift / intent.signal_atr if intent.signal_atr else None,
+        signal_to_handoff_ms=(
+            int((handed_at - utc(intent.generated_at)).total_seconds() * 1000)
+            if handed_at
+            else None
+        ),
+        handoff_to_execution_ms=(
+            max(0, int((opened - handed_at).total_seconds() * 1000)) if handed_at else None
+        ),
+        signal_to_execution_ms=(
+            int((max(opened, handed_at) - utc(intent.generated_at)).total_seconds() * 1000)
+            if handed_at
+            else None
+        ),
     )
     intent.status = "EXECUTED_MANUALLY"
     repo.db.add(bet)
