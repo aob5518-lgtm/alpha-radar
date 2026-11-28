@@ -83,7 +83,7 @@ jobs:
         run: |
           docker compose up --no-build --detach --wait --no-deps api web
           python scripts/verify-event-semi-auto.py
-          docker compose exec -T api python -m alpha_radar.event_semi_auto.integration_verify
+          docker compose exec -T -e LIVE_EXECUTION_ENABLED=true api python -m alpha_radar.event_semi_auto.integration_verify
       - name: Show Compose logs on failure
         if: failure()
         run: docker compose logs

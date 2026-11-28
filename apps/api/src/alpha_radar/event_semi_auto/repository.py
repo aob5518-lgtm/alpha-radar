@@ -5,9 +5,12 @@ from uuid import UUID
 from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alpha_radar.config import get_settings
 from alpha_radar.event_contracts.shadow_models import EventShadowSignal
 from alpha_radar.event_contracts.shadow_rules import FRESHNESS, RULES, VERSION
 from alpha_radar.event_contracts.strategy import Horizon, utc
+from alpha_radar.event_semi_auto.execution_adapters import adapter_for
+from alpha_radar.event_semi_auto.execution_contract import AdapterKind, LiveExecutionAdapter
 from alpha_radar.event_semi_auto.models import ExecutionAudit, LiveIntent, RealBet, SemiAutoSettings
 from alpha_radar.event_semi_auto.rules import PENDING
 from alpha_radar.market_data.constants import MarketInterval
@@ -18,8 +21,18 @@ RECOVERABLE_HANDOFF = ("APPROVED_BY_USER", "EXPIRED", "CANCELLED_BY_RISK")
 
 
 class Repository:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, *, adapter: LiveExecutionAdapter | None = None) -> None:
         self.db = db
+        self.override_adapter = adapter
+
+    def execution_adapter(self, kind: AdapterKind) -> LiveExecutionAdapter:
+        if self.override_adapter and self.override_adapter.kind == kind:
+            return self.override_adapter
+        return adapter_for(kind)
+
+    @property
+    def execution_enabled(self) -> bool:
+        return get_settings().live_execution_enabled
 
     async def lock(self) -> None:
         await self.db.execute(text("SELECT pg_advisory_xact_lock(7852512917)"))
@@ -33,12 +46,36 @@ class Repository:
     async def active(self) -> list[RealBet]:
         return list(await self.db.scalars(select(RealBet).where(RealBet.status == "OPEN")))
 
+    async def unresolved(self, intent_id: UUID) -> bool:
+        return bool(
+            await self.db.scalar(
+                select(LiveIntent.id)
+                .where(
+                    LiveIntent.id != intent_id,
+                    or_(
+                        LiveIntent.execution_status.in_(
+                            ("EXECUTING", "HANDOFF_STARTED", "RECONCILIATION_REQUIRED")
+                        ),
+                        and_(
+                            LiveIntent.execution_status.is_(None),
+                            LiveIntent.handoff_started_at.is_not(None),
+                            LiveIntent.status.in_(RECOVERABLE_HANDOFF),
+                        ),
+                    ),
+                )
+                .limit(1)
+            )
+        )
+
     async def handoffs(self) -> list[LiveIntent]:
         return list(
             await self.db.scalars(
                 select(LiveIntent)
                 .where(
-                    LiveIntent.handoff_started_at.is_not(None),
+                    or_(
+                        LiveIntent.handoff_started_at.is_not(None),
+                        LiveIntent.execution_status.in_(("EXECUTING", "RECONCILIATION_REQUIRED")),
+                    ),
                     LiveIntent.status.in_(RECOVERABLE_HANDOFF),
                 )
                 .order_by(LiveIntent.handoff_started_at.desc(), LiveIntent.id)

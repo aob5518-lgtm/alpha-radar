@@ -7,6 +7,11 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from alpha_radar.assets.models import json_type, uuid_type
 from alpha_radar.db.base import Base
+from alpha_radar.event_semi_auto.execution_contract import (
+    AdapterKind,
+    ExecutionError,
+    ExecutionStatus,
+)
 from alpha_radar.market_data.models import financial_numeric as number
 
 timestamp = sa.DateTime(timezone=True)
@@ -50,6 +55,19 @@ class LiveIntent(FrozenIdentity, Base):
         sa.Index("ix_live_intent_history", "created_at", "id"),
         sa.Index("ix_live_intent_expiry", "status", "expires_at"),
         sa.Index("ix_live_intent_handoff", "handoff_started_at"),
+        sa.Index("ix_live_intent_execution_status", "execution_status"),
+        sa.CheckConstraint(
+            "(execution_adapter IS NULL AND execution_deadline IS NULL "
+            "AND execution_status IS NULL)"
+            " OR (execution_adapter IS NOT NULL"
+            " AND execution_adapter IN ('MANUAL','MOBILE_HANDOFF','RESEARCH_DISABLED')"
+            " AND execution_deadline IS NOT NULL AND execution_deadline <= expires_at"
+            " AND execution_status IS NOT NULL"
+            " AND execution_status IN ('CREATED','RISK_APPROVED','READY_FOR_EXECUTION',"
+            "'HANDOFF_STARTED','EXECUTING','EXECUTED','FAILED','EXPIRED','CANCELLED',"
+            "'RECONCILIATION_REQUIRED','SETTLED'))",
+            name="ck_live_execution_lifecycle",
+        ),
         sa.CheckConstraint(
             "horizon_minutes IN (10,30) AND direction IN ('higher','lower')",
             name="ck_live_intent_identity",
@@ -79,6 +97,17 @@ class LiveIntent(FrozenIdentity, Base):
     approved_payout: Mapped[Decimal | None] = mapped_column(number)
     handoff_started_at: Mapped[datetime | None] = mapped_column(timestamp)
     returned_at: Mapped[datetime | None] = mapped_column(timestamp)
+    execution_adapter: Mapped[AdapterKind | None] = mapped_column(sa.String(24))
+    execution_status: Mapped[ExecutionStatus | None] = mapped_column(sa.String(32))
+    execution_deadline: Mapped[datetime | None] = mapped_column(timestamp)
+    execution_id: Mapped[UUID | None] = mapped_column(uuid_type)
+    execution_started_at: Mapped[datetime | None] = mapped_column(timestamp)
+    execution_completed_at: Mapped[datetime | None] = mapped_column(timestamp)
+    adapter_completed_at: Mapped[datetime | None] = mapped_column(timestamp)
+    adapter_error: Mapped[ExecutionError | None] = mapped_column(sa.String(32))
+    pre_execution_drift_absolute: Mapped[Decimal | None] = mapped_column(number)
+    pre_execution_drift_percent: Mapped[Decimal | None] = mapped_column(number)
+    pre_execution_drift_atr: Mapped[Decimal | None] = mapped_column(number)
 
 
 class RealBet(FrozenIdentity, Base):

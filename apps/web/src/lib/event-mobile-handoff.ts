@@ -22,7 +22,8 @@ export function actionable(intent: SemiIntent, enabled: boolean, now: number) {
       intent.status === "APPROVED_BY_USER") &&
     !intent.risk_reason &&
     !intent.handoff_started_at &&
-    Date.parse(intent.expires_at) > now
+    !intent.execution_started_at &&
+    Date.parse(intent.execution_deadline ?? intent.expires_at) > now
   );
 }
 

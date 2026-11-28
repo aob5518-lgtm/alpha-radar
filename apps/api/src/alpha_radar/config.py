@@ -132,6 +132,10 @@ class Settings(BaseSettings):
     event_simulator_admin_token: SecretStr = SecretStr("")
     event_semi_auto_available: bool = False
     event_semi_auto_operator_token: SecretStr = SecretStr("")
+    live_execution_enabled: bool = False
+    live_execution_adapter: Literal["MANUAL", "MOBILE_HANDOFF", "RESEARCH_DISABLED"] = (
+        "MOBILE_HANDOFF"
+    )
     market_data_quote_freshness_seconds: int = Field(default=90, ge=1)
     market_data_future_tolerance_seconds: int = Field(default=30, ge=0)
     coinbase_exchange_api_url: str = "https://api.exchange.coinbase.com"

@@ -135,6 +135,8 @@ The private Semi-Auto mode is a third consumer. It shares the existing monolith
 and Celery worker while owning its settings, intents, operator-confirmed bet
 records and audit trail. Exchange order placement remains manual. See
 [Event Contract Semi-Auto V1](EVENT_CONTRACT_SEMI_AUTO_V1.md).
+The [execution adapter contract](EVENT_CONTRACT_EXECUTION_ADAPTER.md) defines the
+private lifecycle, execution gates and evidence-based reconciliation.
 
 ## Sources domain
 

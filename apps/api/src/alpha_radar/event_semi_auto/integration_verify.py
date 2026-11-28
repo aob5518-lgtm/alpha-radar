@@ -11,18 +11,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alpha_radar.config import get_settings
 from alpha_radar.db.session import async_session_factory, engine
 from alpha_radar.errors import AppError
+from alpha_radar.event_contracts.shadow_models import EventShadowSignal
 from alpha_radar.event_contracts.shadow_repository import ShadowRepository
 from alpha_radar.event_contracts.shadow_rules import RULES
 from alpha_radar.event_contracts.strategy import Horizon
+from alpha_radar.event_semi_auto.execution_adapters import OperatorAdapter
+from alpha_radar.event_semi_auto.execution_contract import (
+    AdapterHealth,
+    ExecutionRequest,
+    ExecutionResult,
+)
 from alpha_radar.event_semi_auto.models import ExecutionAudit, LiveIntent, RealBet
 from alpha_radar.event_semi_auto.repository import Repository
 from alpha_radar.event_semi_auto.schemas import Confirm, Control, IntentAction, RiskSettings, Settle
 from alpha_radar.event_semi_auto.service import confirm, control, decide, settle, tick
-from alpha_radar.event_semi_auto.views import handoff_metrics
+from alpha_radar.event_semi_auto.views import adapter_health, bet_view, handoff_metrics
 from alpha_radar.event_simulator.integration_verify import candle, freeze
 from alpha_radar.event_simulator.models import SimulationBet
 from alpha_radar.event_simulator.schemas import Market
 from alpha_radar.market_data.constants import MarketInterval
+from alpha_radar.market_data.models import MarketCandle
 
 AT = datetime(2026, 11, 16, 20, 0, tzinfo=UTC)
 
@@ -74,9 +82,46 @@ async def duplicate_settle(bet_id: UUID, data: Settle, now: datetime) -> RealBet
         return await settle(Repository(db), bet_id, data, now)
 
 
+class DisabledRepository(Repository):
+    @property
+    def execution_enabled(self) -> bool:
+        return False
+
+
+class TimeoutAdapter(OperatorAdapter):
+    def __init__(self) -> None:
+        super().__init__("MOBILE_HANDOFF")
+        self.calls = 0
+        self.healthy = False
+
+    def health(self) -> AdapterHealth:
+        return super().health().model_copy(update={"healthy": self.healthy})
+
+    async def execute(self, request: ExecutionRequest) -> ExecutionResult:
+        self.calls += 1
+        raise TimeoutError("Fixture private provider detail must not reach the ledger")
+
+
+async def rejected(
+    repo: Repository, intent: LiveIntent, action: IntentAction, now: datetime, code: str
+) -> None:
+    try:
+        await decide(repo, intent.id, action, now)
+    except AppError as failure:
+        assert failure.code == code, (failure.code, code)
+        await repo.db.commit()
+    else:
+        raise AssertionError(f"Expected {code}")
+
+
 async def verify() -> None:
     settings = get_settings()
-    if settings.app_env == "production" or settings.market_data_provider != "mock":
+    if (
+        settings.app_env == "production"
+        or settings.market_data_provider != "mock"
+        or not settings.live_execution_enabled
+        or settings.live_execution_adapter != "MOBILE_HANDOFF"
+    ):
         raise RuntimeError("Fixtures require a disposable mock-provider database")
     async with async_session_factory() as db:
         repo = Repository(db)
@@ -129,11 +174,17 @@ async def verify() -> None:
                 AT,
             )
         except AppError as failure:
-            assert failure.code == "payout_low"
+            assert failure.code == "BLOCKED_PAYOUT"
         else:
             raise AssertionError("Below-minimum payout passed")
         approval = IntentAction(action="approve", acknowledged=True, payout=Decimal("1.80"))
         await decide(repo, btc.id, approval, AT)
+        assert btc.execution_status == "READY_FOR_EXECUTION"
+        handoff = IntentAction(action="handoff", acknowledged=True, payout=Decimal("1.80"))
+        await rejected(DisabledRepository(db), btc, handoff, AT, "live_execution_disabled")
+        await rejected(repo, btc, handoff.model_copy(update={"payout": None}), AT, "BLOCKED_PAYOUT")
+        await decide(repo, btc.id, handoff, AT)
+        assert btc.execution_status == "HANDOFF_STARTED"
         with_price = Confirm(
             acknowledged=True,
             direction="higher",
@@ -157,15 +208,10 @@ async def verify() -> None:
     async with async_session_factory() as db:
         repo = Repository(db)
         assert await repo.daily_pnl(AT) == 0
-        try:
-            await decide(repo, eth.id, approval, AT)
-        except AppError as failure:
-            assert failure.code == "max_active_bets"
-        else:
-            raise AssertionError("Existing real exposure was ignored")
+        await rejected(repo, eth, handoff, AT, "max_active_bets")
         await decide(repo, eth.id, IntentAction(action="reject", reason="discretion"), AT)
-        rejected = await db.get(LiveIntent, eth.id)
-        assert rejected is not None and rejected.status == "REJECTED_BY_USER"
+        declined = await db.get(LiveIntent, eth.id)
+        assert declined is not None and declined.status == "REJECTED_BY_USER"
         config = await repo.configuration()
         assert config is not None
         await control(repo, Control(revision=config.revision, action="kill"), AT)
@@ -223,7 +269,7 @@ async def verify() -> None:
             assert failure.code == "signal_expired"
         else:
             raise AssertionError("Expired intent could record a bet")
-        assert pending.status == "EXPIRED"
+        assert pending.status == "EXPIRED" and pending.execution_status == "EXPIRED"
         assert await db.scalar(select(func.count()).select_from(RealBet)) == 1
         mobile = later + timedelta(days=1)
         await histories(db, "BTCUSDT", 10, mobile)
@@ -235,11 +281,10 @@ async def verify() -> None:
         assert issued.event_signal_id == signal.id
         snapshot = (signal.score, signal.direction, signal.result)
         expected_atr = Decimal(2) / issued.signal_atr
-        action = IntentAction(action="handoff", acknowledged=True)
+        action = handoff
         handed = await decide(repo, issued.id, action, mobile + timedelta(seconds=1))
         assert handed.handoff_started_at == mobile + timedelta(seconds=1)
-        replay = await decide(repo, issued.id, action, mobile + timedelta(seconds=2))
-        assert replay.handoff_started_at == handed.handoff_started_at
+        await rejected(repo, issued, action, mobile + timedelta(seconds=2), "intent_not_actionable")
         assert (
             await db.scalar(
                 select(func.count())
@@ -253,7 +298,8 @@ async def verify() -> None:
         returned = mobile + timedelta(minutes=2)
         await tick(repo, returned)
         assert (await repo.handoffs())[0].id == issued.id
-        assert (await decide(repo, issued.id, action, returned)).status == "EXPIRED"
+        assert issued.execution_status == "RECONCILIATION_REQUIRED"
+        await rejected(repo, issued, action, returned, "signal_expired")
         return_action = IntentAction(action="return")
         await decide(repo, issued.id, return_action, returned)
         repeat = await decide(repo, issued.id, return_action, returned + timedelta(seconds=1))
@@ -267,6 +313,7 @@ async def verify() -> None:
                 "actual_open_at": mobile + timedelta(seconds=8),
                 "actual_expiry_at": mobile + timedelta(seconds=8, minutes=30),
                 "actual_open_price": Decimal(102),
+                "order_reference": "fixture-late",
             }
         )
         try:
@@ -284,14 +331,69 @@ async def verify() -> None:
         assert recorded.price_drift_absolute == 2 and recorded.price_drift_percent == 2
         assert recorded.price_drift_atr == expected_atr.quantize(Decimal("1e-18"))
         assert recorded.handoff_to_execution_ms == 7000 and recorded.signal_to_execution_ms == 8000
+        assert bet_view(recorded, issued).intent_to_execution_ms == 8000
+        assert issued.execution_status == "EXECUTED"
         await db.refresh(signal)
         assert (signal.score, signal.direction, signal.result) == snapshot
         assert not await repo.handoffs()
         metrics = await handoff_metrics(repo, returned)
         assert metrics.payout_below_policy == 1 and metrics.expired_during_handoff == 1
-        assert metrics.median_signal_to_execution_ms == metrics.p90_signal_to_execution_ms == 8000
+        assert metrics.median_signal_to_execution_ms == 4000
+        assert metrics.p90_signal_to_execution_ms == 8000
         assert await db.scalar(select(func.count()).select_from(SimulationBet)) == before
+        await settle(repo, recorded.id, result, confirmed.actual_expiry_at)
+        await verify_timeout(db, mobile + timedelta(days=1), handoff)
     print("Semi-Auto PostgreSQL lifecycle, idempotency, risk and Paper isolation verified.")
+
+
+async def verify_timeout(db: AsyncSession, now: datetime, action: IntentAction) -> None:
+    adapter = TimeoutAdapter()
+    repo = Repository(db, adapter=adapter)
+    for symbol in ("BTCUSDT", "ETHUSDT"):
+        await histories(db, symbol, 10, now)
+        await freeze(db, symbol, 10, "higher", now)
+    await db.commit()
+    assert (await tick(repo, now))["opened"] == 2
+    btc, eth = sorted(await repo.pending(), key=lambda row: row.symbol)
+    frozen = (btc.signal_score, btc.direction, btc.strategy_version, btc.settings_snapshot.copy())
+    await rejected(repo, btc, action, now, "adapter_unavailable")
+    assert adapter.calls == 0
+    adapter.healthy = True
+    assert btc.signal_atr is not None
+    signal_row = await db.get(EventShadowSignal, btc.event_signal_id)
+    assert signal_row is not None
+    later = now + timedelta(minutes=1)
+    # The deadline is a strict boundary even when a new price is available.
+    await rejected(repo, eth, action, later, "signal_expired")
+    # Change only the disposable fixture close used by the still-actionable BTC intent.
+    observed = await db.scalar(
+        select(MarketCandle).where(
+            MarketCandle.market_instrument_id == signal_row.reference_instrument_id,
+            MarketCandle.open_time == now - timedelta(minutes=1),
+        )
+    )
+    assert observed is not None
+    observed.close = observed.high = Decimal(110)
+    await db.commit()
+    await rejected(repo, btc, action, now, "price_drift")
+    assert btc.pre_execution_drift_absolute == 10 and btc.pre_execution_drift_percent == 10
+    assert adapter.calls == 0
+    override = action.model_copy(update={"drift_acknowledged": True})
+    await rejected(repo, btc, override, now, "execution_outcome_unknown")
+    assert btc.execution_status == "RECONCILIATION_REQUIRED" and adapter.calls == 1
+    await rejected(repo, btc, override, now, "intent_not_actionable")
+    await rejected(repo, btc, IntentAction(action="reject"), now, "execution_evidence_required")
+    assert adapter.calls == 1
+    assert frozen == (btc.signal_score, btc.direction, btc.strategy_version, btc.settings_snapshot)
+    health = {item.adapter: item for item in await adapter_health(repo)}
+    assert health["MOBILE_HANDOFF"].last_failure == now
+    assert health["MOBILE_HANDOFF"].error_rate == 1 / 3
+    config = await repo.configuration()
+    assert config is not None
+    await control(repo, Control(action="kill", revision=config.revision), now)
+    assert btc.execution_status == "RECONCILIATION_REQUIRED"
+    await decide(repo, btc.id, IntentAction(action="reconcile_no_order", acknowledged=True), now)
+    assert btc.execution_status == "CANCELLED"
 
 
 async def main() -> None:

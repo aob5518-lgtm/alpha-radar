@@ -24,8 +24,15 @@ from alpha_radar.event_semi_auto.schemas import (
     Settle,
     State,
 )
-from alpha_radar.event_semi_auto.service import confirm, control, decide, problem, settle
-from alpha_radar.event_semi_auto.views import intent_view, read_state
+from alpha_radar.event_semi_auto.service import (
+    confirm,
+    control,
+    decide,
+    get_intent,
+    problem,
+    settle,
+)
+from alpha_radar.event_semi_auto.views import bet_view, intent_view, read_state
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -94,9 +101,13 @@ async def decision(intent_id: UUID, payload: IntentAction, db: Database) -> Inte
 
 @router.post("/intents/{intent_id}/confirm", response_model=BetView)
 async def confirm_record(intent_id: UUID, payload: Confirm, db: Database) -> BetView:
-    return BetView.model_validate(await confirm(Repository(db), intent_id, payload))
+    repo = Repository(db)
+    bet = await confirm(repo, intent_id, payload)
+    return bet_view(bet, await get_intent(repo, intent_id))
 
 
 @router.post("/bets/{bet_id}/settle", response_model=BetView)
 async def settle_record(bet_id: UUID, payload: Settle, db: Database) -> BetView:
-    return BetView.model_validate(await settle(Repository(db), bet_id, payload))
+    repo = Repository(db)
+    bet = await settle(repo, bet_id, payload)
+    return bet_view(bet, await get_intent(repo, bet.intent_id))

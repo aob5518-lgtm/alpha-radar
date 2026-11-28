@@ -4,6 +4,8 @@
 The Semi-Auto worker is a third consumer of frozen Event Signal V1 records.
 Signal generation, Shadow settlement and the Paper ledger keep their existing
 contracts. PostgreSQL owns the four new tables in migration `20261128_0011`.
+The [Live Execution Architecture](EVENT_CONTRACT_EXECUTION_ADAPTER.md) describes the
+current dispatch gates, lifecycle, and reconciliation semantics.
 
 ## Access and activation
 
@@ -30,14 +32,12 @@ normalized by the stored Bybit ATR14. A drift above 0.25 ATR requires explicit
 acknowledgement. Stale data and the existing macro exclusion window block
 actions. Settings changes invalidate the previous revision's pending intents.
 
-The operator reviews the intent and opens the official Binance app entry. All
-contract selection and order placement take place manually in the Binance App.
-The operator enters the actual payout to approve the intent and checks the
-exchange's direction, horizon, premium, open price, open time and expiry.
-Below-minimum payout is blocked, including on a direct confirmation request.
-The user records the order while the intent is actionable in this original
-workflow. The [mobile handoff](EVENT_CONTRACT_MOBILE_HANDOFF_V1.md) accepts
-audited historical reports for already-executed orders after a timely handoff.
+The operator reviews the intent and enters the current displayed payout before
+starting execution. All contract selection and order placement take place manually
+in the Binance App. The operator checks the exchange's direction, horizon, premium,
+open price, open time and expiry. Below-minimum payout blocks a new start.
+The [mobile handoff](EVENT_CONTRACT_MOBILE_HANDOFF_V1.md) accepts audited historical
+reports for already-executed orders after a timely handoff.
 The optional exchange order reference helps detect accidental duplicates.
 Binance login credentials, session tokens and private execution adapters are
 outside the ledger.
@@ -49,8 +49,8 @@ bet, three consecutive real losses and a 120-minute cooldown. Each canonical
 instrument and horizon permits at most one open real bet. At 1.80× total payout,
 the break-even hit rate is 55.56%. Evidence scores are ordinal. Risk uses
 manual-ledger net P&L recorded during the UTC day and reserves the full premium
-of open real records. The daily limit and exposure apply to the actual premium
-at confirmation. The worker and all operator writes serialize under the same
+of open real records. The daily limit and exposure apply to the frozen premium
+before execution starts. The worker and all operator writes serialize under the same
 transaction advisory lock. Unique indexes enforce the signal-to-intent,
 intent-to-bet, order-reference and open-exposure invariants. Retried confirmations
 and settlements with the same terms return the existing record.
