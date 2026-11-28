@@ -2,6 +2,14 @@ export const dynamic = "force-dynamic";
 
 type Context = { params: Promise<{ segments?: string[] }> };
 const uuid = "[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}";
+const alertRoutes: Record<string, RegExp> = {
+  GET: new RegExp(`^alerts(?:/(?:config|devices|intents/${uuid}))?$`, "i"),
+  POST: new RegExp(
+    `^alerts/(?:devices(?:/${uuid}/test)?|intents/${uuid}/opened)$`,
+    "i",
+  ),
+  DELETE: new RegExp(`^alerts/devices/${uuid}$`, "i"),
+};
 
 async function proxy(request: Request, context: Context): Promise<Response> {
   const headers = {
@@ -12,9 +20,13 @@ async function proxy(request: Request, context: Context): Promise<Response> {
     Response.json({ error: { code } }, { status, headers });
   const path = ((await context.params).segments ?? []).join("/");
   const { method } = request;
+  const alerts =
+    process.env.EVENT_ALERTS_ENABLED === "true" &&
+    alertRoutes[method]?.test(path);
   if (
     process.env.EVENT_SEMI_AUTO_AVAILABLE !== "true" ||
     !(
+      alerts ||
       (method === "GET" && !path) ||
       (method === "PATCH" && path === "settings") ||
       (method === "POST" &&
@@ -35,7 +47,7 @@ async function proxy(request: Request, context: Context): Promise<Response> {
   const authorization = request.headers.get("authorization");
   if (!authorization || authorization.length > 512)
     return error(401, "operator_required");
-  const mutating = method !== "GET";
+  const mutating = method === "POST" || method === "PATCH";
   if (
     mutating &&
     !request.headers.get("content-type")?.startsWith("application/json")
@@ -47,7 +59,7 @@ async function proxy(request: Request, context: Context): Promise<Response> {
       process.env.API_URL ?? "http://localhost:8000",
     );
     const query = new URL(request.url).searchParams;
-    for (const key of ["intent_before", "bet_before"]) {
+    for (const key of ["intent_before", "bet_before", "history"]) {
       const value = query.get(key);
       if (value) target.searchParams.set(key, value);
     }
@@ -73,3 +85,4 @@ async function proxy(request: Request, context: Context): Promise<Response> {
 export const GET = proxy;
 export const POST = proxy;
 export const PATCH = proxy;
+export const DELETE = proxy;

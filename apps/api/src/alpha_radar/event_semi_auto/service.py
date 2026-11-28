@@ -12,6 +12,7 @@ from alpha_radar.event_contracts.shadow_models import EventShadowSignal
 from alpha_radar.event_contracts.shadow_repository import ShadowRepository
 from alpha_radar.event_contracts.shadow_rules import FRESHNESS
 from alpha_radar.event_contracts.strategy import utc
+from alpha_radar.event_semi_auto.alerts import alerts_enabled, queue_alert
 from alpha_radar.event_semi_auto.execution_contract import (
     ExecutionError,
     ExecutionRequest,
@@ -183,6 +184,8 @@ async def tick(repo: Repository, at: datetime | None = None) -> dict[str, int]:
             repo.audit("signal_received", now, intent)
             repo.audit("intent_created", now, intent)
             repo.audit("risk_blocked" if reason else "risk_approved", now, intent, reason)
+            if reason is None and alerts_enabled():
+                await queue_alert(repo.db, intent, state, at or datetime.now(UTC))
             blocked += int(reason is not None)
             opened += int(reason is None)
     await repo.db.commit()

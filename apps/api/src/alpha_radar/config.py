@@ -132,6 +132,11 @@ class Settings(BaseSettings):
     event_simulator_admin_token: SecretStr = SecretStr("")
     event_semi_auto_available: bool = False
     event_semi_auto_operator_token: SecretStr = SecretStr("")
+    event_alerts_enabled: bool = False
+    event_push_enabled: bool = False
+    web_push_vapid_public_key: str = ""
+    web_push_vapid_private_key: SecretStr = SecretStr("")
+    web_push_vapid_subject: str = ""
     live_execution_enabled: bool = False
     live_execution_adapter: Literal["MANUAL", "MOBILE_HANDOFF", "RESEARCH_DISABLED"] = (
         "MOBILE_HANDOFF"

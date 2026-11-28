@@ -86,12 +86,16 @@ export function EventContractModes({
   locale,
   copy,
   children,
+  requestedIntent,
 }: {
   locale: Locale;
   copy: ShadowCopy;
   children: ReactNode;
+  requestedIntent: string | null;
 }) {
-  const [mode, setMode] = useState<Mode>("paper");
+  const [mode, setMode] = useState<Mode>(
+    requestedIntent ? "semi-auto" : "paper",
+  );
   const zh = locale === "zh-CN";
   const tabs: [Mode, string][] = [
     ["shadow", zh ? "影子观察" : "Shadow"],
@@ -121,7 +125,11 @@ export function EventContractModes({
       ) : mode === "shadow" ? (
         <ShadowView locale={locale} copy={copy} />
       ) : (
-        <EventSemiAuto locale={locale} shadow={copy} />
+        <EventSemiAuto
+          locale={locale}
+          shadow={copy}
+          requestedIntent={requestedIntent}
+        />
       )}
     </>
   );

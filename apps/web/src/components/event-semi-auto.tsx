@@ -14,7 +14,11 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 
+import { EventAlertSettings } from "@/components/event-alert-settings";
+import { useEventAlerts } from "@/components/event-alert-provider";
+import { alertRequest } from "@/lib/event-alerts";
 import { executionTime, validPayout } from "@/lib/event-semi-auto";
 import {
   actionable,
@@ -990,12 +994,16 @@ function Settings({
 export function EventSemiAuto({
   locale,
   shadow,
+  requestedIntent,
 }: {
   locale: Locale;
   shadow: Messages["chart"]["eventContracts"]["shadow"];
+  requestedIntent: string | null;
 }) {
   const [draft, setDraft] = useState("");
-  const [token, setToken] = useState("");
+  const { token, setToken } = useEventAlerts();
+  const [direct, setDirect] = useState<SemiIntent | null>(null);
+  const [directError, setDirectError] = useState(false);
   const [state, setState] = useState<SemiState | null>(null);
   const [busy, setBusy] = useState(false);
   const writing = useRef(false);
@@ -1029,7 +1037,7 @@ export function EventSemiAuto({
           signal: abort.signal,
         })) as SemiState;
         if (abort.signal.aborted || writing.current) return;
-        if (resume.current) {
+        if (resume.current && !requestedIntent) {
           const pending = returnable(current.handoffs);
           if (pending.length) {
             await Promise.all(
@@ -1075,7 +1083,52 @@ export function EventSemiAuto({
       window.removeEventListener("pageshow", foreground);
       window.removeEventListener("focus", foreground);
     };
-  }, [token, busy]);
+  }, [token, busy, requestedIntent]);
+
+  const unlocked = Boolean(state);
+  useEffect(() => {
+    if (!requestedIntent || !token || !unlocked || busy) return;
+    const path = "/intents/" + requestedIntent;
+    const controller = new AbortController();
+    let polling = false;
+    let opened = false;
+    async function refresh() {
+      if (polling || document.visibilityState !== "visible") return;
+      polling = true;
+      try {
+        const item = await alertRequest<SemiIntent>(token, path, {
+          signal: controller.signal,
+        });
+        if (item.id !== requestedIntent) throw new Error("Wrong intent");
+        if (controller.signal.aborted) return;
+        setDirect(item);
+        setDirectError(false);
+        if (!opened) {
+          await alertRequest(token, path + "/opened", {
+            method: "POST",
+            body: "{}",
+            signal: controller.signal,
+          }).catch(() => undefined);
+          opened = true;
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setDirect(null);
+          setDirectError(true);
+        }
+      } finally {
+        polling = false;
+      }
+    }
+    void refresh();
+    const timer = setInterval(() => void refresh(), 3000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [requestedIntent, token, unlocked, busy]);
 
   const send: Send = async (path, data, method = "POST") => {
     if (writing.current) return false;
@@ -1198,6 +1251,8 @@ export function EventSemiAuto({
     setToken("");
     setDraft("");
     setState(null);
+    setDirect(null);
+    setDirectError(false);
     setError("");
     setReviewId(null);
     setIntentPage(null);
@@ -1221,11 +1276,23 @@ export function EventSemiAuto({
         ? [intent]
         : [],
     ) ?? [];
-  const selected =
-    eligible.find((intent) => intent.id === reviewId) ?? eligible[0];
-  const recovered =
-    state?.handoffs.find((intent) => intent.id === reviewId) ??
-    state?.handoffs[0];
+  const selected = requestedIntent
+    ? direct &&
+      eligible.some((item) => item.id === direct.id) &&
+      actionable(
+        direct,
+        Boolean(
+          state?.enabled && state.live_execution_enabled && !state.killed,
+        ),
+        now,
+      )
+      ? direct
+      : undefined
+    : (eligible.find((intent) => intent.id === reviewId) ?? eligible[0]);
+  const recovered = requestedIntent
+    ? undefined
+    : (state?.handoffs.find((intent) => intent.id === reviewId) ??
+      state?.handoffs[0]);
   const decisions: [string, string][] = [
     ["eligible", t("符合条件", "Eligible")],
     ["executed", t("已执行", "Executed")],
@@ -1302,6 +1369,44 @@ export function EventSemiAuto({
         </form>
       ) : (
         <>
+          <EventAlertSettings
+            locale={locale}
+            monitoring={state.enabled && !state.killed}
+          />
+          {requestedIntent && !selected && (
+            <div className={panel} role="status">
+              {direct ? (
+                <>
+                  <p className="font-medium">
+                    {direct.symbol} · {direct.horizon_minutes}m ·{" "}
+                    {direct.direction.toUpperCase()}
+                  </p>
+                  <p className="text-sm">
+                    {direct.status === "EXPIRED" ||
+                    Date.parse(
+                      direct.execution_deadline ?? direct.expires_at,
+                    ) <= now
+                      ? t(
+                          "该信号已过期，请等待下一次信号。",
+                          "This signal expired. Wait for the next signal.",
+                        )
+                      : direct.risk_reason
+                        ? reasonLabel(direct.risk_reason, t)
+                        : statusLabel(direct.status, t)}
+                  </p>
+                </>
+              ) : (
+                <p>
+                  {directError
+                    ? t("当前无法读取该意图。", "This intent is unavailable.")
+                    : t("正在读取该意图…", "Loading this intent…")}
+                </p>
+              )}
+              <Link href="/event-contracts" className="text-sm underline">
+                {t("返回事件合约", "Return to Event Contracts")}
+              </Link>
+            </div>
+          )}
           {recovered && (
             <>
               {state.handoffs.length > 1 && (
