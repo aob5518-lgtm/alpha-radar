@@ -18,6 +18,7 @@ private enum Mode: String, CaseIterable {
   case observe = "OBSERVE"
   case dryRun = "DRY_RUN"
   case assisted = "ASSISTED"
+  case auto = "AUTO"
 }
 
 private struct Panel: View {
@@ -30,7 +31,7 @@ private struct Panel: View {
 
   @AppStorage("cloudOrigin") private var cloudOrigin = ""
   @AppStorage("emergencyStop") private var emergencyStop = false
-  @State private var mode: Mode = .dryRun
+  @State private var mode: Mode = .observe
   @State private var pairingDigest = ""
   @State private var observation: Cloud.Observation?
   @State private var lastAlert: UUID?
@@ -53,6 +54,9 @@ private struct Panel: View {
   @State private var modal = false
   @State private var preparationStart: Date?
   @State private var generation = UUID()
+  @State private var mirrorTask: Task<Void, Never>?
+  @State private var mirrorGeneration = UUID()
+  @State private var physicalResult = "尚未测试"
 
   var body: some View {
     ScrollView {
@@ -79,13 +83,13 @@ private struct Panel: View {
           Divider().frame(height: 15)
           LabeledContent("镜像窗口", value: diagnostic.visible > 0 ? "已检测到" : "未检测到")
         }
-        LabeledContent("界面识别", value: "设备状态和订单内容未验证")
+        if mode != .dryRun { physicalPanel }
         if mode == .observe {
           observePanel
         } else if mode == .dryRun {
           mockPanel
         } else {
-          Text("ASSISTED 不可用。等待平台授权及真机订单界面的独立读回验证。")
+          Text("\(mode.rawValue) 已锁定。需要平台授权和订单字段的真机独立读回。")
             .foregroundStyle(.secondary)
         }
         LabeledContent("最近结果", value: lastResult)
@@ -97,6 +101,12 @@ private struct Panel: View {
     .onChange(of: cloudOrigin) {
       if mode == .observe { reset() }
     }
+    .onReceive(
+      NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.willSleepNotification)
+    ) { _ in
+      reset()
+    }
+    .onDisappear { reset() }
     .task(id: generation) {
       let active = generation
       while !Task.isCancelled {
@@ -122,6 +132,70 @@ private struct Panel: View {
           }
         }
         try? await Task.sleep(for: .seconds(3))
+      }
+    }
+  }
+
+  private var physicalPanel: some View {
+    GroupBox("镜像与真机验证") {
+      VStack(alignment: .leading, spacing: 8) {
+        LabeledContent("辅助功能", value: diagnostic.accessibility ? "已授权" : "未授权")
+        LabeledContent("屏幕录制", value: diagnostic.capturePermission ? "已授权" : "未授权")
+        LabeledContent("独立读回", value: physicalResult)
+        if mode == .observe {
+          HStack {
+            Button("激活 iPhone 镜像") { runPhysical(.activate) }
+            Button("读取测试页") { runPhysical(.inspect) }
+            Button("验证测试页输入") { runPhysical(.testInput) }
+          }
+          .disabled(emergencyStop || mirrorTask != nil)
+          Text("请先用 iPhone Safari 打开配套测试页。实测只点击该页的测试按钮。")
+            .font(.caption).foregroundStyle(.secondary)
+        }
+      }
+      .padding(8)
+    }
+  }
+
+  private enum PhysicalAction { case activate, inspect, testInput }
+
+  private func runPhysical(_ action: PhysicalAction) {
+    guard !emergencyStop, mode == .observe, mirrorTask == nil else { return }
+    let operation = UUID()
+    mirrorGeneration = operation
+    physicalResult = "验证中"
+    mirrorTask = Task { @MainActor in
+      defer { if mirrorGeneration == operation { mirrorTask = nil } }
+      do {
+        switch action {
+        case .testInput:
+          let proof = try await NativeMirroring.testFixture {
+            mirrorGeneration == operation && !emergencyStop && mode == .observe
+          }
+          guard mirrorGeneration == operation else { return }
+          physicalResult = "真机输入已独立读回 · \(proof.inputToReadbackMs) ms"
+          Self.log.info(
+            "phy_test readback=confirmed activation_ms=\(proof.activationMs) input_to_readback_ms=\(proof.inputToReadbackMs)"
+          )
+        case .inspect:
+          let state = try await NativeMirroring.inspectFixture()
+          guard mirrorGeneration == operation else { return }
+          switch state {
+          case .ready: physicalResult = "真机测试页 · 已看到测试按钮"
+          case .passed: physicalResult = "真机测试页 · 已看到输入接收标记"
+          case .unknown: throw MirrorTestError.unexpectedScreen
+          }
+        case .activate:
+          let elapsed = try await NativeMirroring.activate()
+          guard mirrorGeneration == operation else { return }
+          physicalResult = "镜像已激活 · \(elapsed) ms · 设备内容待核验"
+          Self.log.info("phy_test activation_ms=\(elapsed)")
+        }
+      } catch {
+        guard mirrorGeneration == operation else { return }
+        let code = (error as? MirrorTestError)?.rawValue ?? "unconfirmed"
+        physicalResult = "已停止 · \(code)"
+        Self.log.notice("phy_test stopped=\(code, privacy: .public)")
       }
     }
   }
@@ -235,6 +309,10 @@ private struct Panel: View {
 
   private func reset() {
     generation = UUID()
+    mirrorGeneration = UUID()
+    mirrorTask?.cancel()
+    mirrorTask = nil
+    physicalResult = emergencyStop ? "本地已急停" : "尚未测试"
     observation = nil
     pairingDigest = ""
     connection = "未连接"

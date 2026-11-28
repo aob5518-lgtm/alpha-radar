@@ -1,5 +1,7 @@
 # Alpha Radar Mac Executor V1
 
+For the native mirroring diagnostics in the current companion, see [Mac Executor V2](MAC_EXECUTOR_V2.md).
+
 Feasibility conclusion **PARTIALLY_SUPPORTED**. The operator reported successful manual
 interaction with Binance through iPhone Mirroring. On November 29, 2026 (Asia/Kuala Lumpur),
 an Apple Silicon Mac running macOS 27.2.1 exposed one on-screen iPhone Mirroring window.

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alpha Radar Mirror Test</title>
+  <style>
+    body { margin: 0; background: #fff; color: #111; font-family: system-ui, sans-serif; }
+    main { position: absolute; top: 50%; width: 100%; transform: translateY(-50%); text-align: center; }
+    h1, button, p { font-size: 18px; font-weight: 700; }
+    h1 { margin: 0 0 40px; }
+    button { padding: 16px 20px; border: 2px solid #111; border-radius: 10px; background: #def; color: #111; }
+  </style>
+  <main>
+    <h1>ALPHA RADAR MIRROR TEST</h1>
+    <button type="button" id="probe">TAP TEST BUTTON</button>
+    <p id="result" hidden>IPHONE INPUT RECEIVED</p>
+  </main>
+  <script>
+    const probe = document.getElementById('probe');
+    probe.addEventListener('click', () => {
+      probe.remove();
+      document.getElementById('result').hidden = false;
+    }, { once: true });
+  </script>
+</html>
