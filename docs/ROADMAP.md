@@ -531,3 +531,9 @@ The opt-in `/event-contracts` research page uses frozen Event Signal V1 records 
 track automated paper bets under explicit settlement and payout assumptions.
 The ledger, risk controls and limitations are documented in
 [Event Contract Simulator V1](EVENT_CONTRACT_SIMULATOR_V1.md).
+
+## Event Contract Semi-Auto V1
+
+The same research page adds a private operator mode for reviewing frozen signals
+against real-risk settings and recording manually placed orders and outcomes.
+[Event Contract Semi-Auto V1](EVENT_CONTRACT_SEMI_AUTO_V1.md) describes the workflow.

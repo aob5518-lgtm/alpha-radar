@@ -8,7 +8,8 @@ Status: Active Development
 Alpha Radar is a focused financial intelligence product with three core user-facing
 functions: Important Financial Events, a professional Crypto Chart with deterministic structural
 levels and trend regime, and a platform-grounded AI Analyst. An opt-in Event Contract Simulator
-provides paper-only evaluation of the Chart's Event Signal as a separate research page.
+provides Shadow and Paper evaluation and a private, operator-controlled Semi-Auto ledger
+for manually placed Event Contracts.
 
 It continuously monitors:
 
@@ -110,6 +111,7 @@ Core primary navigation contains:
 
 The feature-flagged Event Contract Simulator (`/event-contracts`) adds a research
 entry to this navigation. See [Event Contract Simulator V1](EVENT_CONTRACT_SIMULATOR_V1.md).
+See [Event Contract Semi-Auto V1](EVENT_CONTRACT_SEMI_AUTO_V1.md) for the manual workflow.
 
 The root route redirects to Events. English and Simplified Chinese remain supported. The product
 optimizes for usefulness, accuracy, speed and clarity rather than surface count. Missing data is
