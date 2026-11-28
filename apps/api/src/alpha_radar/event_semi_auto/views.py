@@ -1,4 +1,6 @@
 from datetime import datetime
+from math import ceil
+from statistics import median
 from uuid import UUID
 
 from pydantic import ValidationError
@@ -18,6 +20,7 @@ from alpha_radar.event_semi_auto.rules import PENDING, drift, performance
 from alpha_radar.event_semi_auto.schemas import (
     BetView,
     ComparisonRow,
+    HandoffMetrics,
     IntentView,
     RiskSettings,
     SignalCard,
@@ -87,6 +90,59 @@ async def cards(repo: Repository, settings: RiskSettings, now: datetime) -> list
     finally:
         await redis.aclose()
     return values
+
+
+async def handoff_metrics(repo: Repository, now: datetime) -> HandoffMetrics:
+    intents = LiveIntent
+    bets = RealBet
+    statuses = (
+        (
+            await repo.db.execute(
+                select(intents.status, intents.expires_at, intents.returned_at).where(
+                    intents.handoff_started_at.is_not(None)
+                )
+            )
+        )
+        .tuples()
+        .all()
+    )
+    executions = (
+        (
+            await repo.db.execute(
+                select(
+                    bets.signal_to_execution_ms,
+                    bets.payout_below_policy,
+                    bets.price_drift_atr,
+                    bets.settings_snapshot,
+                ).where(bets.signal_to_handoff_ms.is_not(None))
+            )
+        )
+        .tuples()
+        .all()
+    )
+    latencies = sorted(ms for ms, _, _, _ in executions if ms is not None)
+    above = sum(
+        atr is not None and atr > RiskSettings.model_validate(snapshot).max_drift_atr
+        for _, _, atr, snapshot in executions
+    )
+    unavailable = sum(atr is None for _, _, atr, _ in executions)
+    return HandoffMetrics(
+        opened=len(statuses),
+        executed=len(executions),
+        skipped=sum(status == "REJECTED_BY_USER" for status, _, _ in statuses),
+        expired_during_handoff=sum(
+            utc(expires) <= utc(returned)
+            if returned
+            else status == "EXPIRED" or (status == "APPROVED_BY_USER" and utc(expires) <= now)
+            for status, expires, returned in statuses
+        ),
+        payout_below_policy=sum(below for _, below, _, _ in executions),
+        median_signal_to_execution_ms=int(median(latencies)) if latencies else None,
+        p90_signal_to_execution_ms=latencies[ceil(len(latencies) * 0.9) - 1] if latencies else None,
+        drift_within_limit=len(executions) - above - unavailable,
+        drift_above_limit=above,
+        drift_unavailable=unavailable,
+    )
 
 
 async def read_state(
@@ -183,6 +239,8 @@ async def read_state(
         daily_pnl=await repo.daily_pnl(now),
         signals=await cards(repo, settings, now),
         intents=[await intent_view(repo, item, now) for item in intents],
+        handoffs=[await intent_view(repo, item, now) for item in await repo.handoffs()],
+        handoff_metrics=await handoff_metrics(repo, now),
         active=[BetView.model_validate(item) for item in await repo.active()],
         history=[BetView.model_validate(item) for item in history],
         next_intent_before=next_intent,

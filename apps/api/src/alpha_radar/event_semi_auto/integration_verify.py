@@ -18,6 +18,7 @@ from alpha_radar.event_semi_auto.models import ExecutionAudit, LiveIntent, RealB
 from alpha_radar.event_semi_auto.repository import Repository
 from alpha_radar.event_semi_auto.schemas import Confirm, Control, IntentAction, RiskSettings, Settle
 from alpha_radar.event_semi_auto.service import confirm, control, decide, settle, tick
+from alpha_radar.event_semi_auto.views import handoff_metrics
 from alpha_radar.event_simulator.integration_verify import candle, freeze
 from alpha_radar.event_simulator.models import SimulationBet
 from alpha_radar.event_simulator.schemas import Market
@@ -132,7 +133,6 @@ async def verify() -> None:
         else:
             raise AssertionError("Below-minimum payout passed")
         approval = IntentAction(action="approve", acknowledged=True, payout=Decimal("1.80"))
-        await decide(repo, btc.id, IntentAction(action="handoff", acknowledged=True), AT)
         await decide(repo, btc.id, approval, AT)
         with_price = Confirm(
             acknowledged=True,
@@ -225,6 +225,71 @@ async def verify() -> None:
             raise AssertionError("Expired intent could record a bet")
         assert pending.status == "EXPIRED"
         assert await db.scalar(select(func.count()).select_from(RealBet)) == 1
+        mobile = later + timedelta(days=1)
+        await histories(db, "BTCUSDT", 10, mobile)
+        signal = await freeze(db, "BTCUSDT", 10, "higher", mobile)
+        await db.commit()
+        assert (await tick(repo, mobile))["opened"] == 1
+        issued = (await repo.pending())[0]
+        assert issued.signal_atr is not None
+        assert issued.event_signal_id == signal.id
+        snapshot = (signal.score, signal.direction, signal.result)
+        expected_atr = Decimal(2) / issued.signal_atr
+        action = IntentAction(action="handoff", acknowledged=True)
+        handed = await decide(repo, issued.id, action, mobile + timedelta(seconds=1))
+        assert handed.handoff_started_at == mobile + timedelta(seconds=1)
+        replay = await decide(repo, issued.id, action, mobile + timedelta(seconds=2))
+        assert replay.handoff_started_at == handed.handoff_started_at
+        assert (
+            await db.scalar(
+                select(func.count())
+                .select_from(ExecutionAudit)
+                .where(
+                    ExecutionAudit.intent_id == issued.id, ExecutionAudit.event == "binance_handoff"
+                )
+            )
+            == 1
+        )
+        returned = mobile + timedelta(minutes=2)
+        await tick(repo, returned)
+        assert (await repo.handoffs())[0].id == issued.id
+        assert (await decide(repo, issued.id, action, returned)).status == "EXPIRED"
+        return_action = IntentAction(action="return")
+        await decide(repo, issued.id, return_action, returned)
+        repeat = await decide(repo, issued.id, return_action, returned + timedelta(seconds=1))
+        assert repeat.returned_at == returned
+        late = data.model_copy(
+            update={
+                "record_handoff": True,
+                "actual_payout": Decimal("1.60"),
+                "direction": "lower",
+                "horizon_minutes": 30,
+                "actual_open_at": mobile + timedelta(seconds=8),
+                "actual_expiry_at": mobile + timedelta(seconds=8, minutes=30),
+                "actual_open_price": Decimal(102),
+            }
+        )
+        try:
+            await confirm(repo, issued.id, late, returned)
+        except AppError as failure:
+            assert failure.code == "identity_mismatch"
+        else:
+            raise AssertionError("Execution mismatches were not acknowledged")
+        confirmed = late.model_copy(update={"mismatch_acknowledged": True})
+        recorded = await confirm(repo, issued.id, confirmed, returned)
+        assert (await confirm(repo, issued.id, confirmed, returned)).id == recorded.id
+        assert recorded.payout_below_policy and recorded.late_execution_confirmation
+        assert recorded.direction_mismatch and recorded.horizon_mismatch
+        assert recorded.price_drift_absolute == 2 and recorded.price_drift_percent == 2
+        assert recorded.price_drift_atr == expected_atr.quantize(Decimal("1e-18"))
+        assert recorded.handoff_to_execution_ms == 7000 and recorded.signal_to_execution_ms == 8000
+        await db.refresh(signal)
+        assert (signal.score, signal.direction, signal.result) == snapshot
+        assert not await repo.handoffs()
+        metrics = await handoff_metrics(repo, returned)
+        assert metrics.payout_below_policy == 1 and metrics.expired_during_handoff == 1
+        assert metrics.median_signal_to_execution_ms == metrics.p90_signal_to_execution_ms == 8000
+        assert await db.scalar(select(func.count()).select_from(SimulationBet)) == before
     print("Semi-Auto PostgreSQL lifecycle, idempotency, risk and Paper isolation verified.")
 
 

@@ -7,13 +7,21 @@ import type {
   SemiRiskSettings,
   SemiState,
 } from "@alpha-radar/types/event-semi-auto";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-
 import {
-  executionTime,
-  payoutBreakeven,
-  validPayout,
-} from "@/lib/event-semi-auto";
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+
+import { executionTime } from "@/lib/event-semi-auto";
+import {
+  actionable,
+  binanceAppEntry,
+  copyInstruction,
+  returnable,
+} from "@/lib/event-mobile-handoff";
 import type { Locale } from "@/lib/i18n/config";
 import type { Messages } from "@/lib/i18n/messages";
 
@@ -123,6 +131,8 @@ function reasonLabel(reason: string, t: T): string {
         "方向或期限与信号不一致。",
         "Direction or horizon does not match the intent.",
       );
+    case "handoff_required":
+      return t("找不到有效的交接记录。", "No valid handoff was found.");
     case "acknowledgement_required":
       return t("请勾选风险确认。", "Acknowledge the risk first.");
     case "duplicate_order_reference":
@@ -172,191 +182,204 @@ function IntentReview({
   intent,
   disabled,
   send,
+  start,
   t,
   fmt,
   close,
+  now,
 }: {
   intent: SemiIntent;
   disabled: boolean;
   send: Send;
+  start: (intent: SemiIntent, driftAcknowledged: boolean) => Promise<void>;
   t: T;
   fmt: Format;
   close: () => void;
+  now: number;
 }) {
-  const [payout, setPayout] = useState(intent.approved_payout ?? "");
-  const [acknowledged, setAcknowledged] = useState(false);
+  const [sheet, setSheet] = useState(false);
   const [driftAcknowledged, setDriftAcknowledged] = useState(false);
-  const [rejection, setRejection] = useState("");
   const [recording, setRecording] = useState(false);
-  const [handoff, setHandoff] = useState(false);
-  const url = `/intents/${intent.id}`;
-  const canApprove =
-    acknowledged &&
-    !disabled &&
-    !intent.risk_reason &&
-    validPayout(payout, intent.minimum_payout);
-  const approved = intent.status === "APPROVED_BY_USER";
+  const [payout, setPayout] = useState("");
+  const [direction, setDirection] = useState(intent.direction);
+  const [horizon, setHorizon] = useState(intent.horizon_minutes);
+  const [mismatchAcknowledged, setMismatchAcknowledged] = useState(false);
+  const url = "/intents/" + intent.id;
+  const recovery = Boolean(intent.handoff_started_at);
+  const expired = Date.parse(intent.expires_at) <= now;
+  const mismatch =
+    direction !== intent.direction || horizon !== intent.horizon_minutes;
+
   function record(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const field = (name: string) => String(form.get(name) ?? "").trim();
     const openAt = executionTime(field("open_at"));
     const expires = executionTime(field("expires"));
-    if (!openAt || !expires || !canApprove) return;
+    if (!openAt || !expires || (mismatch && !mismatchAcknowledged)) return;
     void send(url + "/confirm", {
       acknowledged: true,
-      drift_acknowledged: driftAcknowledged,
+      record_handoff: true,
+      mismatch_acknowledged: mismatchAcknowledged,
       actual_premium: field("premium"),
       actual_payout: payout,
       actual_open_at: openAt,
       actual_expiry_at: expires,
       actual_open_price: field("price"),
-      direction: field("direction"),
-      horizon_minutes: Number(field("horizon")),
+      direction,
+      horizon_minutes: horizon,
       order_reference: field("reference") || null,
-      notes: field("notes") || null,
     }).then((ok) => {
       if (ok) close();
     });
   }
+
   return (
-    <article className={panel + " space-y-3"} data-intent-review={intent.id}>
-      <div className="flex justify-between gap-2">
-        <h2 className="text-lg font-semibold">
-          {t("准备下注", "Prepare entry")} · {intent.symbol}{" "}
-          {intent.horizon_minutes}m
-        </h2>
-        <button type="button" onClick={close} className={button}>
-          {t("关闭", "Close")}
-        </button>
-      </div>
-      <p className="text-xl font-semibold">
-        {intent.direction.toUpperCase()} · {fmt.cash(intent.suggested_stake)} ·
-        ≥{fmt.payout(intent.minimum_payout)}
+    <article
+      className={panel + " min-w-0 space-y-3"}
+      data-intent-review={intent.id}
+    >
+      <h2 className="font-semibold">
+        {recovery
+          ? t("刚才准备的订单", "Previously prepared order")
+          : t("当前可审核信号", "Actionable signal")}
+      </h2>
+      <p className="text-2xl font-semibold">
+        {intent.symbol.slice(0, -4)} · {intent.horizon_minutes}m ·{" "}
+        {intent.direction.toUpperCase()}
       </p>
-      <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-        <div>
-          <dt>{t("证据分", "Evidence score")}</dt>
-          <dd>{intent.signal_score}</dd>
-        </div>
-        <div>
-          <dt>{t("信号时间", "Signal time")}</dt>
-          <dd>{fmt.time(intent.generated_at)}</dd>
-        </div>
-        <div>
-          <dt>{t("审核截止", "Intent expires")}</dt>
-          <dd>{fmt.time(intent.expires_at)}</dd>
-        </div>
-        <div>
-          <dt>{t("信号参考价", "Signal reference price")}</dt>
-          <dd>{fmt.value(intent.signal_reference_price)}</dd>
-        </div>
-        <div>
-          <dt>{t("风控", "Risk")}</dt>
-          <dd>
-            {intent.risk_reason
-              ? reasonLabel(intent.risk_reason, t)
-              : t("通过", "Passed")}
-          </dd>
-        </div>
-      </dl>
-      <p className="text-sm text-amber-300">
-        {t(
-          "Radar 信号参考价 ≠ Binance 实际开仓价。",
-          "Radar signal reference and Binance execution price are distinct.",
-        )}
+      <p className="text-lg">
+        {fmt.cash(intent.suggested_stake)} · ≥
+        {fmt.payout(intent.minimum_payout)}
       </p>
-      {intent.drift_warning && (
-        <p className="text-sm text-amber-300">
-          {reasonLabel("price_drift", t)} ({fmt.value(intent.drift_atr)} ATR)
-        </p>
-      )}
-      <label className="flex items-start gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={acknowledged}
-          onChange={(event) => setAcknowledged(event.target.checked)}
-          className="mt-0.5 size-5 shrink-0"
-        />
-        {t(
-          "我会在 Binance App 核对方向、期限、金额和真实赔率，并亲自确认最终订单。",
-          "I will check direction, horizon, stake and payout in the Binance App and confirm any order myself.",
-        )}
-      </label>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className={button}
-          disabled={!acknowledged || disabled || Boolean(intent.risk_reason)}
-          onClick={() =>
-            void send(url + "/decision", {
-              action: "handoff",
-              acknowledged,
-            }).then(setHandoff)
-          }
-        >
-          {t("准备打开 Binance", "Prepare to open Binance")}
-        </button>
-        {handoff && acknowledged && !intent.risk_reason && !disabled && (
-          <a
-            className={button}
-            href="https://www.binance.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {t("打开 Binance", "Open Binance")}
-          </a>
-        )}
-      </div>
-      <Field label={t("实际赔率 / Payout", "Actual payout (total multiplier)")}>
-        <input
-          className={input}
-          type="number"
-          inputMode="decimal"
-          min="1.000001"
-          max="100"
-          step="0.000001"
-          value={payout}
-          onChange={(event) => setPayout(event.target.value)}
-        />
-      </Field>
       <p className="text-sm">
-        {t("盈亏平衡命中率", "Break-even hit rate")}{" "}
-        {fmt.rate(payoutBreakeven(payout))}
+        {intent.signal_state.replaceAll("_", " ")} · {t("证据分", "Score")}{" "}
+        {intent.signal_score} · {t("信号参考价", "Signal reference")}{" "}
+        {fmt.value(intent.signal_reference_price)}
       </p>
-      {payout && !validPayout(payout, intent.minimum_payout) && (
-        <p className="text-sm text-red-300" role="alert">
-          {reasonLabel("payout_low", t)}
-        </p>
+      <p className="text-sm text-amber-300" data-handoff-expired={expired}>
+        {expired
+          ? t("该信号已过期", "This signal has expired")
+          : t("有效时间", "Time remaining") +
+            " " +
+            Math.ceil((Date.parse(intent.expires_at) - now) / 1000) +
+            "s"}
+      </p>
+      {recovery ? (
+        <>
+          <p>
+            {t(
+              "你是否已经在 Binance 完成下注？",
+              "Did you place the order in Binance?",
+            )}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={primary}
+              disabled={disabled}
+              onClick={() => setRecording(true)}
+            >
+              {t("已下注", "I placed it")}
+            </button>
+            <button
+              type="button"
+              className={button}
+              disabled={disabled}
+              onClick={() =>
+                void send(url + "/decision", { action: "reject" }).then(
+                  (ok) => {
+                    if (ok) close();
+                  },
+                )
+              }
+            >
+              {t("未下注", "I did not place it")}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={button}
+              onClick={() => void copyInstruction(intent)}
+            >
+              {t("复制订单信息", "Copy order details")}
+            </button>
+          </div>
+          <BinanceSteps t={t} />
+        </>
+      ) : (
+        <>
+          {sheet ? (
+            <section
+              className="space-y-3 rounded border p-3"
+              aria-label={t("前往币安前确认", "Review before opening Binance")}
+            >
+              <BinanceSteps t={t} />
+              <p className="text-sm">
+                {t(
+                  "请在币安核对实际赔率和开仓价。赔率低于门槛时请跳过。",
+                  "Check payout and open price in Binance. Skip if payout is below the minimum.",
+                )}
+              </p>
+              {intent.drift_warning && (
+                <Field label={reasonLabel("price_drift", t)}>
+                  <input
+                    type="checkbox"
+                    className="size-5"
+                    checked={driftAcknowledged}
+                    onChange={(event) =>
+                      setDriftAcknowledged(event.target.checked)
+                    }
+                  />
+                </Field>
+              )}
+              <button
+                type="button"
+                className={primary + " w-full"}
+                data-handoff-launch=""
+                disabled={
+                  disabled ||
+                  expired ||
+                  Boolean(intent.risk_reason) ||
+                  (intent.drift_warning && !driftAcknowledged)
+                }
+                onClick={() => void start(intent, driftAcknowledged)}
+              >
+                {t("前往 Binance", "Continue to Binance")}
+              </button>
+            </section>
+          ) : (
+            <button
+              type="button"
+              className={primary + " w-full"}
+              data-handoff-cta=""
+              disabled={disabled || expired}
+              onClick={() => setSheet(true)}
+            >
+              {t("前往 Binance 下单", "Open Binance to place order")}
+            </button>
+          )}
+          <button
+            type="button"
+            className={button}
+            disabled={disabled || expired}
+            onClick={() =>
+              void send(url + "/decision", { action: "reject" }).then((ok) => {
+                if (ok) close();
+              })
+            }
+          >
+            {t("跳过", "Skip")}
+          </button>
+        </>
       )}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className={primary}
-          disabled={!canApprove}
-          onClick={() =>
-            void send(url + "/decision", {
-              action: "approve",
-              acknowledged,
-              payout,
-            })
-          }
+      {recovery && recording && (
+        <form
+          className="space-y-3 rounded border p-3"
+          onSubmit={record}
+          data-handoff-record=""
         >
-          {approved
-            ? t("更新已核对赔率", "Update reviewed payout")
-            : t("确认已核对赔率", "Approve reviewed payout")}
-        </button>
-        <button
-          type="button"
-          className={button}
-          disabled={!approved || !canApprove}
-          onClick={() => setRecording(true)}
-        >
-          {t("我已下注", "I placed the order")}
-        </button>
-      </div>
-      {approved && recording && (
-        <form className="space-y-3 rounded border p-3" onSubmit={record}>
           <div className="grid gap-2 sm:grid-cols-2">
             <Field label={t("实际金额（USDT）", "Actual premium (USDT)")}>
               <input
@@ -368,7 +391,24 @@ function IntentReview({
                 max="10000"
                 inputMode="decimal"
                 required
-                defaultValue={Number(intent.suggested_stake)}
+              />
+            </Field>
+            <Field
+              label={t(
+                "实际赔率倍数（总返还 ÷ 金额）",
+                "Actual payout multiplier (total return ÷ premium)",
+              )}
+            >
+              <input
+                className={input}
+                type="number"
+                min="1.000001"
+                max="100"
+                step="0.000001"
+                inputMode="decimal"
+                required
+                value={payout}
+                onChange={(event) => setPayout(event.target.value)}
               />
             </Field>
             <Field label={t("实际开仓价", "Actual open price")}>
@@ -410,92 +450,83 @@ function IntentReview({
                 required
               />
             </Field>
-            <Field label={t("确认方向", "Confirm direction")}>
+            <Field label={t("实际方向", "Actual direction")}>
               <select
                 className={input}
-                name="direction"
-                defaultValue={intent.direction}
+                value={direction}
+                onChange={(event) => {
+                  setDirection(
+                    event.target.value === "lower" ? "lower" : "higher",
+                  );
+                  setMismatchAcknowledged(false);
+                }}
               >
                 <option value="higher">HIGHER</option>
                 <option value="lower">LOWER</option>
               </select>
             </Field>
-            <Field label={t("确认期限", "Confirm horizon")}>
+            <Field label={t("实际期限", "Actual horizon")}>
               <select
                 className={input}
-                name="horizon"
-                defaultValue={intent.horizon_minutes}
+                value={horizon}
+                onChange={(event) => {
+                  setHorizon(event.target.value === "30" ? 30 : 10);
+                  setMismatchAcknowledged(false);
+                }}
               >
-                <option value="10">10m</option>
-                <option value="30">30m</option>
+                <option value={10}>10m</option>
+                <option value={30}>30m</option>
               </select>
             </Field>
             <Field label={t("订单编号（选填）", "Order reference (optional)")}>
               <input className={input} name="reference" maxLength={128} />
             </Field>
-            <Field label={t("备注（选填）", "Notes (optional)")}>
-              <input className={input} name="notes" maxLength={500} />
-            </Field>
           </div>
-          {intent.drift_warning && (
-            <label className="flex items-center gap-2 text-sm">
+          {payout && Number(payout) < Number(intent.minimum_payout) && (
+            <p role="status" className="text-amber-300">
+              {t(
+                "实际赔率低于策略最低要求，记录将标记为低于门槛。",
+                "Actual payout was below policy and will be flagged.",
+              )}
+            </p>
+          )}
+          {mismatch && (
+            <Field
+              label={t(
+                "实际方向或期限与信号不同，我确认按币安成交记录。",
+                "I confirm the actual direction or horizon differs from the signal.",
+              )}
+            >
               <input
                 className="size-5"
                 type="checkbox"
-                checked={driftAcknowledged}
-                onChange={(event) => setDriftAcknowledged(event.target.checked)}
+                checked={mismatchAcknowledged}
+                onChange={(event) =>
+                  setMismatchAcknowledged(event.target.checked)
+                }
               />
-              {t(
-                "已核对价格偏离与实际开仓价",
-                "I reviewed the price drift and actual open price",
-              )}
-            </label>
+            </Field>
           )}
           <button
-            className={primary}
-            disabled={
-              !canApprove || (intent.drift_warning && !driftAcknowledged)
-            }
+            className={primary + " sticky bottom-2 w-full bg-[var(--panel)]"}
+            disabled={disabled || (mismatch && !mismatchAcknowledged)}
           >
-            {t("确认已下注", "Record manual execution")}
+            {t("记录实际成交", "Record actual execution")}
           </button>
         </form>
       )}
-      <div className="flex flex-wrap items-end gap-2">
-        <Field label={t("跳过理由（选填）", "Skip reason (optional)")}>
-          <select
-            className={input}
-            value={rejection}
-            onChange={(event) => setRejection(event.target.value)}
-          >
-            <option value="">—</option>
-            <option value="payout_low">
-              {t("赔率太低", "Payout too low")}
-            </option>
-            {["location", "discretion", "other"].map((reason) => (
-              <option value={reason} key={reason}>
-                {reasonLabel(reason, t)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <button
-          type="button"
-          className={button}
-          disabled={disabled}
-          onClick={() =>
-            void send(url + "/decision", {
-              action: "reject",
-              reason: rejection || null,
-            }).then((ok) => {
-              if (ok) close();
-            })
-          }
-        >
-          {t("跳过这次", "Skip this intent")}
-        </button>
-      </div>
     </article>
+  );
+}
+
+function BinanceSteps({ t }: { t: T }) {
+  return (
+    <p className="text-sm text-[var(--muted)]">
+      {t(
+        "币安 App → 合约 → 事件合约。选择 BTC／ETH、10m／30m，核对方向、金额和赔率，再确认。",
+        "Binance App → Futures → Events. Select BTC/ETH and 10m/30m, check direction, premium and payout, then confirm.",
+      )}
+    </p>
   );
 }
 
@@ -516,6 +547,43 @@ function BetDetails({ bet, t, fmt }: { bet: RealBet; t: T; fmt: Format }) {
         <dt>{t("实际开仓价", "Actual open price")}</dt>
         <dd>{fmt.value(bet.actual_open_price)}</dd>
       </div>
+      {bet.price_drift_absolute !== null && (
+        <div>
+          <dt>{t("实际价格偏离", "Actual price drift")}</dt>
+          <dd>
+            {fmt.value(bet.price_drift_absolute)} ·{" "}
+            {fmt.value(bet.price_drift_percent)}% ·{" "}
+            {fmt.value(bet.price_drift_atr)} ATR
+          </dd>
+        </div>
+      )}
+      {bet.signal_to_execution_ms !== null && (
+        <div>
+          <dt>{t("信号 → 交接 → 开仓", "Signal → handoff → execution")}</dt>
+          <dd>
+            {fmt.value((bet.signal_to_handoff_ms ?? 0) / 1000)}s +{" "}
+            {fmt.value((bet.handoff_to_execution_ms ?? 0) / 1000)}s
+          </dd>
+        </div>
+      )}
+      {(bet.payout_below_policy ||
+        bet.late_execution_confirmation ||
+        bet.direction_mismatch ||
+        bet.horizon_mismatch) && (
+        <div className="text-amber-300">
+          <dt>{t("成交审核", "Execution audit")}</dt>
+          {bet.payout_below_policy && (
+            <dd>{t("实际赔率低于门槛", "Payout below policy")}</dd>
+          )}
+          {bet.late_execution_confirmation && (
+            <dd>{t("过期后补录", "Recorded after signal expiry")}</dd>
+          )}
+          {bet.direction_mismatch && (
+            <dd>{t("方向不同", "Direction mismatch")}</dd>
+          )}
+          {bet.horizon_mismatch && <dd>{t("期限不同", "Horizon mismatch")}</dd>}
+        </div>
+      )}
       <div>
         <dt>{t("实际开仓时间", "Actual open time")}</dt>
         <dd>{fmt.time(bet.actual_open_at)}</dd>
@@ -671,6 +739,57 @@ type DecimalKey = Exclude<
   NumericKey | "markets" | "horizons"
 >;
 
+function HandoffMetrics({
+  state,
+  t,
+  fmt,
+}: {
+  state: SemiState;
+  t: T;
+  fmt: Format;
+}) {
+  const data = state.handoff_metrics;
+  const seconds = (ms: number | null) =>
+    ms === null ? "—" : fmt.value(ms / 1000) + "s";
+  const values = [
+    [t("符合条件", "Eligible"), state.decisions.eligible ?? 0],
+    [t("已发起币安交接", "Binance handoffs started"), data.opened],
+    [t("已补录成交", "Executions recorded"), data.executed],
+    [t("跳过交接", "Handoffs skipped"), data.skipped],
+    [t("交接期间过期", "Expired during handoff"), data.expired_during_handoff],
+    [t("低赔率成交", "Below-policy payouts"), data.payout_below_policy],
+    [
+      t("信号至成交中位数", "Median signal to execution"),
+      seconds(data.median_signal_to_execution_ms),
+    ],
+    [
+      t("信号至成交 P90", "P90 signal to execution"),
+      seconds(data.p90_signal_to_execution_ms),
+    ],
+  ];
+  return (
+    <div className="space-y-2 border-t pt-3">
+      <h3 className="font-semibold">{t("移动端交接", "Mobile handoff")}</h3>
+      <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+        {values.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="text-sm">
+        {t(
+          "价格偏离（不超限 / 超限 / 无 ATR）",
+          "Price drift (within / above limit / no ATR)",
+        )}{" "}
+        · {data.drift_within_limit} / {data.drift_above_limit} /{" "}
+        {data.drift_unavailable}
+      </p>
+    </div>
+  );
+}
+
 function Settings({
   state,
   busy,
@@ -798,6 +917,9 @@ export function EventSemiAuto({
   const [token, setToken] = useState("");
   const [state, setState] = useState<SemiState | null>(null);
   const [busy, setBusy] = useState(false);
+  const writing = useRef(false);
+  const resume = useRef(true);
+  const [now, setNow] = useState(Date.now);
   const [error, setError] = useState("");
   const [activation, setActivation] = useState(false);
   const [reviewId, setReviewId] = useState<string | null>(null);
@@ -809,36 +931,80 @@ export function EventSemiAuto({
   const fmt = formatters(locale);
 
   useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     if (!token || busy) return;
     const abort = new AbortController();
+    let polling = false;
     async function getState() {
+      if (polling || writing.current || document.visibilityState !== "visible")
+        return;
+      polling = true;
       try {
-        setState(
-          (await request(token, "", { signal: abort.signal })) as SemiState,
-        );
+        let current = (await request(token, "", {
+          signal: abort.signal,
+        })) as SemiState;
+        if (abort.signal.aborted || writing.current) return;
+        if (resume.current) {
+          const pending = returnable(current.handoffs);
+          if (pending.length) {
+            await Promise.all(
+              pending.map((intent) =>
+                request(token, "/intents/" + intent.id + "/decision", {
+                  method: "POST",
+                  body: JSON.stringify({ action: "return" }),
+                  signal: abort.signal,
+                }),
+              ),
+            );
+            current = (await request(token, "", {
+              signal: abort.signal,
+            })) as SemiState;
+          }
+          resume.current = false;
+        }
+        if (!abort.signal.aborted && !writing.current) setState(current);
       } catch (failure) {
         if (abort.signal.aborted) return;
         const code =
           failure instanceof Error ? failure.message : "semi_auto_unavailable";
         if (code === "operator_required") setState(null);
         setError(code);
+      } finally {
+        polling = false;
       }
+    }
+    function foreground() {
+      if (document.visibilityState !== "visible") return;
+      resume.current = true;
+      void getState();
     }
     void getState();
     const timer = setInterval(() => void getState(), 4000);
+    document.addEventListener("visibilitychange", foreground);
+    window.addEventListener("pageshow", foreground);
+    window.addEventListener("focus", foreground);
     return () => {
       abort.abort();
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", foreground);
+      window.removeEventListener("pageshow", foreground);
+      window.removeEventListener("focus", foreground);
     };
   }, [token, busy]);
 
   const send: Send = async (path, data, method = "POST") => {
-    if (busy) return false;
+    if (writing.current) return false;
+    writing.current = true;
     setBusy(true);
     setError("");
     try {
       await request(token, path, { method, body: JSON.stringify(data) });
-      setState((await request(token, "")) as SemiState);
+      setIntentPage(null);
+      setBetPage(null);
       return true;
     } catch (failure) {
       setError(
@@ -846,9 +1012,56 @@ export function EventSemiAuto({
       );
       return false;
     } finally {
+      writing.current = false;
       setBusy(false);
     }
   };
+  async function start(intent: SemiIntent, driftAcknowledged: boolean) {
+    if (writing.current) return;
+    const tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
+    resume.current = false;
+    writing.current = true;
+    setBusy(true);
+    setError("");
+    const saved = request(token, "/intents/" + intent.id + "/decision", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "handoff",
+        acknowledged: true,
+        drift_acknowledged: driftAcknowledged,
+      }),
+    }) as Promise<SemiIntent>;
+    const ready = saved.then(
+      (result) =>
+        result.id === intent.id &&
+        result.status === "APPROVED_BY_USER" &&
+        Boolean(result.handoff_started_at) &&
+        !result.returned_at &&
+        Date.parse(result.expires_at) > Date.now(),
+      () => false,
+    );
+    void copyInstruction(intent, ready);
+    try {
+      const result = await saved;
+      if (!(await ready)) {
+        tab?.close();
+        return;
+      }
+      setReviewId(result.id);
+      setIntentPage(null);
+      if (tab && !tab.closed) tab.location.replace(binanceAppEntry);
+      else window.location.assign(binanceAppEntry);
+    } catch (failure) {
+      tab?.close();
+      setError(
+        failure instanceof Error ? failure.message : "semi_auto_unavailable",
+      );
+    } finally {
+      writing.current = false;
+      setBusy(false);
+    }
+  }
   function control(action: "enable" | "disable" | "kill") {
     if (state)
       void send(
@@ -891,6 +1104,7 @@ export function EventSemiAuto({
     }
   }
   function lockPanel() {
+    resume.current = true;
     setToken("");
     setDraft("");
     setState(null);
@@ -900,9 +1114,15 @@ export function EventSemiAuto({
     setBetPage(null);
     setActivation(false);
   }
-  const selected = state?.signals.find(
-    (item) => item.intent?.id === reviewId,
-  )?.intent;
+  const eligible =
+    state?.signals.flatMap(({ intent }) =>
+      intent && actionable(intent, state.enabled, now) ? [intent] : [],
+    ) ?? [];
+  const selected =
+    eligible.find((intent) => intent.id === reviewId) ?? eligible[0];
+  const recovered =
+    state?.handoffs.find((intent) => intent.id === reviewId) ??
+    state?.handoffs[0];
   const decisions: [string, string][] = [
     ["eligible", t("符合条件", "Eligible")],
     ["executed", t("已执行", "Executed")],
@@ -973,6 +1193,131 @@ export function EventSemiAuto({
         </form>
       ) : (
         <>
+          {recovered && (
+            <>
+              {state.handoffs.length > 1 && (
+                <Field label={t("待补录交接", "Pending handoffs")}>
+                  <select
+                    className={input}
+                    value={recovered.id}
+                    onChange={(event) => setReviewId(event.target.value)}
+                  >
+                    {state.handoffs.map((intent) => (
+                      <option key={intent.id} value={intent.id}>
+                        {intent.symbol} · {intent.horizon_minutes}m ·{" "}
+                        {fmt.time(intent.handoff_started_at)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
+              <IntentReview
+                key={recovered.id}
+                intent={recovered}
+                disabled={busy}
+                send={send}
+                start={start}
+                t={t}
+                fmt={fmt}
+                now={now}
+                close={() => setReviewId(null)}
+              />
+            </>
+          )}
+          {selected && (
+            <IntentReview
+              key={selected.id}
+              intent={selected}
+              disabled={busy}
+              send={send}
+              start={start}
+              t={t}
+              fmt={fmt}
+              now={now}
+              close={() => setReviewId(null)}
+            />
+          )}
+          <section className="space-y-2">
+            <h2 className="font-semibold">
+              {t("当前信号", "Current signals")}
+            </h2>
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+              {state.signals.map((card) => {
+                const assessment = card.assessment;
+                const canReview =
+                  card.intent && actionable(card.intent, state.enabled, now);
+                const reason = Object.entries(shadow.reasons).find(
+                  ([key]) => key === assessment?.reason,
+                )?.[1];
+                return (
+                  <article
+                    className={panel + " space-y-1"}
+                    data-semi-signal={card.symbol + ":" + card.horizon_minutes}
+                    key={card.symbol + card.horizon_minutes}
+                  >
+                    <h3 className="font-semibold">
+                      {card.symbol} · {card.horizon_minutes}m
+                    </h3>
+                    <p className="text-sm">
+                      {assessment?.state.replaceAll("_", " ") ?? "—"} ·{" "}
+                      {assessment?.score ?? "—"}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">
+                      {reason ?? shadow.reasons.warming_up}
+                    </p>
+                    <p className="text-sm">
+                      {fmt.cash(card.suggested_stake)} · ≥
+                      {fmt.payout(card.minimum_payout)}
+                    </p>
+                    <p className="text-xs">
+                      {!state.enabled
+                        ? reasonLabel("disabled", t)
+                        : canReview
+                          ? t("风控通过", "Risk checks passed")
+                          : card.intent?.risk_reason
+                            ? reasonLabel(card.intent.risk_reason, t)
+                            : t(
+                                "等待可审核信号",
+                                "Waiting for an actionable signal",
+                              )}
+                    </p>
+                    {canReview &&
+                      card.intent &&
+                      card.intent.id !== selected?.id && (
+                        <button
+                          type="button"
+                          className={primary}
+                          onClick={() => setReviewId(card.intent?.id ?? null)}
+                        >
+                          {t("查看信号", "Review signal")}
+                        </button>
+                      )}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+          <section className={panel + " space-y-2"}>
+            <h2 className="font-semibold">
+              {t("活动实盘记录", "Active real bets")}
+            </h2>
+            {state.active.length === 0 && (
+              <p className="text-sm text-[var(--muted)]">
+                {t("暂无活动记录", "No active records")}
+              </p>
+            )}
+            {state.active.map((bet) => (
+              <article key={bet.id} className="space-y-2 rounded border p-2">
+                <h3>
+                  {bet.symbol} · {bet.horizon_minutes}m ·{" "}
+                  {bet.direction.toUpperCase()}
+                </h3>
+                <p className="text-sm">{statusLabel(bet.status, t)}</p>
+                <BetDetails bet={bet} t={t} fmt={fmt} />
+                <SettleForm bet={bet} busy={busy} send={send} t={t} />
+              </article>
+            ))}
+          </section>
           <section className={panel + " space-y-2"}>
             <div className="flex flex-wrap gap-2">
               {!state.enabled && (
@@ -1034,110 +1379,12 @@ export function EventSemiAuto({
                 ` · ${t("冷却至", "Cooldown until")} ${fmt.time(state.cooldown_until)}`}
             </p>
           </section>
-          <section className="space-y-2">
-            <h2 className="font-semibold">
-              {t("当前信号", "Current signals")}
-            </h2>
-            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-              {state.signals.map((card) => {
-                const assessment = card.assessment;
-                const eligible =
-                  state.enabled && card.intent && !card.intent.risk_reason;
-                const reason = Object.entries(shadow.reasons).find(
-                  ([key]) => key === assessment?.reason,
-                )?.[1];
-                return (
-                  <article
-                    className={panel + " space-y-1"}
-                    data-semi-signal={card.symbol + ":" + card.horizon_minutes}
-                    key={card.symbol + card.horizon_minutes}
-                  >
-                    <h3 className="font-semibold">
-                      {card.symbol} · {card.horizon_minutes}m
-                    </h3>
-                    <p className="text-sm">
-                      {assessment?.state.replaceAll("_", " ") ?? "—"} ·{" "}
-                      {assessment?.score ?? "—"}
-                    </p>
-                    <p className="text-xs text-[var(--muted)]">
-                      {reason ?? shadow.reasons.warming_up}
-                    </p>
-                    <p className="text-sm">
-                      {fmt.cash(card.suggested_stake)} · ≥
-                      {fmt.payout(card.minimum_payout)}
-                    </p>
-                    <p className="text-xs">
-                      {!state.enabled
-                        ? reasonLabel("disabled", t)
-                        : eligible
-                          ? t("风控通过", "Risk checks passed")
-                          : card.intent?.risk_reason
-                            ? reasonLabel(card.intent.risk_reason, t)
-                            : t(
-                                "等待可审核信号",
-                                "Waiting for an actionable signal",
-                              )}
-                    </p>
-                    {eligible && card.intent && (
-                      <button
-                        type="button"
-                        className={primary}
-                        onClick={() => setReviewId(card.intent?.id ?? null)}
-                      >
-                        {t("准备下注", "Prepare entry")}
-                      </button>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-          {selected ? (
-            <IntentReview
-              key={selected.id}
-              intent={selected}
-              disabled={busy || !state.enabled}
-              send={send}
-              t={t}
-              fmt={fmt}
-              close={() => setReviewId(null)}
-            />
-          ) : (
-            reviewId && (
-              <p role="status">
-                {t(
-                  "该信号已过期或不再可审核。",
-                  "The selected intent is no longer actionable.",
-                )}
-              </p>
-            )
-          )}
-          <section className={panel + " space-y-2"}>
-            <h2 className="font-semibold">
-              {t("活动实盘记录", "Active real bets")}
-            </h2>
-            {state.active.length === 0 && (
-              <p className="text-sm text-[var(--muted)]">
-                {t("暂无活动记录", "No active records")}
-              </p>
-            )}
-            {state.active.map((bet) => (
-              <article key={bet.id} className="space-y-2 rounded border p-2">
-                <h3>
-                  {bet.symbol} · {bet.horizon_minutes}m ·{" "}
-                  {bet.direction.toUpperCase()}
-                </h3>
-                <p className="text-sm">{statusLabel(bet.status, t)}</p>
-                <BetDetails bet={bet} t={t} fmt={fmt} />
-                <SettleForm bet={bet} busy={busy} send={send} t={t} />
-              </article>
-            ))}
-          </section>
           <section className={panel + " space-y-3"}>
             <h2 className="font-semibold">
               {t("实盘表现 · 手动记录", "Real performance · Operator records")}
             </h2>
             <Metrics data={state.real} t={t} fmt={fmt} />
+            <HandoffMetrics state={state} t={t} fmt={fmt} />
             <h3 className="font-semibold">
               {t("模拟与实盘", "Paper and real")}
             </h3>
