@@ -79,6 +79,7 @@ jobs:
           EVENT_SIMULATOR_ENABLED: "true"
           EVENT_SIMULATOR_ADMIN_TOKEN: "disposable-compose-test-operator-token"
           EVENT_SEMI_AUTO_AVAILABLE: "true"
+          EVENT_ALERTS_ENABLED: "true"
           EVENT_SEMI_AUTO_OPERATOR_TOKEN: "disposable-compose-semi-auto-test-token"
         run: |
           docker compose up --no-build --detach --wait --no-deps api web

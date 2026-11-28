@@ -3,7 +3,8 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from uuid import UUID
+from unittest.mock import AsyncMock, patch
+from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,9 @@ from alpha_radar.event_contracts.shadow_models import EventShadowSignal
 from alpha_radar.event_contracts.shadow_repository import ShadowRepository
 from alpha_radar.event_contracts.shadow_rules import RULES
 from alpha_radar.event_contracts.strategy import Horizon
+from alpha_radar.event_semi_auto.alert_models import IntentAlert, PushDelivery, PushDevice
+from alpha_radar.event_semi_auto.alert_tasks import dispatch
+from alpha_radar.event_semi_auto.alerts import alert_feed
 from alpha_radar.event_semi_auto.execution_adapters import OperatorAdapter
 from alpha_radar.event_semi_auto.execution_contract import (
     AdapterHealth,
@@ -33,6 +37,54 @@ from alpha_radar.market_data.constants import MarketInterval
 from alpha_radar.market_data.models import MarketCandle
 
 AT = datetime(2026, 11, 16, 20, 0, tzinfo=UTC)
+
+
+async def verify_alert_delivery(db: AsyncSession, btc: LiveIntent, eth: LiveIntent) -> None:
+    device = PushDevice(
+        id=uuid4(),
+        endpoint="https://fcm.googleapis.com/fcm/send/fixture",
+        p256dh="fixture",
+        auth="fixture",
+        label="Fixture",
+        locale="en",
+        detailed=False,
+        enabled=True,
+        created_at=AT,
+    )
+    db.add(device)
+    await db.flush()
+    for intent in (btc, eth):
+        db.add(
+            PushDelivery(
+                intent_id=intent.id,
+                device_id=device.id,
+                status="queued",
+                attempt_count=0,
+                retry_at=AT,
+            )
+        )
+    await db.commit()
+    sender = AsyncMock(side_effect=["retry", "accepted", "invalid"])
+    with patch("alpha_radar.event_semi_auto.alert_tasks.send_push", sender):
+        await dispatch(btc.id, device.id, AT + timedelta(milliseconds=125))
+        await dispatch(btc.id, device.id, AT + timedelta(seconds=1))
+        assert sender.await_count == 1
+        await asyncio.gather(
+            dispatch(btc.id, device.id, AT + timedelta(seconds=3)),
+            dispatch(btc.id, device.id, AT + timedelta(seconds=3)),
+        )
+        assert sender.await_count == 2
+        await dispatch(eth.id, device.id, AT + timedelta(seconds=4))
+        assert sender.await_count == 3
+        await dispatch(eth.id, device.id, AT + timedelta(seconds=5))
+        assert sender.await_count == 3
+    await db.refresh(device)
+    assert not device.enabled
+    history = {item.intent_id: item for item in await alert_feed(Repository(db), AT, True)}
+    assert history[btc.id].push_status == "accepted"
+    assert history[eth.id].push_status == "failed"
+    assert history[btc.id].dispatch_ms == 125
+    assert history[btc.id].opened_at is None
 
 
 async def histories(db: AsyncSession, symbol: Market, horizon: Horizon, at: datetime) -> None:
@@ -162,6 +214,13 @@ async def verify() -> None:
         assert btc.expires_at == AT + timedelta(seconds=60)
         assert eth.expires_at == AT + timedelta(seconds=120)
         assert btc.signal_atr is not None and btc.signal_atr > 0
+        if settings.event_alerts_enabled:
+            assert await db.scalar(select(func.count()).select_from(IntentAlert)) == 2
+            alerts = await alert_feed(repo, AT, False)
+            assert {item.intent_id for item in alerts} == {btc.id, eth.id}
+            assert {item.horizon_minutes for item in alerts} == {10, 30}
+            assert await alert_feed(repo, AT + timedelta(seconds=120), False) == []
+            await verify_alert_delivery(db, btc, eth)
         try:
             await decide(
                 repo,
@@ -216,6 +275,8 @@ async def verify() -> None:
         assert config is not None
         await control(repo, Control(revision=config.revision, action="kill"), AT)
         assert await tick(repo, AT) == {"opened": 0, "blocked": 0}
+        if settings.event_alerts_enabled:
+            assert await alert_feed(repo, AT, False) == []
         assert (await repo.active())[0].id == bets[0].id
 
     result = Settle(result="WIN", settlement_price=Decimal(101))

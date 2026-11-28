@@ -12,6 +12,7 @@
     "./event-contracts": "./src/event-contracts.ts",
     "./event-simulator": "./src/event-simulator.ts",
     "./event-semi-auto": "./src/event-semi-auto.ts",
+    "./event-alerts": "./src/event-alerts.ts",
     "./strategy": "./src/strategy.ts",
     "./sources": "./src/sources.ts"
   }

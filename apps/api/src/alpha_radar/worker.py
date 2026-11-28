@@ -19,6 +19,7 @@ app.conf.update(  # pyright: ignore[reportUnknownMemberType]
         "alpha_radar.event_contracts.shadow_tasks",
         "alpha_radar.event_simulator.tasks",
         "alpha_radar.event_semi_auto.tasks",
+        "alpha_radar.event_semi_auto.alert_tasks",
         "alpha_radar.market_data.tasks",
         "alpha_radar.sources.tasks",
     ),
@@ -97,6 +98,13 @@ if settings.event_semi_auto_available and settings.event_signal_shadow_enabled:
         "task": "alpha_radar.event_semi_auto.tick",
         "schedule": 10.0,
         "options": {"expires": 9},
+    }
+
+if settings.event_alerts_enabled and settings.event_push_enabled:
+    app.conf.beat_schedule["event-alert-recovery"] = {  # pyright: ignore[reportUnknownMemberType]
+        "task": "alpha_radar.event_alerts.dispatch",
+        "schedule": 5.0,
+        "options": {"expires": 5},
     }
 
 if settings.source_ingestion_enabled:

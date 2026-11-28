@@ -7,6 +7,9 @@ import structlog
 def configure_logging(log_level: str) -> None:
     level = getattr(logging, log_level.upper(), logging.INFO)
     logging.basicConfig(format="%(message)s", stream=sys.stdout, level=level, force=True)
+    # HTTP request URLs can include opaque Web Push subscription credentials.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,

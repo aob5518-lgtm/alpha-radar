@@ -3,6 +3,7 @@
 from alpha_radar.assets.models import Asset, AssetAlias, AssetProviderMapping
 from alpha_radar.event_contracts.models import EventContractDecision
 from alpha_radar.event_contracts.shadow_models import EventShadowSignal
+from alpha_radar.event_semi_auto.alert_models import IntentAlert, PushDelivery, PushDevice
 from alpha_radar.event_semi_auto.models import ExecutionAudit, LiveIntent, RealBet, SemiAutoSettings
 from alpha_radar.event_simulator.models import SimulationBet, SimulationDecision, SimulationSession
 from alpha_radar.events.models import Event, EventAsset, EventSourceReference
@@ -20,6 +21,9 @@ __all__ = [
     "EventShadowSignal",
     "ExecutionAudit",
     "LiveIntent",
+    "IntentAlert",
+    "PushDelivery",
+    "PushDevice",
     "RealBet",
     "SemiAutoSettings",
     "SimulationBet",
