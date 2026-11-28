@@ -373,7 +373,7 @@ async def verify_timeout(db: AsyncSession, now: datetime, action: IntentAction) 
         )
     )
     assert observed is not None
-    observed.close = Decimal(110)
+    observed.close = observed.high = Decimal(110)
     await db.commit()
     await rejected(repo, btc, action, now, "price_drift")
     assert btc.pre_execution_drift_absolute == 10 and btc.pre_execution_drift_percent == 10
